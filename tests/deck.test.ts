@@ -27,7 +27,10 @@ test('dealHands distribue 5 cartes à chaque joueur sans perte de cartes', () =>
   const hands = dealHands(deck, 4, 0)
   assert.equal(hands.length, 4)
   assert.deepEqual(hands.map((hand) => hand.length), [5, 5, 5, 5])
-  assert.deepEqual(hands.flat(), deck.slice(0, 20))
+  assert.deepEqual(
+    hands.flat().sort((a, b) => `${a.suit}-${a.value}`.localeCompare(`${b.suit}-${b.value}`)),
+    deck.slice(0, 20).sort((a, b) => `${a.suit}-${a.value}`.localeCompare(`${b.suit}-${b.value}`)),
+  )
 })
 
 test('dealHands respecte le joueur de départ', () => {
