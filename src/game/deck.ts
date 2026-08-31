@@ -50,8 +50,12 @@ export function buildDeck(variant: DeckVariant): Card[] {
  * grand nombre de parties dans un jeu à mise réelle.
  */
 function secureRandomInt(maxExclusive: number): number {
-  const MAX_UINT32 = 0xffffffff
-  const rejectionLimit = MAX_UINT32 - (MAX_UINT32 % maxExclusive)
+  // Uint32Array produit toutes les valeurs de [0, 2^32 - 1]. La borne de
+  // rejet doit donc être calculée à partir de 2^32 (et non 0xffffffff),
+  // sinon certaines valeurs valides sont rejetées à tort et le modulo peut
+  // introduire un biais (par exemple pour maxExclusive = 2).
+  const UINT32_RANGE = 0x1_0000_0000
+  const rejectionLimit = UINT32_RANGE - (UINT32_RANGE % maxExclusive)
   const buf = new Uint32Array(1)
   let x: number
   do {
