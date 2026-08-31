@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#123C32" />
+      <stop offset="100%" stop-color="#0d2a1f" />
+    </linearGradient>
+  </defs>
+
+  <!-- Fond arrondi -->
+  <rect x="1" y="1" width="46" height="46" rx="11" fill="url(#bg)" stroke="#D6A84F" stroke-width="2" />
+
+  <!-- Pique doré -->
+  <g transform="translate(7,6) scale(1.4)">
+    <path
+      d="M12 2 C12 2 4 9 4 15 C4 19 7.5 21 10.5 20 C10 22 8 23 6 23 L18 23 C16 23 14 22 13.5 20 C16.5 21 20 19 20 15 C20 9 12 2 12 2 Z"
+      fill="#D6A84F"
+    />
+  </g>
+</svg>

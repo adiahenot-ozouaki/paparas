@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="<!-- figma:lang -->">
+  <head>
+    <!-- figma:head-start -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+
+    <!-- Préconnexion aux polices Google Fonts (chargées via @import dans index.css) -->
+    <!-- pour réduire le délai de premier affichage du texte. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- Couleur de la barre de navigation / interface système sur mobile, -->
+    <!-- alignée sur le fond sombre de l'app plutôt que le blanc par défaut. -->
+    <meta name="theme-color" content="#0B0D10" />
+    <meta name="color-scheme" content="dark" />
+
+    <!-- Rendu plus proche d'une app native si ajoutée à l'écran d'accueil (iOS/Android). -->
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+
+    <title><!-- figma:title --></title>
+    <!-- figma:head-end -->
+  </head>
+  <body>
+    <!-- figma:body-start -->
+    <div id="root"></div>
+    <noscript>
+      Garam Paparas nécessite JavaScript pour fonctionner. Merci d'activer JavaScript dans votre navigateur.
+    </noscript>
+    <script type="module" src="/src/main.tsx"></script>
+    <!-- figma:body-end -->
+  </body>
+</html>
