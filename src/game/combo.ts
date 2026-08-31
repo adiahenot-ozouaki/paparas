@@ -11,6 +11,15 @@ const COMBO_BY_TRAILING_THREES: Record<number, ComboType> = {
   4: 'kmt',
 }
 
+/** Libellés d'affichage des combos, consommés par les écrans React. */
+export const COMBO_LABEL: Record<ComboType, string> = {
+  simple: 'Simple',
+  kora: 'Kora',
+  '33': '33',
+  trinity: 'Trinité',
+  kmt: 'KMT',
+}
+
 export const COMBO_MULTIPLIER: Record<ComboType, number> = {
   simple: 1,
   kora: 2,
