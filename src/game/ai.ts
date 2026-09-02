@@ -21,8 +21,8 @@
 // toujours avantageuse dès qu'elle est possible (voir round.ts::canClaimVictory).
 // ==========================================================================
 
-import type { Card, Suit } from '../types'
-import { getPlayableCards, type PlayedCard } from './trick'
+import type { Card, Suit } from '../types.ts'
+import { getPlayableCards, type PlayedCard } from './trick.ts'
 
 function isThree(card: Card): boolean {
   return card.value === '3'
