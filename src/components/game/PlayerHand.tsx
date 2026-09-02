@@ -28,14 +28,10 @@ interface PlayerHandProps {
   onClaimVictory: () => void
 }
 
-/** Délai max (ms) entre deux taps sur la même carte pour compter comme un double-tap. */
 const DOUBLE_TAP_DELAY = 350
-/** Distance verticale (px) à glisser vers le haut pour que le relâchement joue la carte. */
 const DRAG_PLAY_THRESHOLD = 64
-/** En dessous de cette distance totale, un pointerUp est traité comme un simple tap. */
 const DRAG_MOVE_THRESHOLD = 8
 
-/** Nom complet de la couleur, pour l'aria-label (le symbole seul n'est pas fiable en lecteur d'écran). */
 const SUIT_NAME: Record<GameCard['suit'], string> = {
   '♥': 'Cœur',
   '♦': 'Carreau',
@@ -107,15 +103,12 @@ export function PlayerHand({
 
     const distance = Math.hypot(info.dx, info.dy)
     if (distance < DRAG_MOVE_THRESHOLD) {
-      // Mouvement négligeable : traité comme un tap normal (simple ou double).
       handleTap(index)
       return
     }
     if (info.dy < -DRAG_PLAY_THRESHOLD) {
       onAttemptPlay(index)
     }
-    // Sinon : relâché sans dépasser le seuil — la carte revient simplement
-    // à sa place (le retrait de `drag` ci-dessus suffit, la transition CSS fait le reste).
   }
 
   return (
@@ -132,11 +125,53 @@ export function PlayerHand({
         zIndex: 20,
       }}
     >
-      {/* ------------------------------------------------------------------ */}
-      {/* Informations du joueur — avatar retiré (seules les cartes sont    */}
-      {/* visibles sur l'écran de jeu) ; la bulle nom/capital reste, masquée */}
-      {/* seulement en mode compact.                                        */}
-      {/* ------------------------------------------------------------------ */}
+      {/* Indicateur de tour humain */}
+      {isHumanTurn && !humanIsBanked && (
+        <div
+          className="turn-banner anim-scale-bounce"
+          role="status"
+          aria-live="polite"
+          style={{
+            marginBottom: 8,
+            background: 'linear-gradient(135deg, rgba(214,168,79,0.2), rgba(240,213,138,0.12))',
+            border: '1.5px solid rgba(214,168,79,0.55)',
+            borderRadius: 14,
+            padding: '7px 18px',
+            boxShadow: '0 0 24px rgba(214,168,79,0.25)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+          }}
+        >
+          <span style={{ fontSize: 14 }} aria-hidden>
+            ✨
+          </span>
+          <span
+            className="font-display"
+            style={{
+              color: '#F0D58A',
+              fontSize: 13,
+              fontWeight: 800,
+              letterSpacing: '0.12em',
+            }}
+          >
+            À TOI DE JOUER
+          </span>
+          {isLeader && (
+            <span
+              style={{
+                color: '#4CAF76',
+                fontSize: 10,
+                fontWeight: 600,
+                letterSpacing: '0.04em',
+                marginLeft: 4,
+              }}
+            >
+              · à la main
+            </span>
+          )}
+        </div>
+      )}
 
       {!compactMode && (
         <div
@@ -150,13 +185,9 @@ export function PlayerHand({
             borderRadius: 14,
             padding: '8px 14px',
             border: `1.5px solid ${
-              isHumanTurn
-                ? 'rgba(214,168,79,0.5)'
-                : 'rgba(255,255,255,0.08)'
+              isHumanTurn ? 'rgba(214,168,79,0.5)' : 'rgba(255,255,255,0.08)'
             }`,
-            boxShadow: isHumanTurn
-              ? '0 0 20px rgba(214,168,79,0.2)'
-              : 'none',
+            boxShadow: isHumanTurn ? '0 0 20px rgba(214,168,79,0.2)' : 'none',
           }}
         >
           <div>
@@ -171,14 +202,7 @@ export function PlayerHand({
             >
               Vous{' '}
               {humanIsBanked && (
-                <span
-                  style={{
-                    color: '#A9B0B7',
-                    fontWeight: 500,
-                  }}
-                >
-                  (en banque)
-                </span>
+                <span style={{ color: '#A9B0B7', fontWeight: 500 }}>(en banque)</span>
               )}
             </p>
 
@@ -190,18 +214,11 @@ export function PlayerHand({
                 fontWeight: 600,
               }}
             >
-              {players[HUMAN_INDEX].capital.toLocaleString(
-                'fr-FR',
-              )}{' '}
-              FCFA · {hand.length} cartes
+              {players[HUMAN_INDEX].capital.toLocaleString('fr-FR')} FCFA · {hand.length} cartes
             </p>
           </div>
         </div>
       )}
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Message lorsque le joueur est en banque                           */}
-      {/* ------------------------------------------------------------------ */}
 
       {humanIsBanked && (
         <div
@@ -226,16 +243,10 @@ export function PlayerHand({
               letterSpacing: '0.06em',
             }}
           >
-            🏦 Vous êtes en banque — vous ne jouez plus ce
-            round
+            🏦 Vous êtes en banque — vous ne jouez plus ce round
           </span>
         </div>
       )}
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Cartes du joueur — tap = sélectionner, double-tap ou glisser vers */}
-      {/* le haut = jouer directement.                                      */}
-      {/* ------------------------------------------------------------------ */}
 
       <div
         style={{
@@ -281,16 +292,9 @@ export function PlayerHand({
                 dragStartRef.current = null
               }}
               onClick={() => {
-                // Filet de sécurité pour les environnements sans Pointer
-                // Events fiables (rare) — le drag gère déjà tap/double-tap.
                 if (!playable && !isDragging) handleTap(index)
               }}
               onKeyDown={e => {
-                // Équivalent clavier d'un tap simple (sélectionner /
-                // désélectionner) : Entrée ou Espace. Jouer la carte se
-                // fait ensuite via le vrai bouton "JOUER CETTE CARTE"
-                // (déjà nativement accessible au clavier), pas de geste de
-                // double-tap ou de glisser à réinventer au clavier.
                 if ((e.key === 'Enter' || e.key === ' ') && playable) {
                   e.preventDefault()
                   handleTap(index)
@@ -299,14 +303,18 @@ export function PlayerHand({
               style={{
                 position: 'absolute',
                 left: `calc(50% + ${translateX}px - 36px)`,
-                bottom: isSelected ? 28 : 6,
-                transform: `translate(${dragDx}px, ${dragDy}px) rotate(${isDragging ? 0 : rotate}deg) translateY(${isDragging ? 0 : translateY}px) scale(${liftedByDrag ? 1.08 : 1})`,
+                bottom: isSelected ? 28 : playable ? 12 : 6,
+                transform: `translate(${dragDx}px, ${dragDy}px) rotate(${isDragging ? 0 : rotate}deg) translateY(${isDragging ? 0 : translateY}px) scale(${liftedByDrag ? 1.08 : playable && !isSelected ? 1.02 : 1})`,
                 transition: isDragging
                   ? 'none'
                   : 'bottom 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 zIndex: isDragging ? 30 : isSelected ? 20 : index + 1,
                 cursor: playable ? 'grab' : 'default',
-                filter: liftedByDrag ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.5))' : undefined,
+                filter: liftedByDrag
+                  ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.5))'
+                  : playable
+                    ? 'drop-shadow(0 4px 10px rgba(214,168,79,0.25))'
+                    : undefined,
               }}
             >
               <PlayingCard
@@ -319,10 +327,6 @@ export function PlayerHand({
           )
         })}
       </div>
-
-      {/* ------------------------------------------------------------------ */}
-      {/* Actions                                                            */}
-      {/* ------------------------------------------------------------------ */}
 
       <div
         style={{
@@ -348,6 +352,20 @@ export function PlayerHand({
           </button>
         )}
 
+        {isHumanTurn && selectedCardIndex === null && !canClaim && (
+          <p
+            style={{
+              color: '#A9B0B7',
+              fontSize: 11,
+              margin: 0,
+              letterSpacing: '0.04em',
+              opacity: 0.85,
+            }}
+          >
+            Tape une carte · double-tape ou glisse vers le haut pour jouer
+          </p>
+        )}
+
         {canClaim && (
           <button
             className="btn-primary anim-scale-bounce"
@@ -357,10 +375,8 @@ export function PlayerHand({
               fontSize: 12,
               borderRadius: 12,
               letterSpacing: '0.06em',
-              background:
-                'linear-gradient(135deg, #9B59B6, #6f3d82)',
-              boxShadow:
-                '0 4px 16px rgba(155,89,182,0.4)',
+              background: 'linear-gradient(135deg, #9B59B6, #6f3d82)',
+              boxShadow: '0 4px 16px rgba(155,89,182,0.4)',
             }}
           >
             👑 RÉCLAMER LA VICTOIRE
