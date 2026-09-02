@@ -1,23 +1,24 @@
 import { useState } from 'react'
 import type { Screen } from '../types'
-import { useGame } from '../game/GameContext'
-
-const PLAYERS = [
-  { name: 'Vous', avatar: '🦅', capital: 47500, ready: true, isYou: true },
-  { name: 'Binu', avatar: '🐆', capital: 38200, ready: true, isYou: false },
-  { name: 'Lebe', avatar: '🦁', capital: 21000, ready: false, isYou: false },
-  { name: 'Goju', avatar: '🐊', capital: 55000, ready: false, isYou: false },
-]
+import { useGame, SEAT_NAMES, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
 
 export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const { startNewGame, stakeConfig } = useGame()
   const [ready, setReady] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
 
+  // Affichage lobby : sièges fixes (Vous + 3 IA) avec le capital de départ configuré.
+  // Les montants inventés du mock ne sont plus utilisés.
+  const lobbyPlayers = SEAT_NAMES.map((name, i) => ({
+    name,
+    avatar: SEAT_AVATARS[i],
+    capital: stakeConfig.startingCapital,
+    ready: i === HUMAN_INDEX ? ready : true, // les IA sont considérées prêtes
+    isYou: i === HUMAN_INDEX,
+  }))
+
   function enterTable() {
     // Nouvelle partie : capitaux réinitialisés, round 1 distribué.
-    // (Les valeurs ci-dessus dans PLAYERS ne sont que la mise en scène du
-    // lobby — la vraie table démarre avec le capital de départ configuré.)
     startNewGame()
     onNavigate('gameTable')
   }
@@ -188,7 +189,7 @@ export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) =>
               <div>
                 <p style={{ color: '#A9B0B7', fontSize: 11, margin: '0 0 2px' }}>Joueurs</p>
                 <p className="font-display" style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>
-                  {PLAYERS.length} / 4
+                  {lobbyPlayers.length} / 4
                 </p>
               </div>
               <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', alignSelf: 'stretch' }} />
@@ -212,10 +213,10 @@ export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) =>
         {/* Players */}
         <div style={{ padding: '20px' }}>
           <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: '0 0 14px', color: '#fff' }}>
-            Joueurs ({PLAYERS.length}/4)
+            Joueurs ({lobbyPlayers.length}/4)
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {PLAYERS.map((p, i) => (
+            {lobbyPlayers.map((p, i) => (
               <div
                 key={i}
                 className="anim-fade-in-up"
