@@ -43,8 +43,46 @@ body {
   min-height: 100dvh;
 }
 
-::-webkit-scrollbar { width: 0; height: 0; }
-* { scrollbar-width: none; }
+/* Scrollbars — visibles, discrètes, thème sombre / or */
+* {
+  scrollbar-width: thin; /* Firefox */
+  scrollbar-color: rgba(214, 168, 79, 0.45) rgba(255, 255, 255, 0.06);
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 99px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(214, 168, 79, 0.4);
+  border-radius: 99px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(214, 168, 79, 0.65);
+  background-clip: padding-box;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Zones sans barre (table de jeu, overlays, etc.) */
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+}
 
 .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
 
@@ -92,20 +130,16 @@ body {
 }
 
 .app-screen {
-  /* Les écrans restent dans le shell (padding safe-area déjà appliqué) */
   width: 100%;
   height: 100%;
 }
 
-/* Tablette : toujours plein écran */
 @media (min-width: 640px) {
   .app-shell {
     max-width: 100%;
   }
 }
 
-/* Desktop : cadre légèrement plus large, ombre douce, coins arrondis si
-   la fenêtre est vraiment large (évite une bande vide sans perdre l'espace). */
 @media (min-width: 1100px) {
   .app-root {
     align-items: center;
@@ -124,7 +158,6 @@ body {
   }
 }
 
-/* Très grands écrans / 4K : on autorise un peu plus de largeur pour la table */
 @media (min-width: 1600px) {
   .app-shell {
     width: min(100%, 1520px);
@@ -132,8 +165,6 @@ body {
   }
 }
 
-/* Conteneur de contenu centré pour les écrans type dashboard (home, stats…)
-   Utilisable via className="page-content" sur les écrans scrollables. */
 .page-content {
   width: 100%;
   max-width: 720px;
@@ -302,7 +333,6 @@ body {
 .nav-pill {
   background: #181E26;
   border-top: 1px solid rgba(255,255,255,0.06);
-  /* Home indicator / barre système */
   padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
 }
 
