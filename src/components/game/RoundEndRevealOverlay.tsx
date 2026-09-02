@@ -6,9 +6,8 @@ import { COMBO_LABEL, countTrailingThrees } from '../../game/combo'
 import { SEAT_NAMES } from '../../game/GameContext'
 
 // ==========================================================================
-// Fin de round « normale » (plis + éventuelle victoire réclamée).
-// Affiche pour chaque siège : cartes posées sur le tapis (playLog) + restes
-// en main — y compris les joueurs en banque.
+// Fin de round « normale » : une ligne par joueur (tapis + main),
+// cause affichée dans la case du gagnant.
 // ==========================================================================
 
 type Phase = 'handsReveal' | 'payout'
@@ -35,8 +34,10 @@ export function RoundEndRevealOverlay({
 
   const winnerSequence = playLog[winnerIndex] ?? []
   const trailingCount = countTrailingThrees(winnerSequence)
-  const trailingCards =
-    trailingCount > 0 ? winnerSequence.slice(winnerSequence.length - trailingCount) : []
+
+  const winnerCause = outcome.wonByClaim
+    ? `👑 Victoire réclamée · ${comboLabel}`
+    : `Combo ${comboLabel}`
 
   return (
     <div
@@ -70,7 +71,7 @@ export function RoundEndRevealOverlay({
       />
 
       {phase === 'handsReveal' && (
-        <div className="anim-fade-in" style={{ width: '100%', maxWidth: 400, position: 'relative' }}>
+        <div className="anim-fade-in" style={{ width: '100%', maxWidth: 420, position: 'relative' }}>
           <p
             style={{
               color: '#A9B0B7',
@@ -89,60 +90,47 @@ export function RoundEndRevealOverlay({
               textAlign: 'center',
               fontSize: 16,
               fontWeight: 700,
-              margin: '0 0 14px',
+              margin: '0 0 16px',
             }}
           >
             {SEAT_NAMES[winnerIndex]} — {comboLabel}
             {outcome.wonByClaim ? ' · 👑' : ''}
           </p>
 
-          {trailingCards.length > 0 && (
-            <div style={{ marginBottom: 14, textAlign: 'center' }}>
-              <p style={{ color: '#A9B0B7', fontSize: 11, margin: '0 0 8px' }}>
-                Séquence gagnante (fin de manche)
-              </p>
-              <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
-                {trailingCards.map((c, i) => (
-                  <PlayingCard
-                    key={i}
-                    suit={c.suit}
-                    value={c.value}
-                    state="winner"
-                    size="sm"
-                  />
-                ))}
-              </div>
-            </div>
-          )}
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             {SEAT_NAMES.map((name, i) => {
               const isWinner = i === winnerIndex
               const isBanked = outcome.bankedPlayerIndexes.includes(i)
               const played = playLog[i] ?? []
               const remaining = hands[i] ?? []
-              const hasAny = played.length > 0 || remaining.length > 0
+              // Une seule ligne : d'abord le tapis, puis le reste en main
+              const lineCards: { card: Card; fromHand: boolean; index: number }[] = [
+                ...played.map((card, index) => ({ card, fromHand: false, index })),
+                ...remaining.map((card, index) => ({ card, fromHand: true, index })),
+              ]
 
               return (
                 <div
                   key={name}
                   className="anim-fade-in-up"
                   style={{
-                    animationDelay: `${i * 0.08}s`,
-                    background: isWinner ? 'rgba(214,168,79,0.08)' : 'rgba(255,255,255,0.03)',
+                    animationDelay: `${i * 0.06}s`,
+                    background: isWinner ? 'rgba(214,168,79,0.1)' : 'rgba(255,255,255,0.03)',
                     border: isWinner
-                      ? '1px solid rgba(214,168,79,0.35)'
+                      ? '1px solid rgba(214,168,79,0.4)'
                       : '1px solid rgba(255,255,255,0.06)',
                     borderRadius: 12,
                     padding: '10px 12px',
                   }}
                 >
+                  {/* En-tête : nom + badges */}
                   <div
                     style={{
                       display: 'flex',
                       alignItems: 'center',
                       gap: 8,
-                      marginBottom: hasAny ? 8 : 0,
+                      marginBottom: lineCards.length > 0 || isWinner ? 8 : 0,
+                      flexWrap: 'wrap',
                     }}
                   >
                     <span
@@ -156,59 +144,97 @@ export function RoundEndRevealOverlay({
                       {name}
                     </span>
                     {isBanked && (
-                      <span style={{ color: '#A9B0B7', fontSize: 11 }}>🏦 banque</span>
+                      <span style={{ color: '#A9B0B7', fontSize: 11 }}>🏦</span>
                     )}
                     {isWinner && (
-                      <span style={{ color: '#D6A84F', fontSize: 11, fontWeight: 600 }}>gagnant</span>
+                      <span
+                        style={{
+                          color: outcome.wonByClaim ? '#C9A0FF' : '#D6A84F',
+                          fontSize: 11,
+                          fontWeight: 700,
+                          fontFamily: 'Plus Jakarta Sans',
+                          letterSpacing: '0.02em',
+                        }}
+                      >
+                        {winnerCause}
+                      </span>
                     )}
                   </div>
 
-                  {!hasAny && (
-                    <span style={{ color: '#5b636b', fontSize: 11 }}>Aucune carte jouée</span>
-                  )}
-
-                  {played.length > 0 && (
-                    <div style={{ marginBottom: remaining.length > 0 ? 6 : 0 }}>
-                      <p style={{ color: '#5b636b', fontSize: 10, margin: '0 0 4px', letterSpacing: '0.06em' }}>
-                        TAPIS
-                      </p>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {played.map((card, ci) => {
-                          const isTrailing =
-                            isWinner &&
-                            trailingCount > 0 &&
-                            ci >= played.length - trailingCount
-                          return (
-                            <PlayingCard
-                              key={`p-${ci}`}
-                              suit={card.suit}
-                              value={card.value}
-                              state={isTrailing ? 'winner' : 'default'}
-                              size="xs"
-                            />
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {remaining.length > 0 && (
-                    <div>
-                      <p style={{ color: '#5b636b', fontSize: 10, margin: '0 0 4px', letterSpacing: '0.06em' }}>
-                        MAIN
-                      </p>
-                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                        {remaining.map((card, ci) => (
+                  {/* Cartes sur une seule ligne */}
+                  {lineCards.length > 0 ? (
+                    <div
+                      style={{
+                        display: 'flex',
+                        gap: 4,
+                        flexWrap: 'nowrap',
+                        overflowX: 'auto',
+                        alignItems: 'center',
+                        WebkitOverflowScrolling: 'touch',
+                      }}
+                    >
+                      {played.length > 0 && remaining.length > 0 && (
+                        <span
+                          style={{
+                            color: '#5b636b',
+                            fontSize: 9,
+                            letterSpacing: '0.06em',
+                            marginRight: 2,
+                            flexShrink: 0,
+                          }}
+                        >
+                          TAPIS
+                        </span>
+                      )}
+                      {played.map((card, ci) => {
+                        const isTrailing =
+                          isWinner && trailingCount > 0 && ci >= played.length - trailingCount
+                        return (
                           <PlayingCard
-                            key={`h-${ci}`}
+                            key={`p-${ci}`}
                             suit={card.suit}
                             value={card.value}
-                            state="default"
+                            state={isTrailing ? 'winner' : 'default'}
                             size="xs"
                           />
-                        ))}
-                      </div>
+                        )
+                      })}
+                      {played.length > 0 && remaining.length > 0 && (
+                        <span
+                          style={{
+                            width: 1,
+                            height: 28,
+                            background: 'rgba(255,255,255,0.15)',
+                            margin: '0 4px',
+                            flexShrink: 0,
+                          }}
+                        />
+                      )}
+                      {remaining.length > 0 && played.length > 0 && (
+                        <span
+                          style={{
+                            color: '#5b636b',
+                            fontSize: 9,
+                            letterSpacing: '0.06em',
+                            marginRight: 2,
+                            flexShrink: 0,
+                          }}
+                        >
+                          MAIN
+                        </span>
+                      )}
+                      {remaining.map((card, ci) => (
+                        <PlayingCard
+                          key={`h-${ci}`}
+                          suit={card.suit}
+                          value={card.value}
+                          state="default"
+                          size="xs"
+                        />
+                      ))}
                     </div>
+                  ) : (
+                    <span style={{ color: '#5b636b', fontSize: 11 }}>Aucune carte</span>
                   )}
                 </div>
               )
