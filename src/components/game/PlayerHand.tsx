@@ -12,17 +12,13 @@ interface PlayerHandProps {
   hand: GameCard[]
   isHumanTurn: boolean
   humanIsBanked: boolean
-  /** A posé la carte qui a fixé la couleur demandée du pli en cours. */
   isLeader: boolean
   selectedCardIndex: number | null
   canClaim: boolean
   isCardPlayable: (card: GameCard) => boolean
   isPlaying: boolean
-  /** Masque la bulle nom/capital du joueur et agrandit les cartes en main. */
   compactMode: boolean
-
   onCardSelect: (index: number) => void
-  /** Tap sélectionne, double-tap OU glisser une carte vers le haut la joue directement. */
   onAttemptPlay: (index: number) => void
   onPlayCard: () => void
   onClaimVictory: () => void
@@ -50,7 +46,6 @@ export function PlayerHand({
   hand,
   isHumanTurn,
   humanIsBanked,
-  isLeader,
   selectedCardIndex,
   canClaim,
   isCardPlayable,
@@ -125,54 +120,6 @@ export function PlayerHand({
         zIndex: 20,
       }}
     >
-      {/* Indicateur de tour humain */}
-      {isHumanTurn && !humanIsBanked && (
-        <div
-          className="turn-banner anim-scale-bounce"
-          role="status"
-          aria-live="polite"
-          style={{
-            marginBottom: 8,
-            background: 'linear-gradient(135deg, rgba(214,168,79,0.2), rgba(240,213,138,0.12))',
-            border: '1.5px solid rgba(214,168,79,0.55)',
-            borderRadius: 14,
-            padding: '7px 18px',
-            boxShadow: '0 0 24px rgba(214,168,79,0.25)',
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-          }}
-        >
-          <span style={{ fontSize: 14 }} aria-hidden>
-            ✨
-          </span>
-          <span
-            className="font-display"
-            style={{
-              color: '#F0D58A',
-              fontSize: 13,
-              fontWeight: 800,
-              letterSpacing: '0.12em',
-            }}
-          >
-            À TOI DE JOUER
-          </span>
-          {isLeader && (
-            <span
-              style={{
-                color: '#4CAF76',
-                fontSize: 10,
-                fontWeight: 600,
-                letterSpacing: '0.04em',
-                marginLeft: 4,
-              }}
-            >
-              · à la main
-            </span>
-          )}
-        </div>
-      )}
-
       {!compactMode && (
         <div
           style={{
