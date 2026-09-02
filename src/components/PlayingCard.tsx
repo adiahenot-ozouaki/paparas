@@ -51,10 +51,8 @@ export default function PlayingCard({
     return (
       <div
         className="card-back pattern-african"
-        // Carte face cachée : ne porte aucune information individuelle
-        // utile (le nombre de cartes en main est déjà annoncé ailleurs) —
-        // masquée pour les lecteurs d'écran plutôt que de les faire
-        // s'arrêter sur chaque dos de carte un par un.
+        // Carte face cachée : purement décorative — le compte de cartes
+        // est annoncé ailleurs. Pas de tabIndex : évite focus + aria-hidden.
         aria-hidden="true"
         style={{
           width: s.width,
@@ -64,6 +62,8 @@ export default function PlayingCard({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
+          // Les clics passent au parent (OpponentPanel, etc.) si besoin.
+          pointerEvents: onClick ? undefined : 'none',
           ...style,
         }}
         onClick={onClick}
@@ -87,10 +87,7 @@ export default function PlayingCard({
   const isDisabled = state === 'disabled'
   const isWinner = state === 'winner'
   // Interactive UNIQUEMENT si un onClick est fourni directement sur ce
-  // composant (certains écrans, comme PlayerHand, gèrent l'interaction sur
-  // un div englobant à la place et ne passent pas onClick ici — dans ce
-  // cas la carte reste purement visuelle et ne doit pas voler le focus
-  // clavier ni annoncer un statut "bouton" trompeur).
+  // composant (PlayerHand gère l'interaction sur un wrapper parent).
   const isInteractive = !!onClick && !isDisabled
 
   return (
@@ -107,12 +104,17 @@ export default function PlayingCard({
         height: s.height,
         transform: rotated ? 'rotate(90deg)' : undefined,
         flexShrink: 0,
+        // Décoratif : ne prend jamais le focus (le wrapper parent est le bouton).
+        // Évite l'avertissement « aria-hidden on focused element ».
+        pointerEvents: isInteractive ? undefined : 'none',
         ...style,
       }}
-      onClick={!isDisabled ? onClick : undefined}
+      onClick={isInteractive ? onClick : undefined}
       role={isInteractive ? 'button' : undefined}
-      tabIndex={isInteractive ? 0 : -1}
-      aria-hidden={isInteractive ? undefined : 'true'}
+      // Pas de tabIndex={-1} : un élément avec tabIndex peut encore recevoir
+      // le focus programmatique / au clic, ce qui entre en conflit avec aria-hidden.
+      tabIndex={isInteractive ? 0 : undefined}
+      aria-hidden={isInteractive ? undefined : true}
       aria-label={isInteractive ? cardLabel : undefined}
       aria-disabled={onClick && isDisabled ? true : undefined}
       onKeyDown={
@@ -144,6 +146,7 @@ export default function PlayingCard({
         flexDirection: 'column',
         alignItems: 'center',
         lineHeight: 1,
+        pointerEvents: 'none',
       }}>
         <span style={{ fontSize: s.fontSize, fontWeight: 800, color, fontFamily: 'Plus Jakarta Sans', lineHeight: 1 }}>
           {value}
@@ -151,13 +154,14 @@ export default function PlayingCard({
         <span style={{ fontSize: s.fontSize * 0.85, color, lineHeight: 1 }}>{suit}</span>
       </div>
 
-      {/* Center symbol */}
+      {/* Center suit */}
       <div style={{
         position: 'absolute',
         inset: 0,
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        pointerEvents: 'none',
       }}>
         <span style={{ fontSize: s.centerSize, color, opacity: 0.85 }}>{suit}</span>
       </div>
@@ -172,6 +176,7 @@ export default function PlayingCard({
         alignItems: 'center',
         lineHeight: 1,
         transform: 'rotate(180deg)',
+        pointerEvents: 'none',
       }}>
         <span style={{ fontSize: s.fontSize, fontWeight: 800, color, fontFamily: 'Plus Jakarta Sans', lineHeight: 1 }}>
           {value}
