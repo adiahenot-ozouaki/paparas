@@ -3,6 +3,7 @@ import test from 'node:test'
 import { buildDeck, dealHands, remainingAfterDeal, shuffleDeck } from '../src/game/deck.ts'
 
 const VARIANTS = [
+  { variant: '8' as const, expectedSize: 23, highestValue: '8' },
   { variant: '9' as const, expectedSize: 27, highestValue: '9' },
   { variant: '10' as const, expectedSize: 31, highestValue: '10' },
   { variant: 'as' as const, expectedSize: 35, highestValue: 'A' },
