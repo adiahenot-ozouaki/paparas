@@ -4,37 +4,39 @@ const MODES = [
   {
     id: 'quick',
     title: 'Partie rapide',
-    desc: 'Trouve automatiquement des adversaires.',
+    desc: 'Affronte trois adversaires IA immédiatement.',
     icon: '⚡',
     color: '#D6A84F',
-    cards: ['♠ A', '♥ K', '♦ Q'],
+    cards: ['♠ A', '♥ 10', '♦ 9'],
     badge: 'POPULAIRE',
   },
   {
     id: 'friends',
     title: 'Avec amis',
-    desc: 'Joue contre tes contacts.',
+    desc: 'Multijoueur entre amis — bientôt disponible.',
     icon: '👥',
     color: '#176B50',
-    cards: ['♠ 7', '♥ 3', '♦ J'],
+    cards: ['♠ 7', '♥ 3', '♦ 8'],
     badge: null,
+    disabled: true,
   },
   {
     id: 'private',
     title: 'Partie privée',
-    desc: 'Crée une table et invite tes amis.',
+    desc: 'Table privée sur invitation — bientôt disponible.',
     icon: '🔒',
     color: '#6B5B17',
     cards: ['♠ 5', '♥ 9', '♦ 4'],
     badge: null,
+    disabled: true,
   },
   {
     id: 'training',
     title: 'Entraînement',
-    desc: 'Affronte l\'intelligence artificielle.',
+    desc: 'Même table IA, idéal pour apprendre les règles.',
     icon: '🤖',
     color: '#2E3748',
-    cards: ['♠ 2', '♥ 6', '♦ 8'],
+    cards: ['♠ 6', '♥ 6', '♦ 8'],
     badge: 'GRATUIT',
   },
 ]
@@ -76,154 +78,131 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
 
       {/* Mode cards */}
       <div style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {MODES.map((mode, i) => (
-          <button
-            key={mode.id}
-            className="anim-fade-in-up"
-            onClick={() => onNavigate('stakeConfig')}
-            style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 20,
-              padding: '20px',
-              cursor: 'pointer',
-              textAlign: 'left',
-              animationDelay: `${i * 0.07}s`,
-              position: 'relative',
-              overflow: 'hidden',
-              transition: 'border-color 0.2s, transform 0.1s',
-              display: 'block',
-              width: '100%',
-            }}
-            onMouseEnter={e => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(214,168,79,0.3)'
-              ;(e.currentTarget as HTMLButtonElement).style.transform = 'translateY(-2px)'
-            }}
-            onMouseLeave={e => {
-              (e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.08)'
-              ;(e.currentTarget as HTMLButtonElement).style.transform = 'translateY(0)'
-            }}
-          >
-            {/* Color accent corner */}
-            <div style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: 4,
-              height: '100%',
-              background: `linear-gradient(180deg, ${mode.color}, transparent)`,
-              borderRadius: '20px 0 0 20px',
-            }} />
+        {MODES.map((mode, i) => {
+          const disabled = Boolean(mode.disabled)
+          return (
+            <button
+              key={mode.id}
+              className="anim-fade-in-up"
+              disabled={disabled}
+              onClick={() => {
+                if (!disabled) onNavigate('stakeConfig')
+              }}
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 20,
+                padding: '20px',
+                cursor: disabled ? 'not-allowed' : 'pointer',
+                textAlign: 'left',
+                animationDelay: `${i * 0.07}s`,
+                position: 'relative',
+                overflow: 'hidden',
+                transition: 'border-color 0.2s, transform 0.1s',
+                display: 'block',
+                width: '100%',
+                opacity: disabled ? 0.55 : 1,
+              }}
+            >
+              <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: 4,
+                height: '100%',
+                background: `linear-gradient(180deg, ${mode.color}, transparent)`,
+                borderRadius: '20px 0 0 20px',
+              }} />
 
-            {/* Mini cards decoration */}
-            <div style={{
-              position: 'absolute',
-              right: 16,
-              top: '50%',
-              transform: 'translateY(-50%)',
-              display: 'flex',
-              gap: -6,
-            }}>
-              {mode.cards.map((c, ci) => (
-                <div key={ci} style={{
-                  width: 28,
-                  height: 40,
-                  background: '#F5F1E8',
-                  borderRadius: 6,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 10,
-                  fontWeight: 700,
-                  color: c.includes('♥') || c.includes('♦') ? '#C94B4B' : '#1a1a1a',
-                  boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                  transform: `rotate(${(ci - 1) * 8}deg) translateX(${ci * -6}px)`,
-                  fontFamily: 'Plus Jakarta Sans',
-                }}>
-                  {c}
-                </div>
-              ))}
-            </div>
-
-            <div style={{ paddingLeft: 12, paddingRight: 100 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-                <span style={{ fontSize: 22 }}>{mode.icon}</span>
-                <span className="font-display" style={{ color: '#fff', fontSize: 17, fontWeight: 700 }}>
-                  {mode.title}
-                </span>
-                {mode.badge && (
-                  <span style={{
-                    background: mode.badge === 'POPULAIRE' ? 'rgba(214,168,79,0.2)' : 'rgba(76,175,118,0.2)',
-                    color: mode.badge === 'POPULAIRE' ? '#D6A84F' : '#4CAF76',
-                    fontSize: 9,
+              <div style={{
+                position: 'absolute',
+                right: 16,
+                top: '50%',
+                transform: 'translateY(-50%)',
+                display: 'flex',
+              }}>
+                {mode.cards.map((c, ci) => (
+                  <div key={ci} style={{
+                    width: 28,
+                    height: 40,
+                    background: '#F5F1E8',
+                    borderRadius: 6,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 10,
                     fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: 99,
-                    letterSpacing: '0.08em',
+                    color: c.includes('♥') || c.includes('♦') ? '#C94B4B' : '#1a1a1a',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
+                    transform: `rotate(${(ci - 1) * 8}deg) translateX(${ci * -6}px)`,
                     fontFamily: 'Plus Jakarta Sans',
                   }}>
-                    {mode.badge}
-                  </span>
-                )}
+                    {c}
+                  </div>
+                ))}
               </div>
-              <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>{mode.desc}</p>
-            </div>
-          </button>
-        ))}
+
+              <div style={{ paddingLeft: 12, paddingRight: 100 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: 22 }}>{mode.icon}</span>
+                  <span className="font-display" style={{ color: '#fff', fontSize: 17, fontWeight: 700 }}>
+                    {mode.title}
+                  </span>
+                  {mode.badge && (
+                    <span style={{
+                      background: mode.badge === 'POPULAIRE' ? 'rgba(214,168,79,0.2)' : 'rgba(76,175,118,0.2)',
+                      color: mode.badge === 'POPULAIRE' ? '#D6A84F' : '#4CAF76',
+                      fontSize: 9,
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: 99,
+                      letterSpacing: '0.08em',
+                      fontFamily: 'Plus Jakarta Sans',
+                    }}>
+                      {mode.badge}
+                    </span>
+                  )}
+                  {disabled && (
+                    <span style={{
+                      background: 'rgba(255,255,255,0.06)',
+                      color: '#5b636b',
+                      fontSize: 9,
+                      fontWeight: 700,
+                      padding: '2px 8px',
+                      borderRadius: 99,
+                      letterSpacing: '0.06em',
+                      fontFamily: 'Plus Jakarta Sans',
+                    }}>
+                      BIENTÔT
+                    </span>
+                  )}
+                </div>
+                <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>{mode.desc}</p>
+              </div>
+            </button>
+          )
+        })}
       </div>
 
-      {/* Active tables section */}
-      <div style={{ padding: '0 20px' }}>
+      {/* Tables actives — pas de backend matchmaking pour l'instant */}
+      <div style={{ padding: '0 20px 24px' }}>
         <h3 className="font-display" style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px', color: '#fff' }}>
           Tables actives
         </h3>
-        {[
-          { name: 'TABLE VIP', players: '3/4', mise: '1 000', level: 'Expert' },
-          { name: 'GARAM OPEN', players: '2/4', mise: '500', level: 'Standard' },
-        ].map((table, i) => (
-          <div key={i} style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 16,
-            padding: '14px 16px',
-            marginBottom: 10,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}>
-            <div style={{
-              width: 40,
-              height: 40,
-              borderRadius: 12,
-              background: 'linear-gradient(135deg, #123C32, #0d2a1f)',
-              border: '1px solid rgba(214,168,79,0.3)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 18,
-              flexShrink: 0,
-            }}>
-              🃏
-            </div>
-            <div style={{ flex: 1 }}>
-              <p className="font-display" style={{ color: '#fff', fontSize: 14, fontWeight: 700, margin: '0 0 2px' }}>
-                {table.name}
-              </p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <span style={{ color: '#A9B0B7', fontSize: 12 }}>{table.players} joueurs</span>
-                <span style={{ color: '#A9B0B7', fontSize: 12 }}>•</span>
-                <span style={{ color: '#D6A84F', fontSize: 12, fontWeight: 600 }}>{table.mise} FCFA</span>
-              </div>
-            </div>
-            <button
-              className="btn-primary"
-              onClick={() => onNavigate('lobby')}
-              style={{ padding: '8px 16px', fontSize: 12, borderRadius: 10 }}
-            >
-              Rejoindre
-            </button>
-          </div>
-        ))}
+        <div style={{
+          background: 'rgba(255,255,255,0.04)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 16,
+          padding: '18px 16px',
+          textAlign: 'center',
+        }}>
+          <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 6px' }}>
+            Aucune table publique pour le moment.
+          </p>
+          <p style={{ color: '#5b636b', fontSize: 12, margin: 0 }}>
+            Lancez une partie rapide pour jouer contre l'IA.
+          </p>
+        </div>
       </div>
     </div>
   )

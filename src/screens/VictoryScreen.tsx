@@ -1,13 +1,12 @@
 import type { Screen } from '../types'
 import { useGame, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
 import { COMBO_LABEL } from '../game/combo'
-import { DEFAULT_STAKE_CONFIG } from '../game/payout'
 
 export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  const { players, roundsWon, bestCombo, gameStartedAt, startNewGame } = useGame()
+  const { players, roundsWon, bestCombo, gameStartedAt, stakeConfig, startNewGame } = useGame()
 
   const finalCapital = players[HUMAN_INDEX].capital
-  const netGain = finalCapital - DEFAULT_STAKE_CONFIG.startingCapital
+  const netGain = finalCapital - stakeConfig.startingCapital
   const humanBestCombo = bestCombo[HUMAN_INDEX]
   const elapsedMinutes = Math.max(1, Math.round((Date.now() - gameStartedAt) / 60000))
 

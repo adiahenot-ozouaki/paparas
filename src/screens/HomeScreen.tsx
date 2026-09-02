@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import type { Screen } from '../types'
-import { useGame, HUMAN_INDEX } from '../game/GameContext'
-
-const NOTIFICATIONS = 3
+import { useGame, HUMAN_INDEX, SEAT_AVATARS } from '../game/GameContext'
 
 export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const { players, lifetimeStats } = useGame()
@@ -65,7 +63,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
           boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
           flexShrink: 0,
         }}>
-          🦅
+          {SEAT_AVATARS[HUMAN_INDEX]}
         </div>
         <div style={{ flex: 1 }}>
           <p style={{ color: '#A9B0B7', fontSize: 11, fontFamily: 'Plus Jakarta Sans', letterSpacing: '0.05em', margin: 0 }}>
@@ -89,32 +87,23 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
             </span>
           </div>
         </div>
-        {/* Bell */}
-        <button style={{
-          background: 'rgba(255,255,255,0.06)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 14,
-          width: 42,
-          height: 42,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          cursor: 'pointer',
-          position: 'relative',
-        }}>
-          <span style={{ fontSize: 18 }}>🔔</span>
-          {NOTIFICATIONS > 0 && (
-            <div style={{
-              position: 'absolute',
-              top: 8,
-              right: 8,
-              width: 8,
-              height: 8,
-              borderRadius: '50%',
-              background: '#C94B4B',
-              border: '1.5px solid #10151A',
-            }} />
-          )}
+        {/* Profil rapide — plus de badge notifications fictif */}
+        <button
+          onClick={() => onNavigate('profile')}
+          aria-label="Profil"
+          style={{
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 14,
+            width: 42,
+            height: 42,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          <span style={{ fontSize: 18 }}>👤</span>
         </button>
       </div>
 
@@ -136,7 +125,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
             CAPITAL
           </p>
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
-            <span className="font-display text-gold" style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>
+            <span className={`font-display text-gold${showMoneyAnim ? ' anim-scale-bounce' : ''}`} style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>
               {capital.toLocaleString('fr-FR')}
             </span>
             <span style={{ color: '#A9B0B7', fontSize: 13, fontWeight: 500 }}>FCFA</span>
@@ -176,7 +165,6 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
         padding: '32px 20px 20px',
         position: 'relative',
       }}>
-        {/* Ambient glow behind logo */}
         <div style={{
           position: 'absolute',
           top: 20,
@@ -187,7 +175,6 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
           pointerEvents: 'none',
         }} />
 
-        {/* Mini logo */}
         <div style={{
           display: 'flex',
           flexDirection: 'column',
@@ -213,7 +200,6 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
           </p>
         </div>
 
-        {/* Main play button */}
         <button
           className="btn-primary glow-gold"
           onClick={handlePlay}
@@ -231,12 +217,11 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
           JOUER
         </button>
 
-        {/* Quick action buttons */}
         <div style={{ display: 'flex', gap: 10, width: '100%', maxWidth: 320 }}>
           {[
-            { label: 'Partie rapide', icon: '⚡', screen: 'lobby' as Screen },
-            { label: 'Avec amis', icon: '👥', screen: 'lobby' as Screen },
-            { label: 'Privée', icon: '🔒', screen: 'lobby' as Screen },
+            { label: 'Partie rapide', icon: '⚡', screen: 'stakeConfig' as Screen },
+            { label: 'Classement', icon: '🏆', screen: 'leaderboard' as Screen },
+            { label: 'Règles', icon: '📖', screen: 'rules' as Screen },
           ].map(item => (
             <button
               key={item.label}
@@ -313,10 +298,6 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
             </p>
           </div>
         ) : (
-          // L'historique détaillé partie par partie (adversaires, combo, montant)
-          // n'est pas encore stocké — seuls des cumuls (lifetimeStats) le sont.
-          // En attendant un vrai historique de parties, on affiche un résumé
-          // honnête plutôt que d'inventer des lignes d'activité.
           <div style={{
             background: 'rgba(255,255,255,0.04)',
             border: '1px solid rgba(255,255,255,0.07)',
