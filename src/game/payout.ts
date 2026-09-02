@@ -26,7 +26,7 @@
 // document — c'est une généralisation, pas une règle différente.
 // ==========================================================================
 
-import type { Player } from '../types'
+import type { Player } from '../types.ts'
 
 export interface GameStakeConfig {
   /** Mise de base, définie avant le début de la partie. */
