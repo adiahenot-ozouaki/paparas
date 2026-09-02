@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { Screen, Card as GameCard } from '../types'
-import { playCard, resolveTrick, getCurrentPlayerIndex, canClaimVictory, claimVictory, type RoundState } from '../game/round'
+import { playCard, resolveTrick, getCurrentPlayerIndex, canClaimVictory, claimVictory, bankPlayer, type RoundState } from '../game/round'
 import { getPlayableCards } from '../game/trick'
-import { chooseAiCard } from '../game/ai'
+import { chooseAiCard, shouldAiBank } from '../game/ai'
 import { useGame, HUMAN_INDEX, SEAT_NAMES } from '../game/GameContext'
 import { COMBO_LABEL } from '../game/combo'
 import { GameTableHud } from '../components/game/GameTableHud'
@@ -116,6 +116,7 @@ export default function GameTableScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
+  // Tour IA : claim > banque > choix de carte
   useEffect(() => {
     if (roundState.phase !== 'playing') return
     if (currentPlayerIndex === null || currentPlayerIndex === HUMAN_INDEX) return
@@ -126,21 +127,53 @@ export default function GameTableScreen({
         if (prev.phase !== 'playing') return prev
         const index = getCurrentPlayerIndex(prev)
         if (index === null || index === HUMAN_INDEX) return prev
+
+        // 1. Réclamation de victoire dès que légale
         if (canClaimVictory(prev, index)) {
           return claimVictory(prev, index, stakeConfig)
         }
+
+        // 2. Banque IA (uniquement en début de tour de pli, avant d'avoir joué)
+        const trick = prev.currentTrick
+        if (
+          trick &&
+          trick.playedCards.length === 0 &&
+          trick.trickNumber < 3 &&
+          !prev.bankedPlayers.includes(index)
+        ) {
+          const player = players[index]
+          if (
+            player &&
+            shouldAiBank({
+              hand: prev.hands[index],
+              playerIndex: index,
+              trickNumber: trick.trickNumber,
+              capital: player.capital,
+              startingCapital: stakeConfig.startingCapital,
+              baseStake: stakeConfig.baseStake,
+            })
+          ) {
+            return bankPlayer(prev, index, stakeConfig)
+          }
+        }
+
+        // 3. Choix de carte selon personnalité
         const hand = prev.hands[index]
+        const tricksWonByMe = prev.trickWinners.filter(w => w === index).length
         const card = chooseAiCard({
           hand,
           requestedSuit: prev.currentTrick?.requestedSuit ?? null,
           playedCardsThisTrick: prev.currentTrick?.playedCards ?? [],
+          playerIndex: index,
+          tricksWonByMe,
+          cardsLeftInHand: hand.length,
         })
         return playCard(prev, index, card)
       })
     }, 900)
 
     return () => clearTimeout(timer)
-  }, [roundState, currentPlayerIndex, setRoundState, stakeConfig, isPaused])
+  }, [roundState, currentPlayerIndex, setRoundState, stakeConfig, isPaused, players])
 
   useEffect(() => {
     if (roundState.phase !== 'trickWon') return
