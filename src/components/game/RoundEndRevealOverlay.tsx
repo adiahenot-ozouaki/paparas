@@ -7,7 +7,8 @@ import { SEAT_NAMES } from '../../game/GameContext'
 
 // ==========================================================================
 // Fin de round « normale » (plis + éventuelle victoire réclamée).
-// Même esprit que SpecialWinOverlay : mains révélées → gains → continuer.
+// Affiche pour chaque siège : cartes posées sur le tapis (playLog) + restes
+// en main — y compris les joueurs en banque.
 // ==========================================================================
 
 type Phase = 'handsReveal' | 'payout'
@@ -69,7 +70,7 @@ export function RoundEndRevealOverlay({
       />
 
       {phase === 'handsReveal' && (
-        <div className="anim-fade-in" style={{ width: '100%', maxWidth: 360, position: 'relative' }}>
+        <div className="anim-fade-in" style={{ width: '100%', maxWidth: 400, position: 'relative' }}>
           <p
             style={{
               color: '#A9B0B7',
@@ -80,7 +81,7 @@ export function RoundEndRevealOverlay({
               margin: '0 0 6px',
             }}
           >
-            MAINS RÉVÉLÉES
+            CARTES DU ROUND
           </p>
           <p
             className="text-gold font-display"
@@ -100,7 +101,7 @@ export function RoundEndRevealOverlay({
               <p style={{ color: '#A9B0B7', fontSize: 11, margin: '0 0 8px' }}>
                 Séquence gagnante (fin de manche)
               </p>
-              <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+              <div style={{ display: 'flex', gap: 6, justifyContent: 'center', flexWrap: 'wrap' }}>
                 {trailingCards.map((c, i) => (
                   <PlayingCard
                     key={i}
@@ -114,54 +115,101 @@ export function RoundEndRevealOverlay({
             </div>
           )}
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {SEAT_NAMES.map((name, i) => {
               const isWinner = i === winnerIndex
+              const isBanked = outcome.bankedPlayerIndexes.includes(i)
+              const played = playLog[i] ?? []
               const remaining = hands[i] ?? []
+              const hasAny = played.length > 0 || remaining.length > 0
+
               return (
                 <div
                   key={name}
                   className="anim-fade-in-up"
                   style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 10,
                     animationDelay: `${i * 0.08}s`,
                     background: isWinner ? 'rgba(214,168,79,0.08)' : 'rgba(255,255,255,0.03)',
                     border: isWinner
                       ? '1px solid rgba(214,168,79,0.35)'
                       : '1px solid rgba(255,255,255,0.06)',
                     borderRadius: 12,
-                    padding: '8px 10px',
+                    padding: '10px 12px',
                   }}
                 >
-                  <span
-                    className="font-display"
+                  <div
                     style={{
-                      width: 56,
-                      fontSize: 12,
-                      flexShrink: 0,
-                      color: isWinner ? '#D6A84F' : '#A9B0B7',
-                      fontWeight: isWinner ? 700 : 500,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 8,
+                      marginBottom: hasAny ? 8 : 0,
                     }}
                   >
-                    {name}
-                  </span>
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    {remaining.length === 0 ? (
-                      <span style={{ color: '#5b636b', fontSize: 11 }}>Main vide</span>
-                    ) : (
-                      remaining.map((card, ci) => (
-                        <PlayingCard
-                          key={ci}
-                          suit={card.suit}
-                          value={card.value}
-                          state={isWinner ? 'winner' : 'default'}
-                          size="xs"
-                        />
-                      ))
+                    <span
+                      className="font-display"
+                      style={{
+                        fontSize: 13,
+                        color: isWinner ? '#D6A84F' : '#fff',
+                        fontWeight: isWinner ? 700 : 600,
+                      }}
+                    >
+                      {name}
+                    </span>
+                    {isBanked && (
+                      <span style={{ color: '#A9B0B7', fontSize: 11 }}>🏦 banque</span>
+                    )}
+                    {isWinner && (
+                      <span style={{ color: '#D6A84F', fontSize: 11, fontWeight: 600 }}>gagnant</span>
                     )}
                   </div>
+
+                  {!hasAny && (
+                    <span style={{ color: '#5b636b', fontSize: 11 }}>Aucune carte jouée</span>
+                  )}
+
+                  {played.length > 0 && (
+                    <div style={{ marginBottom: remaining.length > 0 ? 6 : 0 }}>
+                      <p style={{ color: '#5b636b', fontSize: 10, margin: '0 0 4px', letterSpacing: '0.06em' }}>
+                        TAPIS
+                      </p>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {played.map((card, ci) => {
+                          const isTrailing =
+                            isWinner &&
+                            trailingCount > 0 &&
+                            ci >= played.length - trailingCount
+                          return (
+                            <PlayingCard
+                              key={`p-${ci}`}
+                              suit={card.suit}
+                              value={card.value}
+                              state={isTrailing ? 'winner' : 'default'}
+                              size="xs"
+                            />
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {remaining.length > 0 && (
+                    <div>
+                      <p style={{ color: '#5b636b', fontSize: 10, margin: '0 0 4px', letterSpacing: '0.06em' }}>
+                        MAIN
+                      </p>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        {remaining.map((card, ci) => (
+                          <PlayingCard
+                            key={`h-${ci}`}
+                            suit={card.suit}
+                            value={card.value}
+                            state="default"
+                            size="xs"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )
             })}
