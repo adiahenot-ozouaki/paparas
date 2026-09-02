@@ -8,8 +8,8 @@ import { COMBO_LABEL } from '../game/combo'
 import { GameTableHud } from '../components/game/GameTableHud'
 import { GameTableArea } from '../components/game/GameTableArea'
 import { PlayerHand } from '../components/game/PlayerHand'
-import { RoundEndBanner } from '../components/game/RoundEndBanner'
 import { SpecialWinOverlayWrapper } from '../components/game/SpecialWinOverlayWrapper'
+import { RoundEndRevealOverlay } from '../components/game/RoundEndRevealOverlay'
 import { BankConfirmOverlay } from '../components/game/BankConfirmOverlay'
 import { PauseOverlay } from '../components/game/PauseOverlay'
 
@@ -76,11 +76,24 @@ export default function GameTableScreen({
       c => c.suit === card.suit && c.value === card.value,
     )
 
-  // Status centralisé dans le HUD (remplace overlays / bandeaux dispersés).
+  // Status centralisé dans le HUD
   let statusMessage: string | null = null
   let statusTone: 'gold' | 'green' | 'muted' = 'muted'
 
-  if (roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex !== null) {
+  if (roundState.phase === 'roundEnd' && roundState.outcome?.kind === 'normal') {
+    if (roundState.outcome.wonByClaim) {
+      statusMessage = '👑 Victoire réclamée · Round terminé'
+      statusTone = 'gold'
+    } else {
+      const w = roundState.outcome.roundWinnerIndex
+      const name = w === HUMAN_INDEX ? 'Vous' : SEAT_NAMES[w]
+      statusMessage = `${name} gagne · ${COMBO_LABEL[roundState.outcome.combo]}`
+      statusTone = 'gold'
+    }
+  } else if (roundState.phase === 'specialWin') {
+    statusMessage = 'Règle spéciale · Round arrêté'
+    statusTone = 'gold'
+  } else if (roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex !== null) {
     const w = roundState.lastTrickWinnerIndex
     statusMessage =
       w === HUMAN_INDEX ? 'Vous gagnez le pli' : `${SEAT_NAMES[w]} gagne le pli`
@@ -152,11 +165,8 @@ export default function GameTableScreen({
     if (!canBank && confirmingBank) setConfirmingBank(false)
   }, [canBank, confirmingBank])
 
-  function goToRoundResult() {
-    onNavigate('roundResult')
-  }
-
-  function handleSpecialWinContinue() {
+  /** Après révélation + gains : partie suivante ou écran victory/defeat. */
+  function handleRoundEndContinue() {
     const result = checkGameOverNow()
     if (result.isOver && result.winnerIndex !== undefined) {
       recordGameResult(result.winnerIndex === HUMAN_INDEX)
@@ -231,17 +241,17 @@ export default function GameTableScreen({
           <SpecialWinOverlayWrapper
             outcome={roundState.outcome}
             hands={roundState.hands}
-            onContinue={handleSpecialWinContinue}
+            onContinue={handleRoundEndContinue}
           />
         )}
 
       {roundState.phase === 'roundEnd' &&
         roundState.outcome?.kind === 'normal' && (
-          <RoundEndBanner
-            winnerName={SEAT_NAMES[roundState.outcome.roundWinnerIndex]}
-            comboLabel={COMBO_LABEL[roundState.outcome.combo]}
-            wonByClaim={roundState.outcome.wonByClaim}
-            onContinue={goToRoundResult}
+          <RoundEndRevealOverlay
+            outcome={roundState.outcome}
+            hands={roundState.hands}
+            playLog={roundState.playLog}
+            onContinue={handleRoundEndContinue}
           />
         )}
 
