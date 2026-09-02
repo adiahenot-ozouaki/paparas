@@ -8,7 +8,6 @@ import { COMBO_LABEL } from '../game/combo'
 import { GameTableHud } from '../components/game/GameTableHud'
 import { GameTableArea } from '../components/game/GameTableArea'
 import { PlayerHand } from '../components/game/PlayerHand'
-import { TrickWonOverlay } from '../components/game/TrickWonOverlay'
 import { RoundEndBanner } from '../components/game/RoundEndBanner'
 import { SpecialWinOverlayWrapper } from '../components/game/SpecialWinOverlayWrapper'
 import { BankConfirmOverlay } from '../components/game/BankConfirmOverlay'
@@ -35,17 +34,8 @@ export default function GameTableScreen({
   } = useGame()
 
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null)
-  const [showSuitIndicator, setShowSuitIndicator] = useState(false)
   const [confirmingBank, setConfirmingBank] = useState(false)
-  // Pause RÉELLE (voir components/game/PauseOverlay.tsx) : tant que true,
-  // les useEffect qui font avancer le round (tour de l'IA, résolution
-  // d'un pli) ne programment plus de timer — voir leurs gardes ci-dessous.
   const [isPaused, setIsPaused] = useState(false)
-  // Masque les bulles nom/gains (adversaires + joueur) pour agrandir les
-  // cartes du tapis. Purement un choix d'affichage local à cet écran.
-  // Masque les bulles nom/gains (adversaires + joueur) pour agrandir les
-  // cartes du tapis. Activé par défaut ; un appui sur l'icône du HUD les
-  // révèle temporairement.
   const [compactMode, setCompactMode] = useState(true)
 
   const currentPlayerIndex = getCurrentPlayerIndex(roundState)
@@ -86,169 +76,81 @@ export default function GameTableScreen({
       c => c.suit === card.suit && c.value === card.value,
     )
 
-  // ---------------------------------------------------------------------------
-  // Garantit qu'une partie existe si l'écran est ouvert directement.
-  // ---------------------------------------------------------------------------
+  // Status centralisé dans le HUD (remplace overlays / bandeaux dispersés).
+  let statusMessage: string | null = null
+  let statusTone: 'gold' | 'green' | 'muted' = 'muted'
+
+  if (roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex !== null) {
+    const w = roundState.lastTrickWinnerIndex
+    statusMessage =
+      w === HUMAN_INDEX ? 'Vous gagnez le pli' : `${SEAT_NAMES[w]} gagne le pli`
+    statusTone = 'gold'
+  } else if (roundState.phase === 'playing') {
+    if (isHumanTurn && !humanIsBanked) {
+      statusMessage = isHumanLeader ? 'À toi de jouer · à la main' : 'À toi de jouer'
+      statusTone = 'gold'
+    } else if (requestedSuit) {
+      statusMessage = `Couleur demandée ${requestedSuit}`
+      statusTone = 'muted'
+    } else if (currentPlayerIndex !== null && currentPlayerIndex !== HUMAN_INDEX) {
+      statusMessage = `${SEAT_NAMES[currentPlayerIndex]} joue…`
+      statusTone = 'muted'
+    }
+  }
 
   useEffect(() => {
     ensureGameStarted()
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // ---------------------------------------------------------------------------
-  // Indicateur de couleur demandée au début d'un pli.
-  // ---------------------------------------------------------------------------
-
   useEffect(() => {
-    if (
-      roundState.phase !== 'playing' ||
-      !roundState.currentTrick
-    ) {
-      return
-    }
-
-    if (roundState.currentTrick.playedCards.length !== 1) {
-      return
-    }
-
-    setShowSuitIndicator(true)
-
-    const timer = setTimeout(() => {
-      setShowSuitIndicator(false)
-    }, 1200)
-
-    return () => clearTimeout(timer)
-
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    roundState.currentTrick?.trickNumber,
-    roundState.currentTrick?.playedCards.length,
-  ])
-
-  // ---------------------------------------------------------------------------
-  // Tour des IA.
-  // ---------------------------------------------------------------------------
-
-  useEffect(() => {
-    if (roundState.phase !== 'playing') {
-      return
-    }
-
-    if (
-      currentPlayerIndex === null ||
-      currentPlayerIndex === HUMAN_INDEX
-    ) {
-      return
-    }
-
-    // En pause : on ne programme aucun timer. Le nettoyage ci-dessous
-    // (return () => clearTimeout) annule aussi tout timer déjà en vol dès
-    // que isPaused passe à true, puisque cet effet dépend de isPaused et
-    // se relance donc à chaque bascule.
-    if (isPaused) {
-      return
-    }
+    if (roundState.phase !== 'playing') return
+    if (currentPlayerIndex === null || currentPlayerIndex === HUMAN_INDEX) return
+    if (isPaused) return
 
     const timer = setTimeout(() => {
       setRoundState((prev: RoundState) => {
-        if (prev.phase !== 'playing') {
-          return prev
-        }
-
+        if (prev.phase !== 'playing') return prev
         const index = getCurrentPlayerIndex(prev)
-
-        if (index === null || index === HUMAN_INDEX) {
-          return prev
-        }
-
-        // Réclamer la victoire est toujours avantageux dès que c'est
-        // possible (voir round.ts::canClaimVictory) : aucune raison pour
-        // l'IA de ne pas le faire.
+        if (index === null || index === HUMAN_INDEX) return prev
         if (canClaimVictory(prev, index)) {
           return claimVictory(prev, index, stakeConfig)
         }
-
         const hand = prev.hands[index]
-
         const card = chooseAiCard({
           hand,
           requestedSuit: prev.currentTrick?.requestedSuit ?? null,
           playedCardsThisTrick: prev.currentTrick?.playedCards ?? [],
         })
-
         return playCard(prev, index, card)
       })
     }, 900)
 
     return () => clearTimeout(timer)
-  }, [
-    roundState,
-    currentPlayerIndex,
-    setRoundState,
-    stakeConfig,
-    isPaused,
-  ])
-
-  // ---------------------------------------------------------------------------
-  // Résolution du pli remporté.
-  // ---------------------------------------------------------------------------
+  }, [roundState, currentPlayerIndex, setRoundState, stakeConfig, isPaused])
 
   useEffect(() => {
-    if (roundState.phase !== 'trickWon') {
-      return
-    }
-
-    if (isPaused) {
-      return
-    }
+    if (roundState.phase !== 'trickWon') return
+    if (isPaused) return
 
     const timer = setTimeout(() => {
       setRoundState((prev: RoundState) =>
-        prev.phase === 'trickWon'
-          ? resolveTrick(prev, stakeConfig)
-          : prev,
+        prev.phase === 'trickWon' ? resolveTrick(prev, stakeConfig) : prev,
       )
     }, 1400)
 
     return () => clearTimeout(timer)
   }, [roundState, setRoundState, stakeConfig, isPaused])
 
-  // ---------------------------------------------------------------------------
-  // Fin de round : paiement.
-  // ---------------------------------------------------------------------------
-
   useEffect(() => {
-    if (
-      roundState.phase !== 'roundEnd' &&
-      roundState.phase !== 'specialWin'
-    ) {
-      return
-    }
-
+    if (roundState.phase !== 'roundEnd' && roundState.phase !== 'specialWin') return
     applyCurrentPayout()
-
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roundState.phase, roundState.outcome])
 
-  // ---------------------------------------------------------------------------
-  // Fin de round normal : PLUS de navigation automatique (retour utilisateur :
-  // "les animations de fin de round normal sont trop rapides, on doit
-  // pouvoir observer les cartes"). Un bandeau non bloquant avec un bouton
-  // "Voir le résultat →" apparaît ; les piles de cartes du round restent
-  // visibles et observables tant qu'on n'a pas cliqué.
-  // ---------------------------------------------------------------------------
-
-  // Ferme la confirmation banque si elle n'est plus valable (ex: pli 3 atteint).
   useEffect(() => {
-    if (!canBank && confirmingBank) {
-      setConfirmingBank(false)
-    }
+    if (!canBank && confirmingBank) setConfirmingBank(false)
   }, [canBank, confirmingBank])
-
-  // ---------------------------------------------------------------------------
-  // Handlers.
-  // ---------------------------------------------------------------------------
 
   function goToRoundResult() {
     onNavigate('roundResult')
@@ -256,59 +158,32 @@ export default function GameTableScreen({
 
   function handleSpecialWinContinue() {
     const result = checkGameOverNow()
-
-    if (
-      result.isOver &&
-      result.winnerIndex !== undefined
-    ) {
+    if (result.isOver && result.winnerIndex !== undefined) {
       recordGameResult(result.winnerIndex === HUMAN_INDEX)
-      onNavigate(
-        result.winnerIndex === HUMAN_INDEX
-          ? 'victory'
-          : 'defeat',
-      )
-
+      onNavigate(result.winnerIndex === HUMAN_INDEX ? 'victory' : 'defeat')
       return
     }
-
     startNextRound()
     setSelectedCardIndex(null)
   }
 
   function handleCardSelect(index: number) {
-    if (!isHumanTurn) {
-      return
-    }
-
-    if (!isCardPlayable(humanHand[index])) {
-      return
-    }
-
-    setSelectedCardIndex(prev =>
-      prev === index ? null : index,
-    )
+    if (!isHumanTurn) return
+    if (!isCardPlayable(humanHand[index])) return
+    setSelectedCardIndex(prev => (prev === index ? null : index))
   }
 
   function playCardAtIndex(index: number) {
     const card = humanHand[index]
-    setRoundState((prev: RoundState) =>
-      playCard(prev, HUMAN_INDEX, card),
-    )
+    setRoundState((prev: RoundState) => playCard(prev, HUMAN_INDEX, card))
     setSelectedCardIndex(null)
   }
 
   function handlePlayCard() {
-    if (
-      selectedCardIndex === null ||
-      !isHumanTurn
-    ) {
-      return
-    }
-
+    if (selectedCardIndex === null || !isHumanTurn) return
     playCardAtIndex(selectedCardIndex)
   }
 
-  /** Double-tap OU glisser une carte vers le haut : la joue directement. */
   function attemptPlayCard(index: number) {
     if (!isHumanTurn) return
     if (!isCardPlayable(humanHand[index])) return
@@ -326,10 +201,7 @@ export default function GameTableScreen({
   }
 
   const tricksWonThisRound = [0, 1, 2, 3].map(
-    index =>
-      roundState.trickWinners.filter(
-        winner => winner === index,
-      ).length,
+    index => roundState.trickWinners.filter(winner => winner === index).length,
   )
 
   return (
@@ -343,7 +215,6 @@ export default function GameTableScreen({
         flexDirection: 'column',
       }}
     >
-      {/* Texture de fond */}
       <div
         style={{
           position: 'absolute',
@@ -355,7 +226,6 @@ export default function GameTableScreen({
         }}
       />
 
-      {/* Victoire spéciale */}
       {roundState.phase === 'specialWin' &&
         roundState.outcome?.kind === 'specialWin' && (
           <SpecialWinOverlayWrapper
@@ -365,17 +235,6 @@ export default function GameTableScreen({
           />
         )}
 
-      {/* Pli remporté */}
-      {roundState.phase === 'trickWon' &&
-        roundState.lastTrickWinnerIndex !== null && (
-          <TrickWonOverlay
-            winnerIndex={
-              roundState.lastTrickWinnerIndex
-            }
-          />
-        )}
-
-      {/* Fin de round normal — bandeau non bloquant, les cartes restent visibles */}
       {roundState.phase === 'roundEnd' &&
         roundState.outcome?.kind === 'normal' && (
           <RoundEndBanner
@@ -386,7 +245,6 @@ export default function GameTableScreen({
           />
         )}
 
-      {/* Confirmation "aller en banque" */}
       {confirmingBank && (
         <BankConfirmOverlay
           baseStake={stakeConfig.baseStake}
@@ -395,9 +253,6 @@ export default function GameTableScreen({
         />
       )}
 
-      {/* Pause — gèle réellement la partie (voir les useEffect gardés par
-          isPaused plus haut), contrairement à l'ancien bouton qui ne
-          faisait que naviguer vers l'accueil comme "Quitter". */}
       {isPaused && (
         <PauseOverlay
           onResume={() => setIsPaused(false)}
@@ -405,10 +260,11 @@ export default function GameTableScreen({
         />
       )}
 
-      {/* HUD supérieur */}
       <GameTableHud
         roundNumber={roundNumber}
         tricksWonThisRound={tricksWonThisRound}
+        statusMessage={statusMessage}
+        statusTone={statusTone}
         compactMode={compactMode}
         canBank={canBank}
         onPause={() => setIsPaused(true)}
@@ -418,7 +274,6 @@ export default function GameTableScreen({
         onRequestBank={() => setConfirmingBank(true)}
       />
 
-      {/* Zone principale */}
       <div
         style={{
           flex: 1,
@@ -431,12 +286,9 @@ export default function GameTableScreen({
           players={players}
           roundState={roundState}
           currentPlayerIndex={currentPlayerIndex}
-          showSuitIndicator={showSuitIndicator}
-          requestedSuit={requestedSuit}
           compactMode={compactMode}
         />
 
-        {/* Main du joueur */}
         <PlayerHand
           players={players}
           hand={humanHand}
