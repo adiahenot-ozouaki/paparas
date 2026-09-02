@@ -18,20 +18,134 @@
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html, body { height: 100%; margin: 0; padding: 0; }
+
+html {
+  height: 100%;
+  /* Empêche le rebond élastique iOS qui décale le layout fixed/absolute */
+  overscroll-behavior: none;
+}
+
 body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
   font-family: 'Inter', sans-serif;
   background: #0B0D10;
   color: #fff;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
 }
-#root { height: 100%; }
+
+#root {
+  height: 100%;
+  min-height: 100svh;
+  min-height: 100dvh;
+}
 
 ::-webkit-scrollbar { width: 0; height: 0; }
 * { scrollbar-width: none; }
 
 .font-display { font-family: 'Plus Jakarta Sans', sans-serif; }
+
+/* ==========================================================================
+   Layout responsive — shell plein écran
+   ========================================================================== */
+
+.app-root {
+  min-height: 100svh;
+  min-height: 100dvh;
+  width: 100%;
+  background: #070A0D;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+  position: relative;
+}
+
+.app-root-pattern {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='32' height='32'%3E%3Cpolygon points='16,0 32,16 16,32 0,16' fill='none' stroke='rgba(214,168,79,0.04)' stroke-width='0.8'/%3E%3C/svg%3E");
+  opacity: 0.9;
+}
+
+/*
+  Shell : occupe tout l'espace disponible.
+  - Mobile / tablette : 100% × 100svh (edge-to-edge)
+  - Desktop large : largeur max confortable centrée, hauteur plein viewport
+*/
+.app-shell {
+  width: 100%;
+  height: 100svh;
+  height: 100dvh;
+  max-width: 100%;
+  position: relative;
+  overflow: hidden;
+  background: #0B0D10;
+  /* Encoches / home indicator iOS & Android */
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+}
+
+.app-screen {
+  /* Les écrans restent dans le shell (padding safe-area déjà appliqué) */
+  width: 100%;
+  height: 100%;
+}
+
+/* Tablette : toujours plein écran */
+@media (min-width: 640px) {
+  .app-shell {
+    max-width: 100%;
+  }
+}
+
+/* Desktop : cadre légèrement plus large, ombre douce, coins arrondis si
+   la fenêtre est vraiment large (évite une bande vide sans perdre l'espace). */
+@media (min-width: 1100px) {
+  .app-root {
+    align-items: center;
+    padding: 12px;
+  }
+
+  .app-shell {
+    width: min(100%, 1280px);
+    height: min(100dvh - 24px, 100svh - 24px);
+    max-width: 1280px;
+    border-radius: 24px;
+    box-shadow:
+      0 0 0 1px rgba(255, 255, 255, 0.06),
+      0 24px 80px rgba(0, 0, 0, 0.65);
+    overflow: hidden;
+  }
+}
+
+/* Très grands écrans / 4K : on autorise un peu plus de largeur pour la table */
+@media (min-width: 1600px) {
+  .app-shell {
+    width: min(100%, 1520px);
+    max-width: 1520px;
+  }
+}
+
+/* Conteneur de contenu centré pour les écrans type dashboard (home, stats…)
+   Utilisable via className="page-content" sur les écrans scrollables. */
+.page-content {
+  width: 100%;
+  max-width: 720px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+@media (min-width: 900px) {
+  .page-content {
+    max-width: 880px;
+  }
+}
 
 /* African diamond pattern */
 .pattern-african {
@@ -188,6 +302,8 @@ body {
 .nav-pill {
   background: #181E26;
   border-top: 1px solid rgba(255,255,255,0.06);
+  /* Home indicator / barre système */
+  padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
 }
 
 /* Stats bar */
