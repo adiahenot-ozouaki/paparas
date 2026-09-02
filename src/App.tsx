@@ -18,7 +18,17 @@ import StatsScreen from './screens/StatsScreen'
 import AchievementsScreen from './screens/AchievementsScreen'
 import RulesScreen from './screens/RulesScreen'
 
-const NO_NAV_SCREENS: Screen[] = ['splash', 'gameTable', 'roundResult', 'victory', 'defeat', 'lobby', 'gameMode', 'stakeConfig', 'rules']
+const NO_NAV_SCREENS: Screen[] = [
+  'splash',
+  'gameTable',
+  'roundResult',
+  'victory',
+  'defeat',
+  'lobby',
+  'gameMode',
+  'stakeConfig',
+  'rules',
+]
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('splash')
@@ -27,41 +37,18 @@ export default function App() {
   const showNav = !NO_NAV_SCREENS.includes(screen)
 
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: '#070A0D',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-    }}>
-      {/* Desktop background pattern */}
-      <div style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundImage: 'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\'%3E%3Cpolygon points=\'16,0 32,16 16,32 0,16\' fill=\'none\' stroke=\'rgba(214,168,79,0.04)\' stroke-width=\'0.8\'/%3E%3C/svg%3E")',
-        pointerEvents: 'none',
-      }} />
+    <div className="app-root">
+      {/* Texture de fond (visible surtout sur très grands écrans si shell limité) */}
+      <div className="app-root-pattern" aria-hidden />
 
-      {/* Mobile container */}
-      <div style={{
-        width: '100%',
-        maxWidth: 430,
-        height: '100svh',
-        maxHeight: 932,
-        position: 'relative',
-        overflow: 'hidden',
-        background: '#0B0D10',
-        boxShadow: '0 0 80px rgba(0,0,0,0.8), 0 0 0 1px rgba(255,255,255,0.05)',
-        borderRadius: 'clamp(0px, calc((100vw - 430px) / 2), 40px)',
-      }}>
-
-        {/* Filet de sécurité : une erreur de rendu n'importe où dans l'app
-            affiche un écran de récupération plutôt qu'un écran blanc. */}
+      {/*
+        Shell principal : plein viewport sur mobile / tablette.
+        Sur desktop large, largeur max confortable centrée (voir index.css).
+      */}
+      <div className="app-shell">
         <ErrorBoundary>
-          {/* GameProvider : état de partie partagé entre gameTable / roundResult / victory / defeat */}
           <GameProvider>
-            {/* Screen renderer */}
-            <div key={screen} className="anim-fade-in" style={{ position: 'absolute', inset: 0 }}>
+            <div key={screen} className="anim-fade-in app-screen" style={{ position: 'absolute', inset: 0 }}>
               {screen === 'splash' && <SplashScreen onNavigate={navigate} />}
               {screen === 'home' && <HomeScreen onNavigate={navigate} />}
               {screen === 'gameMode' && <GameModeScreen onNavigate={navigate} />}
@@ -78,10 +65,7 @@ export default function App() {
               {screen === 'rules' && <RulesScreen onNavigate={navigate} />}
             </div>
 
-            {/* Bottom nav overlay */}
-            {showNav && (
-              <BottomNav active={screen} onNavigate={navigate} />
-            )}
+            {showNav && <BottomNav active={screen} onNavigate={navigate} />}
           </GameProvider>
         </ErrorBoundary>
       </div>
