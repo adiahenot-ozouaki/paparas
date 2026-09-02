@@ -1,4 +1,4 @@
-import type { Player } from '../../types'
+import type { Player, Suit } from '../../types'
 import type { RoundState } from '../../game/round'
 import {
   SEAT_NAMES,
@@ -6,21 +6,10 @@ import {
 } from '../../game/GameContext'
 import { OpponentPanel } from '../OpponentPanel'
 import { PlayedCardsStack } from './PlayedCardsStack'
+import PlayingCard from '../PlayingCard'
 
 // ==========================================================================
-// GameTableArea — refonte en grille CSS.
-//
-// Avant : les avatars (OpponentPanel) et les piles de cartes du tapis
-// étaient positionnés en absolu, INDÉPENDAMMENT l'un de l'autre. Sur
-// certaines largeurs d'écran, les deux se chevauchaient (retour
-// utilisateur : "les cartes de la main des joueurs gauche et droite
-// cachent une partie de leurs cartes du tapis").
-//
-// Maintenant : une seule grille CSS 3 colonnes × 2 lignes. Les colonnes
-// gauche/droite ont une largeur FIXE, dans laquelle chaque OpponentPanel
-// (qui contient désormais lui-même sa pile de cartes, empilée en colonne)
-// est intégralement contenu. Le chevauchement devient structurellement
-// impossible plutôt que dépendant d'un réglage de marges.
+// GameTableArea — grille CSS + zone centrale du pli en cours.
 // ==========================================================================
 
 interface GameTableAreaProps {
@@ -33,6 +22,21 @@ interface GameTableAreaProps {
   compactMode: boolean
 }
 
+const SUIT_COLOR: Record<string, string> = {
+  '♥': '#C94B4B',
+  '♦': '#C94B4B',
+  '♣': '#E8ECF0',
+  '♠': '#E8ECF0',
+}
+
+/** Légère rotation / offset selon le siège, pour un éventail lisible au centre. */
+const SEAT_CENTER_STYLE: Record<number, { rotate: number; x: number; y: number }> = {
+  0: { rotate: 0, x: 0, y: 18 }, // Vous (bas)
+  1: { rotate: 8, x: 28, y: 0 }, // Binu (droite)
+  2: { rotate: 0, x: 0, y: -18 }, // Lebe (haut)
+  3: { rotate: -8, x: -28, y: 0 }, // Goju (gauche)
+}
+
 export function GameTableArea({
   players,
   roundState,
@@ -43,14 +47,22 @@ export function GameTableArea({
 }: GameTableAreaProps) {
   const stackSize = compactMode ? 'md' : 'sm'
   const sideColumnWidth = compactMode ? 88 : 78
+  const centerCardSize = compactMode ? 'md' : 'sm'
 
-  // Le joueur "à la main" pour le pli en cours : celui dont la carte a
-  // fixé la couleur demandée. Ne devient pertinent qu'une fois cette
-  // carte effectivement posée.
   const trickLeaderIndex =
     roundState.currentTrick && roundState.currentTrick.requestedSuit !== null
       ? roundState.currentTrick.starterIndex
       : null
+
+  const currentTrickCards = roundState.currentTrick?.playedCards ?? []
+  const showCenterTrick =
+    (roundState.phase === 'playing' || roundState.phase === 'trickWon') &&
+    currentTrickCards.length > 0
+
+  const suitVisible =
+    (showSuitIndicator || !!requestedSuit) &&
+    !!requestedSuit &&
+    (roundState.phase === 'playing' || roundState.phase === 'trickWon')
 
   return (
     <div
@@ -124,7 +136,7 @@ export function GameTableArea({
         />
       </div>
 
-      {/* Centre — tapis (décor) + indicateur de couleur demandée */}
+      {/* Centre — tapis + pli en cours + couleur demandée */}
       <div
         style={{
           gridArea: 'center',
@@ -143,36 +155,99 @@ export function GameTableArea({
           }}
         />
 
-        {showSuitIndicator && requestedSuit && (
+        {/* Couleur demandée — visible tant que le pli est ouvert */}
+        {suitVisible && requestedSuit && (
           <div
             className="anim-scale-bounce"
             style={{
               position: 'absolute',
-              top: 8,
+              top: 6,
               left: '50%',
               transform: 'translateX(-50%)',
-              zIndex: 5,
+              zIndex: 6,
               pointerEvents: 'none',
-              background: 'rgba(11,13,16,0.9)',
-              backdropFilter: 'blur(10px)',
-              borderRadius: 12,
-              padding: '4px 14px',
+              background: 'rgba(11,13,16,0.92)',
+              backdropFilter: 'blur(12px)',
+              borderRadius: 14,
+              padding: '6px 16px',
               display: 'flex',
               alignItems: 'center',
-              gap: 8,
-              border: '1px solid rgba(201,75,75,0.4)',
+              gap: 10,
+              border: `1.5px solid ${SUIT_COLOR[requestedSuit] ?? '#C94B4B'}55`,
+              boxShadow: `0 0 20px ${SUIT_COLOR[requestedSuit] ?? '#C94B4B'}22`,
             }}
           >
-            <span style={{ color: '#A9B0B7', fontSize: 9, fontFamily: 'Plus Jakarta Sans', letterSpacing: '0.08em' }}>
+            <span
+              style={{
+                color: '#A9B0B7',
+                fontSize: 9,
+                fontFamily: 'Plus Jakarta Sans',
+                letterSpacing: '0.1em',
+                fontWeight: 600,
+              }}
+            >
               COULEUR DEMANDÉE
             </span>
-            <span style={{ color: '#C94B4B', fontSize: 18, lineHeight: 1 }}>{requestedSuit}</span>
+            <span
+              style={{
+                color: SUIT_COLOR[requestedSuit] ?? '#C94B4B',
+                fontSize: 22,
+                lineHeight: 1,
+                fontWeight: 700,
+              }}
+            >
+              {requestedSuit}
+            </span>
+          </div>
+        )}
+
+        {/* Pli en cours au centre de la table */}
+        {showCenterTrick && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 4,
+              pointerEvents: 'none',
+            }}
+          >
+            <div style={{ position: 'relative', width: 120, height: 110 }}>
+              {currentTrickCards.map((played, i) => {
+                const layout = SEAT_CENTER_STYLE[played.playerIndex] ?? { rotate: 0, x: 0, y: 0 }
+                const isTrickWinner =
+                  roundState.phase === 'trickWon' &&
+                  roundState.lastTrickWinnerIndex === played.playerIndex
+                return (
+                  <div
+                    key={`${played.playerIndex}-${played.card.suit}-${played.card.value}-${i}`}
+                    className="anim-deal-in"
+                    style={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: '50%',
+                      transform: `translate(calc(-50% + ${layout.x}px), calc(-50% + ${layout.y}px)) rotate(${layout.rotate}deg)`,
+                      zIndex: isTrickWinner ? 10 : i + 1,
+                      transition: 'transform 0.25s ease',
+                    }}
+                  >
+                    <PlayingCard
+                      suit={played.card.suit as Suit}
+                      value={played.card.value}
+                      state={isTrickWinner ? 'winner' : 'played'}
+                      size={centerCardSize}
+                    />
+                  </div>
+                )
+              })}
+            </div>
           </div>
         )}
       </div>
 
-      {/* Sud — pile "Vous" (pleine largeur, comme le Nord, pour éviter tout
-          débordement sur petit écran quand la main s'accumule) */}
+      {/* Sud — pile "Vous" */}
       <div style={{ gridArea: 'south', justifySelf: 'center', alignSelf: 'end', marginTop: 6 }}>
         <PlayedCardsStack
           cards={roundState.playLog[0]}
