@@ -1,11 +1,5 @@
 // ==========================================================================
-// engine/deck.ts — SEULE différence fonctionnelle avec le deck.ts client :
-// le mélange utilise l'API Web Crypto (disponible nativement dans Deno),
-// pas Math.random(). C'est LA raison d'être de ce portage serveur : côté
-// client, n'importe qui peut inspecter/prédire/manipuler Math.random()
-// dans son propre navigateur — inacceptable pour un jeu à mise réelle.
-// Le reste (buildDeck, dealHands, remainingAfterDeal) est identique au
-// client, verbatim.
+// deck.ts — construction, mélange et distribution du paquet Kora
 // ==========================================================================
 
 import type { Card, Suit, CardValue, DeckVariant } from './types.ts'
@@ -13,6 +7,7 @@ import type { Card, Suit, CardValue, DeckVariant } from './types.ts'
 const SUITS: Suit[] = ['♠', '♥', '♦', '♣']
 
 const VALUE_ORDER: Record<DeckVariant, CardValue[]> = {
+  '8': ['3', '4', '5', '6', '7', '8'],
   '9': ['3', '4', '5', '6', '7', '8', '9'],
   '10': ['3', '4', '5', '6', '7', '8', '9', '10'],
   as: ['3', '4', '5', '6', '7', '8', '9', '10', 'A'],
@@ -42,18 +37,7 @@ export function buildDeck(variant: DeckVariant): Card[] {
   return deck
 }
 
-/**
- * Entier uniforme dans [0, maxExclusive) tiré via crypto.getRandomValues,
- * avec rejet des valeurs hors plage (rejection sampling) pour éviter tout
- * biais modulo — important même pour un paquet de 35 cartes maximum : un
- * biais systématique, même minime, serait en théorie exploitable sur un
- * grand nombre de parties dans un jeu à mise réelle.
- */
 function secureRandomInt(maxExclusive: number): number {
-  // Uint32Array produit toutes les valeurs de [0, 2^32 - 1]. La borne de
-  // rejet doit donc être calculée à partir de 2^32 (et non 0xffffffff),
-  // sinon certaines valeurs valides sont rejetées à tort et le modulo peut
-  // introduire un biais (par exemple pour maxExclusive = 2).
   const UINT32_RANGE = 0x1_0000_0000
   const rejectionLimit = UINT32_RANGE - (UINT32_RANGE % maxExclusive)
   const buf = new Uint32Array(1)
