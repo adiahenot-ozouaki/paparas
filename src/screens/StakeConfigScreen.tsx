@@ -5,11 +5,16 @@ import { useGame } from '../game/GameContext'
 const STAKE_PRESETS = [500, 1000, 2000, 5000]
 const CAPITAL_PRESETS = [5000, 10000, 20000, 50000]
 
-const VARIANT_OPTIONS: { id: DeckVariant; label: string; detail: string }[] = [
-  { id: '9', label: 'Variante 9', detail: '3 à 9 — 27 cartes' },
-  { id: '10', label: 'Variante 10', detail: '3 à 10 — 31 cartes · mode Vitesse' },
-  { id: 'as', label: 'Variante As', detail: '3 à 10 + As — 35 cartes · mode Classique' },
+const VARIANT_OPTIONS: { id: DeckVariant; label: string }[] = [
+  { id: '8', label: '3 à 8 — 23 cartes' },
+  { id: '9', label: '3 à 9 — 27 cartes' },
+  { id: '10', label: '3 à 10 — 31 cartes' },
+  { id: 'as', label: '3 à 10 + As — 35 cartes' },
 ]
+
+function cycleIndex(current: number, len: number, dir: -1 | 1): number {
+  return (current + dir + len) % len
+}
 
 export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const { stakeConfig, deckVariant, configureGame } = useGame()
@@ -17,6 +22,13 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
   const [baseStake, setBaseStake] = useState(stakeConfig.baseStake)
   const [startingCapital, setStartingCapital] = useState(stakeConfig.startingCapital)
   const [variant, setVariant] = useState<DeckVariant>(deckVariant)
+
+  const stakeIndex = Math.max(0, STAKE_PRESETS.indexOf(baseStake))
+  const capitalIndex = Math.max(0, CAPITAL_PRESETS.indexOf(startingCapital))
+  const variantIndex = Math.max(
+    0,
+    VARIANT_OPTIONS.findIndex(v => v.id === variant),
+  )
 
   function handleContinue() {
     configureGame({ baseStake, startingCapital, deckVariant: variant })
@@ -36,10 +48,10 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
     >
       <div className="pattern-african" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
 
-      {/* Header */}
       <div style={{ padding: '20px 20px 0', position: 'relative' }}>
         <button
           onClick={() => onNavigate('gameMode')}
+          aria-label="Retour"
           style={{
             background: 'rgba(255,255,255,0.06)',
             border: '1px solid rgba(255,255,255,0.1)',
@@ -60,86 +72,62 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
         <h1 className="font-display" style={{ fontSize: 26, fontWeight: 800, margin: '0 0 4px', letterSpacing: '0.02em' }}>
           Configurer la table
         </h1>
-        <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>Choisis la mise, le capital de départ et la variante de paquet.</p>
+        <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>
+          Mise, capital et variante — flèches pour changer.
+        </p>
       </div>
 
-      <div style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 24, flex: 1 }}>
-        {/* Mise de base */}
-        <section>
-          <p style={{ color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'Plus Jakarta Sans', margin: '0 0 10px' }}>
-            Mise de base
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {STAKE_PRESETS.map(value => (
-              <PresetButton
-                key={value}
-                selected={baseStake === value}
-                label={`${value.toLocaleString('fr-FR')} FCFA`}
-                onClick={() => setBaseStake(value)}
-              />
-            ))}
-          </div>
-          <p style={{ color: '#5b636b', fontSize: 11, margin: '8px 0 0' }}>
-            Chaque round redistribue cette mise (×1 à ×16 selon le combo) entre les joueurs. C'est aussi le seuil
-            d'élimination : un capital sous ce montant élimine le joueur.
-          </p>
-        </section>
+      <div
+        style={{
+          padding: '28px 20px',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 18,
+          flex: 1,
+          maxWidth: 440,
+          width: '100%',
+          margin: '0 auto',
+          boxSizing: 'border-box',
+        }}
+      >
+        <StepperRow
+          label="Mise"
+          value={`${baseStake.toLocaleString('fr-FR')} FCFA`}
+          onPrev={() => setBaseStake(STAKE_PRESETS[cycleIndex(stakeIndex, STAKE_PRESETS.length, -1)])}
+          onNext={() => setBaseStake(STAKE_PRESETS[cycleIndex(stakeIndex, STAKE_PRESETS.length, 1)])}
+        />
 
-        {/* Capital de départ */}
-        <section>
-          <p style={{ color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'Plus Jakarta Sans', margin: '0 0 10px' }}>
-            Capital de départ
-          </p>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {CAPITAL_PRESETS.map(value => (
-              <PresetButton
-                key={value}
-                selected={startingCapital === value}
-                label={`${value.toLocaleString('fr-FR')} FCFA`}
-                onClick={() => setStartingCapital(value)}
-              />
-            ))}
-          </div>
-        </section>
+        <StepperRow
+          label="Capital"
+          value={`${startingCapital.toLocaleString('fr-FR')} FCFA`}
+          onPrev={() =>
+            setStartingCapital(CAPITAL_PRESETS[cycleIndex(capitalIndex, CAPITAL_PRESETS.length, -1)])
+          }
+          onNext={() =>
+            setStartingCapital(CAPITAL_PRESETS[cycleIndex(capitalIndex, CAPITAL_PRESETS.length, 1)])
+          }
+        />
 
-        {/* Variante de paquet */}
-        <section>
-          <p style={{ color: '#fff', fontSize: 14, fontWeight: 700, fontFamily: 'Plus Jakarta Sans', margin: '0 0 10px' }}>
-            Variante de paquet
-          </p>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {VARIANT_OPTIONS.map(opt => (
-              <button
-                key={opt.id}
-                onClick={() => setVariant(opt.id)}
-                style={{
-                  textAlign: 'left',
-                  background: variant === opt.id ? 'rgba(214,168,79,0.12)' : 'rgba(255,255,255,0.04)',
-                  border: variant === opt.id ? '1.5px solid rgba(214,168,79,0.5)' : '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: 14,
-                  padding: '12px 16px',
-                  cursor: 'pointer',
-                }}
-              >
-                <p
-                  className="font-display"
-                  style={{
-                    color: variant === opt.id ? '#D6A84F' : '#fff',
-                    fontSize: 14,
-                    fontWeight: 700,
-                    margin: '0 0 2px',
-                  }}
-                >
-                  {opt.label}
-                </p>
-                <p style={{ color: '#A9B0B7', fontSize: 12, margin: 0 }}>{opt.detail}</p>
-              </button>
-            ))}
-          </div>
-        </section>
+        <StepperRow
+          label="Variante"
+          value={VARIANT_OPTIONS[variantIndex].label}
+          onPrev={() => {
+            const next = VARIANT_OPTIONS[cycleIndex(variantIndex, VARIANT_OPTIONS.length, -1)]
+            setVariant(next.id)
+          }}
+          onNext={() => {
+            const next = VARIANT_OPTIONS[cycleIndex(variantIndex, VARIANT_OPTIONS.length, 1)]
+            setVariant(next.id)
+          }}
+        />
+
+        <p style={{ color: '#5b636b', fontSize: 11, margin: '4px 0 0', lineHeight: 1.45 }}>
+          La mise est redistribuée chaque round (×1 à ×16 selon le combo). Un capital sous la mise
+          élimine le joueur.
+        </p>
       </div>
 
-      <div style={{ padding: 20 }}>
+      <div style={{ padding: 20, maxWidth: 440, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
         <button
           className="btn-primary glow-gold"
           onClick={handleContinue}
@@ -152,23 +140,100 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
   )
 }
 
-function PresetButton({ selected, label, onClick }: { selected: boolean; label: string; onClick: () => void }) {
+function StepperRow({
+  label,
+  value,
+  onPrev,
+  onNext,
+}: {
+  label: string
+  value: string
+  onPrev: () => void
+  onNext: () => void
+}) {
   return (
-    <button
-      onClick={onClick}
+    <div
       style={{
-        background: selected ? 'rgba(214,168,79,0.12)' : 'rgba(255,255,255,0.04)',
-        border: selected ? '1.5px solid rgba(214,168,79,0.5)' : '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 12,
-        padding: '12px 8px',
-        color: selected ? '#D6A84F' : '#fff',
-        fontFamily: 'Plus Jakarta Sans',
-        fontWeight: 700,
-        fontSize: 14,
-        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        background: 'rgba(255,255,255,0.04)',
+        border: '1px solid rgba(255,255,255,0.08)',
+        borderRadius: 16,
+        padding: '12px 14px',
       }}
     >
-      {label}
-    </button>
+      <span
+        className="font-display"
+        style={{
+          color: '#A9B0B7',
+          fontSize: 13,
+          fontWeight: 600,
+          width: 72,
+          flexShrink: 0,
+        }}
+      >
+        {label}
+      </span>
+
+      <button
+        type="button"
+        onClick={onPrev}
+        aria-label={`${label} précédente`}
+        style={stepperBtnStyle}
+      >
+        ‹
+      </button>
+
+      <div
+        style={{
+          flex: 1,
+          textAlign: 'center',
+          minWidth: 0,
+        }}
+      >
+        <span
+          className="font-display text-gold"
+          style={{
+            fontSize: 15,
+            fontWeight: 700,
+            letterSpacing: '0.02em',
+            display: 'block',
+            whiteSpace: 'nowrap',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+          }}
+        >
+          {value}
+        </span>
+      </div>
+
+      <button
+        type="button"
+        onClick={onNext}
+        aria-label={`${label} suivante`}
+        style={stepperBtnStyle}
+      >
+        ›
+      </button>
+    </div>
   )
+}
+
+const stepperBtnStyle: React.CSSProperties = {
+  width: 40,
+  height: 40,
+  borderRadius: 12,
+  border: '1px solid rgba(214,168,79,0.35)',
+  background: 'rgba(214,168,79,0.1)',
+  color: '#F0D58A',
+  fontSize: 22,
+  fontWeight: 700,
+  cursor: 'pointer',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  flexShrink: 0,
+  lineHeight: 1,
+  padding: 0,
 }
