@@ -1,32 +1,24 @@
 // ==========================================================================
-// payout.ts — Gains, pertes et élimination
+// payout.ts — Gains, pertes, élimination et fin de partie
 //
-// Étape 6/10 du plan. Dépend de types.ts (étape 1).
-// Place ce fichier dans src/game/payout.ts.
+// Modes de fin (endMode) :
+//   - elimination   : dernier survivant (comportement historique)
+//   - fixedRounds   : après maxRounds, le plus riche gagne (élimination active)
+//   - raceToCapital : premier à atteindre targetCapital, sinon élimination
 //
-// Rappel des règles (section 6 du document) :
-//   - Le gagnant du round (normal ou par règle spéciale) gagne :
-//       mise de base × multiplicateur × (nombre de joueurs − 1)
-//   - Chaque joueur qui perd le round paie :
-//       mise de base × multiplicateur
-//   - Un joueur dont l'argent tombe sous [seuil d'élimination] est éliminé.
-//   - La partie se termine dès qu'il ne reste plus qu'un joueur non éliminé.
-//
-// IMPORTANT : la mise de base (baseStake) et le capital de départ
-// (startingCapital) sont configurables AVANT le début de la partie.
-// 500 FCFA / 5 000 FCFA ne sont que des valeurs par défaut pour les tests
-// (DEFAULT_STAKE_CONFIG), pas des constantes figées dans la logique.
-//
-// Généralisation aux gagnants multiples (règle spéciale déclenchée par
-// plusieurs joueurs simultanément, section 3) : chaque perdant paie
-// toujours `mise × multiplicateur` (montant inchangé, indépendant du
-// nombre de gagnants). Le total ainsi collecté est réparti à parts égales
-// entre tous les gagnants. Avec un seul gagnant, cette règle redonne
-// exactement la formule `mise × multiplicateur × (joueurs − 1)` du
-// document — c'est une généralisation, pas une règle différente.
+// Hybride recommandé : fixedRounds (élimination OU plafond de rounds).
 // ==========================================================================
 
 import type { Player } from '../types.ts'
+
+/** Comment la partie peut se terminer. */
+export type GameEndMode = 'elimination' | 'fixedRounds' | 'raceToCapital'
+
+export type GameOverReason =
+  | 'last_standing'
+  | 'max_rounds'
+  | 'race_target'
+  | 'all_eliminated'
 
 export interface GameStakeConfig {
   /** Mise de base, définie avant le début de la partie. */
@@ -34,17 +26,35 @@ export interface GameStakeConfig {
   /** Capital de départ de chaque joueur. */
   startingCapital: number
   /**
-   * Seuil sous lequel un joueur est éliminé. Par défaut égal à baseStake
-   * (voir note de design ci-dessus) ; peut être surchargé indépendamment
-   * si besoin.
+   * Seuil sous lequel un joueur est éliminé. Par défaut égal à baseStake.
    */
   eliminationThreshold?: number
+  /** Mode de fin de partie. Défaut : élimination pure. */
+  endMode?: GameEndMode
+  /** Nombre max de rounds (mode fixedRounds). Défaut 10. */
+  maxRounds?: number
+  /** Capital cible (mode raceToCapital). */
+  targetCapital?: number
 }
 
 /** Valeurs par défaut UNIQUEMENT pour les tests / le mode démo. */
 export const DEFAULT_STAKE_CONFIG: GameStakeConfig = {
   baseStake: 500,
   startingCapital: 5000,
+  endMode: 'fixedRounds',
+  maxRounds: 10,
+}
+
+export function resolveEndMode(config: GameStakeConfig): GameEndMode {
+  return config.endMode ?? 'elimination'
+}
+
+export function resolveMaxRounds(config: GameStakeConfig): number {
+  return config.maxRounds ?? 10
+}
+
+export function resolveTargetCapital(config: GameStakeConfig): number {
+  return config.targetCapital ?? config.startingCapital * 3
 }
 
 function resolveEliminationThreshold(config: GameStakeConfig): number {
@@ -62,16 +72,8 @@ export interface RoundPayoutResult {
 }
 
 /**
- * Calcule les gains/pertes d'un round étant donné les joueurs gagnants
- * (un seul en temps normal, potentiellement plusieurs en cas de règle
- * spéciale simultanée) et le multiplicateur applicable.
- *
- * bankedPlayerIndexes (optionnel) : joueurs ayant été "en banque"
- * (abandon, voir round.ts::bankPlayer). Ils paient toujours exactement
- * baseStake ×1, INDÉPENDAMMENT du multiplicateur du round — contrairement
- * aux perdants actifs qui paient baseStake × multiplier. Leur mise
- * rejoint le pot du/des gagnant(s) comme n'importe quelle perte, ce qui
- * préserve la somme nulle globale.
+ * Calcule les gains/pertes d'un round.
+ * bankedPlayerIndexes paient toujours baseStake ×1.
  */
 export function computeRoundPayout(params: {
   baseStake: number
@@ -90,22 +92,10 @@ export function computeRoundPayout(params: {
     i => !winnerIndexes.includes(i) && !bankedPlayerIndexes.includes(i),
   )
   const lossPerActiveLoser = baseStake * multiplier
-  const lossPerBankedPlayer = baseStake // toujours ×1, quel que soit le combo final
+  const lossPerBankedPlayer = baseStake
 
   const totalPot = lossPerActiveLoser * activeLoserIndexes.length + lossPerBankedPlayer * bankedPlayerIndexes.length
 
-  // Répartition ENTIÈRE du pot entre les gagnants — pas de division brute.
-  // Avec plusieurs gagnants simultanés (règle spéciale déclenchée par
-  // plusieurs joueurs), `totalPot / winnerIndexes.length` peut produire un
-  // montant non entier (ex: 1500 FCFA / 3 gagnants aurait été exact, mais
-  // 1000 / 3 ne l'est pas). Pour de l'argent réel, aucun FCFA fractionnaire
-  // ne doit jamais apparaître, ET la somme distribuée doit rester
-  // rigoureusement égale au pot collecté (somme nulle globale garantie).
-  //
-  // On distribue donc une part entière (Math.floor) à chacun, puis le
-  // reliquat (0 à winnerIndexes.length - 1 FCFA) est donné 1 par 1 aux
-  // premiers gagnants de la liste — ordre déterministe et reproductible,
-  // pas d'aléa dans la répartition d'argent.
   const baseShare = Math.floor(totalPot / winnerIndexes.length)
   const remainder = totalPot - baseShare * winnerIndexes.length
 
@@ -121,11 +111,6 @@ export function computeRoundPayout(params: {
   }
 }
 
-/**
- * Applique le résultat d'un round aux joueurs : met à jour le capital et
- * marque comme éliminés ceux passés sous le seuil. Retourne un nouveau
- * tableau de joueurs (ne mute pas l'entrée).
- */
 export function applyRoundPayout(
   players: Player[],
   payout: RoundPayoutResult,
@@ -152,16 +137,86 @@ export function applyRoundPayout(
 export interface GameOverCheck {
   isOver: boolean
   winnerIndex?: number
+  reason?: GameOverReason
 }
 
-/** Vérifie si la partie est terminée (un seul joueur non éliminé restant). */
-export function checkGameOver(players: Player[]): GameOverCheck {
+/** Index du joueur non éliminé au capital le plus élevé (égalité → plus petit index). */
+export function richestActiveIndex(players: Player[]): number | undefined {
+  let bestIndex: number | undefined
+  let bestCapital = -Infinity
+  for (let i = 0; i < players.length; i++) {
+    const p = players[i]
+    if (p.isEliminated) continue
+    if (p.capital > bestCapital) {
+      bestCapital = p.capital
+      bestIndex = i
+    }
+  }
+  return bestIndex
+}
+
+/**
+ * Vérifie si la partie est terminée selon le mode configuré.
+ *
+ * @param players état après application du payout du round courant
+ * @param config  mise / mode de fin
+ * @param roundNumber numéro du round qui vient de se terminer (1-based)
+ */
+export function checkGameOver(
+  players: Player[],
+  config: GameStakeConfig = DEFAULT_STAKE_CONFIG,
+  roundNumber = 0,
+): GameOverCheck {
   const remaining = players
     .map((player, index) => ({ player, index }))
     .filter(({ player }) => !player.isEliminated)
 
-  if (remaining.length <= 1) {
-    return { isOver: true, winnerIndex: remaining[0]?.index }
+  // Toujours : 0 ou 1 survivant → fin
+  if (remaining.length === 0) {
+    return { isOver: true, reason: 'all_eliminated' }
   }
+  if (remaining.length === 1) {
+    return { isOver: true, winnerIndex: remaining[0].index, reason: 'last_standing' }
+  }
+
+  const mode = resolveEndMode(config)
+
+  if (mode === 'raceToCapital') {
+    const target = resolveTargetCapital(config)
+    const reached = remaining
+      .filter(({ player }) => player.capital >= target)
+      .sort((a, b) => b.player.capital - a.player.capital || a.index - b.index)
+    if (reached.length > 0) {
+      return { isOver: true, winnerIndex: reached[0].index, reason: 'race_target' }
+    }
+  }
+
+  if (mode === 'fixedRounds') {
+    const maxRounds = resolveMaxRounds(config)
+    if (roundNumber >= maxRounds) {
+      return {
+        isOver: true,
+        winnerIndex: richestActiveIndex(players),
+        reason: 'max_rounds',
+      }
+    }
+  }
+
   return { isOver: false }
+}
+
+/** Libellé UX de la raison de fin. */
+export function gameOverReasonLabel(reason: GameOverReason | undefined, config?: GameStakeConfig): string {
+  switch (reason) {
+    case 'last_standing':
+      return 'Dernier joueur en lice'
+    case 'max_rounds':
+      return `Plafond de ${resolveMaxRounds(config ?? DEFAULT_STAKE_CONFIG)} rounds atteint — plus riche gagne`
+    case 'race_target':
+      return `Objectif de ${(config ? resolveTargetCapital(config) : 0).toLocaleString('fr-FR')} FCFA atteint`
+    case 'all_eliminated':
+      return 'Tous les joueurs sont éliminés'
+    default:
+      return 'Partie terminée'
+  }
 }

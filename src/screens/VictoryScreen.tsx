@@ -1,16 +1,19 @@
 import type { Screen } from '../types'
 import { useGame, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
 import { COMBO_LABEL } from '../game/combo'
+import { gameOverReasonLabel } from '../game/payout'
 
 export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  const { players, roundsWon, bestCombo, gameStartedAt, stakeConfig, startNewGame } = useGame()
+  const { players, roundsWon, bestCombo, gameStartedAt, stakeConfig, lastGameOver, startNewGame } = useGame()
 
   const finalCapital = players[HUMAN_INDEX].capital
   const netGain = finalCapital - stakeConfig.startingCapital
   const humanBestCombo = bestCombo[HUMAN_INDEX]
   const elapsedMinutes = Math.max(1, Math.round((Date.now() - gameStartedAt) / 60000))
+  const reasonText = gameOverReasonLabel(lastGameOver?.reason, stakeConfig)
 
   const STATS = [
+    { label: 'Condition de fin', value: reasonText },
     { label: 'Rounds gagnés', value: String(roundsWon[HUMAN_INDEX]) },
     { label: 'Meilleur combo', value: humanBestCombo ? `${COMBO_LABEL[humanBestCombo]}` : '—' },
     { label: 'Capital final', value: `${finalCapital.toLocaleString('fr-FR')} FCFA` },
@@ -88,12 +91,15 @@ export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) 
           {SEAT_AVATARS[HUMAN_INDEX]}
         </div>
         <p className="font-display" style={{ color: '#fff', fontSize: 16, fontWeight: 700, margin: '0 0 4px', letterSpacing: '0.04em' }}>
-          VOUS ÊTES LE DERNIER JOUEUR
+          {lastGameOver?.reason === 'max_rounds'
+            ? 'PLUS HAUT CAPITAL'
+            : lastGameOver?.reason === 'race_target'
+              ? 'OBJECTIF ATTEINT'
+              : 'DERNIER JOUEUR EN LICE'}
         </p>
-        <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>Tous vos adversaires ont été éliminés</p>
+        <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>{reasonText}</p>
       </div>
 
-      {/* Gains */}
       <div className="anim-scale-bounce" style={{
         background: 'linear-gradient(135deg, rgba(214,168,79,0.15), rgba(214,168,79,0.05))',
         border: '1.5px solid rgba(214,168,79,0.4)',
@@ -114,7 +120,6 @@ export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) 
         <div style={{ color: '#A9B0B7', fontSize: 14, marginTop: 4 }}>FCFA</div>
       </div>
 
-      {/* Stats */}
       <div className="anim-fade-in-up" style={{
         width: '100%',
         background: 'rgba(255,255,255,0.04)',
@@ -129,16 +134,16 @@ export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) 
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',
+            gap: 12,
             padding: '14px 18px',
             borderBottom: i < STATS.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
           }}>
-            <span style={{ color: '#A9B0B7', fontSize: 14 }}>{s.label}</span>
-            <span className="font-display" style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>{s.value}</span>
+            <span style={{ color: '#A9B0B7', fontSize: 14, flexShrink: 0 }}>{s.label}</span>
+            <span className="font-display" style={{ color: '#fff', fontSize: 13, fontWeight: 700, textAlign: 'right' }}>{s.value}</span>
           </div>
         ))}
       </div>
 
-      {/* Actions */}
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <button
           className="btn-primary glow-gold anim-fade-in-up"

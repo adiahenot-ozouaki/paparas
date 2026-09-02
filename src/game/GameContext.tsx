@@ -2,30 +2,23 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import type { ComboType, DeckVariant, Player, SpecialRuleType } from '../types'
 import { bankPlayer, claimVictory, initRound, type RoundState } from './round'
 import { getComboMultiplier } from './combo'
-import { applyRoundPayout, checkGameOver, DEFAULT_STAKE_CONFIG, type GameOverCheck, type GameStakeConfig } from './payout'
+import {
+  applyRoundPayout,
+  checkGameOver,
+  DEFAULT_STAKE_CONFIG,
+  type GameOverCheck,
+  type GameStakeConfig,
+  type GameEndMode,
+} from './payout'
 
 // ==========================================================================
 // GameContext — état de partie partagé entre écrans.
-//
-// Remplace les mocks isolés par écran par une source de vérité unique :
-// players (capital réel), roundState (le moteur de round.ts), quelques
-// statistiques de session, ET :
-//   - une mise/capital/variante DE PAQUET configurables (plus figés en
-//     constantes — voir configureGame(), utilisé par StakeConfigScreen) ;
-//   - une persistance dans localStorage : la partie en cours survit à un
-//     rechargement de page, et des statistiques CUMULÉES sur toutes les
-//     parties (lifetimeStats) sont conservées d'une session à l'autre.
-//
-// lifetimeStats est désormais la source réelle utilisée par
-// ProfileScreen / StatsScreen / LeaderboardScreen (plus aucun mock isolé
-// dans ces écrans) : combos réalisés par type, règles spéciales
-// déclenchées, plis gagnés, gains/pertes cumulés, capital min/max atteint.
 // ==========================================================================
 
 export const SEAT_NAMES = ['Vous', 'Binu', 'Lebe', 'Goju']
 export const SEAT_AVATARS = ['🦅', '🐆', '🦁', '🐊']
 export const HUMAN_INDEX = 0
-export const DEFAULT_DECK_VARIANT: DeckVariant = 'as' // mode Classique (3 à 10 + As)
+export const DEFAULT_DECK_VARIANT: DeckVariant = 'as'
 
 const STORAGE_KEY_ACTIVE_GAME = 'kora:activeGame:v1'
 const STORAGE_KEY_LIFETIME_STATS = 'kora:lifetimeStats:v1'
@@ -58,10 +51,6 @@ function buildFreshRoundState(
   })
 }
 
-// --------------------------------------------------------------------------
-// Persistance — partie en cours
-// --------------------------------------------------------------------------
-
 interface PersistedGameSnapshot {
   players: Player[]
   roundState: RoundState
@@ -72,6 +61,7 @@ interface PersistedGameSnapshot {
   stakeConfig: GameStakeConfig
   deckVariant: DeckVariant
   started: boolean
+  lastGameOver?: GameOverCheck | null
 }
 
 function loadPersistedGame(): PersistedGameSnapshot | null {
@@ -80,8 +70,6 @@ function loadPersistedGame(): PersistedGameSnapshot | null {
     if (!raw) return null
     return JSON.parse(raw) as PersistedGameSnapshot
   } catch {
-    // Stockage indisponible (navigation privée, quota, JSON corrompu...) —
-    // on repart simplement d'une partie neuve plutôt que de planter l'app.
     return null
   }
 }
@@ -90,7 +78,7 @@ function savePersistedGame(snapshot: PersistedGameSnapshot) {
   try {
     localStorage.setItem(STORAGE_KEY_ACTIVE_GAME, JSON.stringify(snapshot))
   } catch {
-    // Écriture impossible : on continue sans persister, pas bloquant pour le jeu.
+    // ignore
   }
 }
 
@@ -102,29 +90,18 @@ function clearPersistedGame() {
   }
 }
 
-// --------------------------------------------------------------------------
-// Persistance — statistiques cumulées (toutes parties confondues)
-// --------------------------------------------------------------------------
-
 export interface LifetimeStats {
   gamesPlayed: number
   gamesWon: number
   totalRoundsWon: number
-  /** Plis gagnés par le joueur humain, tous rounds/parties confondus. */
   totalTricksWon: number
   bestComboEver: ComboType | null
   netGainTotal: number
-  /** Somme de tous les gains positifs du joueur humain (avant compensation des pertes). */
   totalGains: number
-  /** Somme de toutes les pertes du joueur humain (valeur positive). */
   totalLosses: number
-  /** Capital le plus élevé jamais atteint par le joueur humain. */
   maxCapitalEver: number
-  /** Capital le plus bas jamais atteint par le joueur humain (0 = pas encore mesuré). */
   minCapitalEver: number
-  /** Nombre de fois où le joueur humain a remporté un round avec chaque combo. */
   comboCounts: Record<ComboType, number>
-  /** Nombre de fois où le joueur humain a déclenché chaque règle spéciale. */
   specialRuleCounts: Record<SpecialRuleType, number>
 }
 
@@ -148,9 +125,6 @@ function loadLifetimeStats(): LifetimeStats {
     const raw = localStorage.getItem(STORAGE_KEY_LIFETIME_STATS)
     if (!raw) return DEFAULT_LIFETIME_STATS
     const parsed = JSON.parse(raw) as Partial<LifetimeStats>
-    // Merge en profondeur pour comboCounts/specialRuleCounts : une valeur
-    // stockée avant l'ajout d'un nouveau type de combo ne doit pas faire
-    // planter les écrans qui lisent lifetimeStats.comboCounts[nouveauType].
     return {
       ...DEFAULT_LIFETIME_STATS,
       ...parsed,
@@ -170,25 +144,31 @@ function saveLifetimeStats(stats: LifetimeStats) {
   }
 }
 
-// --------------------------------------------------------------------------
-// Contexte
-// --------------------------------------------------------------------------
-
 interface GameContextValue {
   players: Player[]
   roundState: RoundState
   roundNumber: number
   payoutApplied: boolean
-  roundsWon: number[] // indexé par siège
-  bestCombo: (ComboType | null)[] // meilleur combo obtenu par chaque siège (rounds normaux uniquement)
+  roundsWon: number[]
+  bestCombo: (ComboType | null)[]
   gameStartedAt: number
   stakeConfig: GameStakeConfig
   deckVariant: DeckVariant
   lifetimeStats: LifetimeStats
+  /** Dernier résultat de checkGameOver (raison de fin, gagnant). */
+  lastGameOver: GameOverCheck | null
 
   setRoundState: (updater: RoundState | ((prev: RoundState) => RoundState)) => void
-  /** Met à jour la mise / le capital de départ / la variante AVANT de démarrer une partie (voir StakeConfigScreen). */
-  configureGame: (config: Partial<{ baseStake: number; startingCapital: number; deckVariant: DeckVariant }>) => void
+  configureGame: (
+    config: Partial<{
+      baseStake: number
+      startingCapital: number
+      deckVariant: DeckVariant
+      endMode: GameEndMode
+      maxRounds: number
+      targetCapital: number
+    }>,
+  ) => void
   startNewGame: () => void
   ensureGameStarted: () => void
   applyCurrentPayout: () => void
@@ -196,14 +176,12 @@ interface GameContextValue {
   checkGameOverNow: () => GameOverCheck
   bankPlayerAction: (playerIndex: number) => void
   claimVictoryAction: (playerIndex: number) => void
-  /** À appeler une fois, au moment où la partie se termine (victoire ou défaite), pour cumuler les stats. */
   recordGameResult: (won: boolean) => void
 }
 
 const GameContext = createContext<GameContextValue | null>(null)
 
 export function GameProvider({ children }: { children: ReactNode }) {
-  // Hydratation depuis localStorage au premier rendu (une seule fois).
   const initialSnapshot = useRef<PersistedGameSnapshot | null>(loadPersistedGame()).current
 
   const [players, setPlayers] = useState<Player[]>(
@@ -223,15 +201,27 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [deckVariant, setDeckVariant] = useState<DeckVariant>(initialSnapshot?.deckVariant ?? DEFAULT_DECK_VARIANT)
   const [started, setStarted] = useState(initialSnapshot?.started ?? false)
   const [lifetimeStats, setLifetimeStats] = useState<LifetimeStats>(() => loadLifetimeStats())
+  const [lastGameOver, setLastGameOver] = useState<GameOverCheck | null>(initialSnapshot?.lastGameOver ?? null)
 
   const configureGame = useCallback(
-    (config: Partial<{ baseStake: number; startingCapital: number; deckVariant: DeckVariant }>) => {
-      if (config.baseStake !== undefined || config.startingCapital !== undefined) {
-        setStakeConfig(prev => ({
-          baseStake: config.baseStake ?? prev.baseStake,
-          startingCapital: config.startingCapital ?? prev.startingCapital,
-        }))
-      }
+    (
+      config: Partial<{
+        baseStake: number
+        startingCapital: number
+        deckVariant: DeckVariant
+        endMode: GameEndMode
+        maxRounds: number
+        targetCapital: number
+      }>,
+    ) => {
+      setStakeConfig(prev => ({
+        baseStake: config.baseStake ?? prev.baseStake,
+        startingCapital: config.startingCapital ?? prev.startingCapital,
+        eliminationThreshold: prev.eliminationThreshold,
+        endMode: config.endMode ?? prev.endMode,
+        maxRounds: config.maxRounds ?? prev.maxRounds,
+        targetCapital: config.targetCapital ?? prev.targetCapital,
+      }))
       if (config.deckVariant !== undefined) {
         setDeckVariant(config.deckVariant)
       }
@@ -248,6 +238,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     setBestCombo([null, null, null, null])
     setGameStartedAt(Date.now())
     setStarted(true)
+    setLastGameOver(null)
   }, [stakeConfig, deckVariant])
 
   const ensureGameStarted = useCallback(() => {
@@ -277,8 +268,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
       )
     }
 
-    // --- Statistiques cumulées mises à jour à CHAQUE round (pas seulement
-    // en fin de partie) : ProfileScreen / StatsScreen les lisent en direct. ---
     const humanPayoutLine = [...outcome.payout.winners, ...outcome.payout.losers].find(p => p.playerIndex === HUMAN_INDEX)
     const humanDelta = humanPayoutLine?.amount ?? 0
     const newHumanCapital = players[HUMAN_INDEX].capital + humanDelta
@@ -304,8 +293,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
         totalGains: prev.totalGains + Math.max(0, humanDelta),
         totalLosses: prev.totalLosses + Math.max(0, -humanDelta),
         maxCapitalEver: Math.max(prev.maxCapitalEver, newHumanCapital),
-        // minCapitalEver === 0 signifie "jamais mesuré" (voir DEFAULT_LIFETIME_STATS) :
-        // première mesure = valeur observée, pas de comparaison contre 0.
         minCapitalEver: prev.minCapitalEver === 0 ? newHumanCapital : Math.min(prev.minCapitalEver, newHumanCapital),
         comboCounts,
         specialRuleCounts,
@@ -321,14 +308,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
     if (!roundState.outcome) return
     const winnerIndex =
       roundState.outcome.kind === 'normal' ? roundState.outcome.roundWinnerIndex : roundState.outcome.winners[0].playerIndex
-    const nextStarter = (winnerIndex + 1) % 4 // la main passe au joueur juste après le gagnant
+    const nextStarter = (winnerIndex + 1) % 4
     const eliminatedIndexes = players.reduce<number[]>((acc, p, i) => (p.isEliminated ? [...acc, i] : acc), [])
     setRoundStateInternal(buildFreshRoundState(nextStarter, eliminatedIndexes, stakeConfig, deckVariant))
     setPayoutApplied(false)
     setRoundNumber(n => n + 1)
   }, [roundState.outcome, players, stakeConfig, deckVariant])
 
-  const checkGameOverNow = useCallback(() => checkGameOver(players), [players])
+  const checkGameOverNow = useCallback(() => {
+    const result = checkGameOver(players, stakeConfig, roundNumber)
+    setLastGameOver(result)
+    return result
+  }, [players, stakeConfig, roundNumber])
 
   const bankPlayerAction = useCallback(
     (playerIndex: number) => {
@@ -354,10 +345,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const netGain = players[HUMAN_INDEX].capital - stakeConfig.startingCapital
 
         const next: LifetimeStats = {
-          // IMPORTANT : on repart de `...prev` pour conserver les stats déjà
-          // accumulées round par round (comboCounts, totalTricksWon, etc.) —
-          // les oublier ici les aurait silencieusement réinitialisées à
-          // chaque fin de partie.
           ...prev,
           gamesPlayed: prev.gamesPlayed + 1,
           gamesWon: prev.gamesWon + (won ? 1 : 0),
@@ -373,7 +360,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     [players, roundsWon, bestCombo, stakeConfig],
   )
 
-  // --- Persiste la partie en cours à chaque changement pertinent ---
   useEffect(() => {
     if (!started) return
     savePersistedGame({
@@ -386,8 +372,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       stakeConfig,
       deckVariant,
       started,
+      lastGameOver,
     })
-  }, [players, roundState, roundNumber, roundsWon, bestCombo, gameStartedAt, stakeConfig, deckVariant, started])
+  }, [players, roundState, roundNumber, roundsWon, bestCombo, gameStartedAt, stakeConfig, deckVariant, started, lastGameOver])
 
   const value = useMemo<GameContextValue>(
     () => ({
@@ -401,6 +388,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       stakeConfig,
       deckVariant,
       lifetimeStats,
+      lastGameOver,
       setRoundState,
       configureGame,
       startNewGame,
@@ -423,6 +411,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       stakeConfig,
       deckVariant,
       lifetimeStats,
+      lastGameOver,
       setRoundState,
       configureGame,
       startNewGame,

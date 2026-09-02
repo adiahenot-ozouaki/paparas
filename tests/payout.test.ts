@@ -6,6 +6,7 @@ import {
   applyRoundPayout,
   checkGameOver,
   computeRoundPayout,
+  richestActiveIndex,
   type GameStakeConfig,
 } from '../src/game/payout.ts'
 
@@ -70,15 +71,7 @@ test('computeRoundPayout un gagnant ×16 (KMT) : pot = 24000', () => {
   assert.equal(result.losers.every(l => l.amount === -8000), true)
 })
 
-// ---------------------------------------------------------------------------
-// computeRoundPayout — joueurs en banque
-// ---------------------------------------------------------------------------
-
 test('computeRoundPayout banked paient toujours ×1 indépendamment du multiplicateur', () => {
-  // Gagnant 0, banked 3, perdants actifs 1 et 2, multiplier 4
-  // Actifs perdent 500*4 = 2000 chacun → 4000
-  // Banked perd 500 → 500
-  // Pot = 4500 → gagnant +4500
   const result = computeRoundPayout({
     baseStake: 500,
     multiplier: 4,
@@ -94,8 +87,6 @@ test('computeRoundPayout banked paient toujours ×1 indépendamment du multiplic
 })
 
 test('computeRoundPayout plusieurs banked + un gagnant', () => {
-  // Gagnant 0, banked 1 et 2, seul perdant actif 3, multiplier 2
-  // Actif : −1000 ; banked : −500 ×2 ; pot = 2000
   const result = computeRoundPayout({
     baseStake: 500,
     multiplier: 2,
@@ -110,12 +101,7 @@ test('computeRoundPayout plusieurs banked + un gagnant', () => {
   assert.equal(byIndex[3], -1000)
 })
 
-// ---------------------------------------------------------------------------
-// computeRoundPayout — plusieurs gagnants (règle spéciale)
-// ---------------------------------------------------------------------------
-
 test('computeRoundPayout deux gagnants partagent le pot à parts égales', () => {
-  // 2 perdants actifs ×500 = 1000 ; 2 gagnants → 500 chacun
   const result = computeRoundPayout({
     baseStake: 500,
     multiplier: 1,
@@ -131,8 +117,6 @@ test('computeRoundPayout deux gagnants partagent le pot à parts égales', () =>
 })
 
 test('computeRoundPayout reliquat distribué aux premiers gagnants (somme nulle)', () => {
-  // 1 perdant ×500 = 500 ; 3 gagnants → floor(500/3)=166, remainder=2
-  // → 167, 167, 166
   const result = computeRoundPayout({
     baseStake: 500,
     multiplier: 1,
@@ -176,7 +160,7 @@ test('applyRoundPayout met à jour les capitaux sans muter l entrée', () => {
     allPlayerIndexes: ALL4,
   })
   const next = applyRoundPayout(players, payout, STAKE)
-  assert.equal(players[0].capital, 5000) // immuable
+  assert.equal(players[0].capital, 5000)
   assert.equal(next[0].capital, 6500)
   assert.equal(next[1].capital, 4500)
   assert.equal(next[2].capital, 4500)
@@ -192,11 +176,9 @@ test('applyRoundPayout marque éliminé si capital < seuil (baseStake par défau
     winnerIndexes: [0],
     allPlayerIndexes: ALL4,
   })
-  // joueur 1 : 400 − 500 = −100 < 500 → éliminé
   const next = applyRoundPayout(players, payout, STAKE)
   assert.equal(next[1].capital, -100)
   assert.equal(next[1].isEliminated, true)
-  assert.equal(next[0].isEliminated, undefined) // ou falsy
   assert.ok(!next[0].isEliminated)
 })
 
@@ -209,7 +191,6 @@ test('applyRoundPayout respecte eliminationThreshold custom', () => {
     winnerIndexes: [0],
     allPlayerIndexes: ALL4,
   })
-  // joueur 1 : 1200 − 500 = 700 < 1000 → éliminé
   const next = applyRoundPayout(players, payout, config)
   assert.equal(next[1].capital, 700)
   assert.equal(next[1].isEliminated, true)
@@ -227,14 +208,14 @@ test('applyRoundPayout conserve isEliminated déjà true', () => {
     multiplier: 1,
     winnerIndexes: [0],
     allPlayerIndexes: ALL4,
-    bankedPlayerIndexes: [1], // déjà éliminé / banked
+    bankedPlayerIndexes: [1],
   })
   const next = applyRoundPayout(players, payout, STAKE)
   assert.equal(next[1].isEliminated, true)
 })
 
 // ---------------------------------------------------------------------------
-// checkGameOver
+// checkGameOver — élimination
 // ---------------------------------------------------------------------------
 
 test('checkGameOver false tant qu il reste au moins 2 joueurs', () => {
@@ -249,7 +230,10 @@ test('checkGameOver true avec un seul survivant', () => {
     player(0, { isEliminated: true }),
     player(0, { isEliminated: true }),
   ]
-  assert.deepEqual(checkGameOver(players), { isOver: true, winnerIndex: 0 })
+  const result = checkGameOver(players)
+  assert.equal(result.isOver, true)
+  assert.equal(result.winnerIndex, 0)
+  assert.equal(result.reason, 'last_standing')
 })
 
 test('checkGameOver true si tous éliminés (edge)', () => {
@@ -260,13 +244,86 @@ test('checkGameOver true si tous éliminés (edge)', () => {
   const result = checkGameOver(players)
   assert.equal(result.isOver, true)
   assert.equal(result.winnerIndex, undefined)
+  assert.equal(result.reason, 'all_eliminated')
+})
+
+// ---------------------------------------------------------------------------
+// checkGameOver — fixedRounds (hybride)
+// ---------------------------------------------------------------------------
+
+test('fixedRounds : pas de fin avant maxRounds si plusieurs actifs', () => {
+  const config: GameStakeConfig = { ...STAKE, endMode: 'fixedRounds', maxRounds: 10 }
+  const players = [player(6000), player(4000), player(5000), player(3000)]
+  assert.deepEqual(checkGameOver(players, config, 9), { isOver: false })
+})
+
+test('fixedRounds : fin au maxRounds → plus riche gagne', () => {
+  const config: GameStakeConfig = { ...STAKE, endMode: 'fixedRounds', maxRounds: 8 }
+  const players = [player(6000), player(9000), player(5000), player(3000)]
+  const result = checkGameOver(players, config, 8)
+  assert.equal(result.isOver, true)
+  assert.equal(result.winnerIndex, 1)
+  assert.equal(result.reason, 'max_rounds')
+})
+
+test('fixedRounds : élimination prioritaire même avant maxRounds', () => {
+  const config: GameStakeConfig = { ...STAKE, endMode: 'fixedRounds', maxRounds: 10 }
+  const players = [
+    player(8000),
+    player(0, { isEliminated: true }),
+    player(0, { isEliminated: true }),
+    player(0, { isEliminated: true }),
+  ]
+  const result = checkGameOver(players, config, 3)
+  assert.equal(result.isOver, true)
+  assert.equal(result.reason, 'last_standing')
+  assert.equal(result.winnerIndex, 0)
+})
+
+// ---------------------------------------------------------------------------
+// checkGameOver — raceToCapital
+// ---------------------------------------------------------------------------
+
+test('raceToCapital : fin si un joueur atteint la cible', () => {
+  const config: GameStakeConfig = {
+    ...STAKE,
+    endMode: 'raceToCapital',
+    targetCapital: 12000,
+  }
+  const players = [player(5000), player(12500), player(4000), player(3000)]
+  const result = checkGameOver(players, config, 4)
+  assert.equal(result.isOver, true)
+  assert.equal(result.winnerIndex, 1)
+  assert.equal(result.reason, 'race_target')
+})
+
+test('raceToCapital : pas de fin sous la cible', () => {
+  const config: GameStakeConfig = {
+    ...STAKE,
+    endMode: 'raceToCapital',
+    targetCapital: 20000,
+  }
+  const players = [player(8000), player(9000), player(7000), player(6000)]
+  assert.deepEqual(checkGameOver(players, config, 5), { isOver: false })
+})
+
+test('richestActiveIndex ignore les éliminés', () => {
+  const players = [
+    player(1000),
+    player(50000, { isEliminated: true }),
+    player(8000),
+    player(2000),
+  ]
+  assert.equal(richestActiveIndex(players), 2)
 })
 
 // ---------------------------------------------------------------------------
 // DEFAULT_STAKE_CONFIG
 // ---------------------------------------------------------------------------
 
-test('DEFAULT_STAKE_CONFIG vaut 500 / 5000', () => {
+test('DEFAULT_STAKE_CONFIG hybride 500 / 5000 / fixedRounds 10', () => {
   assert.equal(DEFAULT_STAKE_CONFIG.baseStake, 500)
   assert.equal(DEFAULT_STAKE_CONFIG.startingCapital, 5000)
+  assert.equal(DEFAULT_STAKE_CONFIG.endMode, 'fixedRounds')
+  assert.equal(DEFAULT_STAKE_CONFIG.maxRounds, 10)
 })

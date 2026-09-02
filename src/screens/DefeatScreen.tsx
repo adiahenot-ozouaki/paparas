@@ -1,9 +1,10 @@
 import type { Screen } from '../types'
 import { useGame, SEAT_NAMES, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
 import { COMBO_LABEL } from '../game/combo'
+import { gameOverReasonLabel } from '../game/payout'
 
 export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  const { players, roundsWon, bestCombo, gameStartedAt, startNewGame } = useGame()
+  const { players, roundsWon, bestCombo, gameStartedAt, stakeConfig, lastGameOver, startNewGame } = useGame()
 
   const ranking = players
     .map((p, i) => ({ ...p, seatIndex: i }))
@@ -11,6 +12,9 @@ export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) =
 
   const humanBestCombo = bestCombo[HUMAN_INDEX]
   const elapsedMinutes = Math.max(1, Math.round((Date.now() - gameStartedAt) / 60000))
+  const reasonText = gameOverReasonLabel(lastGameOver?.reason, stakeConfig)
+  const winnerName =
+    lastGameOver?.winnerIndex !== undefined ? SEAT_NAMES[lastGameOver.winnerIndex] : null
 
   function handleReplay() {
     startNewGame()
@@ -58,12 +62,17 @@ export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) =
       </div>
 
       <div className="anim-fade-in-up" style={{ textAlign: 'center', marginBottom: 24, animationDelay: '0.25s' }}>
-        <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>
-          Capital insuffisant pour continuer — {players[HUMAN_INDEX].capital.toLocaleString('fr-FR')} FCFA
+        <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 6px' }}>{reasonText}</p>
+        {winnerName && (
+          <p style={{ color: '#D6A84F', fontSize: 13, margin: 0, fontWeight: 600 }}>
+            Vainqueur : {winnerName}
+          </p>
+        )}
+        <p style={{ color: '#5b636b', fontSize: 12, margin: '8px 0 0' }}>
+          Votre capital : {players[HUMAN_INDEX].capital.toLocaleString('fr-FR')} FCFA
         </p>
       </div>
 
-      {/* Classement final */}
       <div
         className="anim-fade-in-up"
         style={{
@@ -108,7 +117,6 @@ export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) =
         ))}
       </div>
 
-      {/* Statistiques de la session */}
       <div
         className="anim-fade-in-up"
         style={{
