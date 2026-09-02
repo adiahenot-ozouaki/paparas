@@ -3,6 +3,10 @@ import { SEAT_NAMES } from '../../game/GameContext'
 interface GameTableHudProps {
   roundNumber: number
   tricksWonThisRound: number[]
+  /** Message live (tour, couleur, pli gagné…). Si null → scores de plis. */
+  statusMessage: string | null
+  /** Teinte optionnelle du status (or / vert / neutre). */
+  statusTone?: 'gold' | 'green' | 'muted'
   compactMode: boolean
   canBank: boolean
   onPause: () => void
@@ -28,9 +32,17 @@ const iconButtonStyle: React.CSSProperties = {
   padding: 0,
 }
 
+const TONE_COLOR = {
+  gold: '#F0D58A',
+  green: '#4CAF76',
+  muted: '#A9B0B7',
+} as const
+
 export function GameTableHud({
   roundNumber,
   tricksWonThisRound,
+  statusMessage,
+  statusTone = 'muted',
   compactMode,
   canBank,
   onPause,
@@ -55,7 +67,6 @@ export function GameTableHud({
         gap: 6,
       }}
     >
-      {/* Pause + Règles + Banque (icônes compactes) */}
       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
         <button onClick={onPause} title="Pause" aria-label="Mettre la partie en pause" style={iconButtonStyle}>
           ⏸
@@ -80,8 +91,8 @@ export function GameTableHud({
         )}
       </div>
 
-      {/* Informations du round */}
-      <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }}>
+      {/* Centre : ROUND + status OU scores de plis */}
+      <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }} role="status" aria-live="polite">
         <p
           className="text-gold font-display"
           style={{
@@ -94,29 +105,49 @@ export function GameTableHud({
           ROUND {roundNumber}
         </p>
 
-        <div
-          style={{
-            display: 'flex',
-            gap: 4,
-            justifyContent: 'center',
-            marginTop: 2,
-          }}
-        >
-          {SEAT_NAMES.map((name, index) => (
-            <span
-              key={name}
-              style={{
-                color: '#A9B0B7',
-                fontSize: 10,
-              }}
-            >
-              {name}: {tricksWonThisRound[index]}
-            </span>
-          ))}
-        </div>
+        {statusMessage ? (
+          <p
+            key={statusMessage}
+            className="anim-fade-in"
+            style={{
+              color: TONE_COLOR[statusTone],
+              fontSize: 12,
+              fontWeight: 600,
+              margin: '3px 0 0',
+              letterSpacing: '0.04em',
+              fontFamily: 'Plus Jakarta Sans',
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+            }}
+          >
+            {statusMessage}
+          </p>
+        ) : (
+          <div
+            style={{
+              display: 'flex',
+              gap: 4,
+              justifyContent: 'center',
+              marginTop: 2,
+              flexWrap: 'wrap',
+            }}
+          >
+            {SEAT_NAMES.map((name, index) => (
+              <span
+                key={name}
+                style={{
+                  color: '#A9B0B7',
+                  fontSize: 10,
+                }}
+              >
+                {name}: {tricksWonThisRound[index]}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
 
-      {/* Bascule "mode compact" + Quitter */}
       <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
         <button
           onClick={onToggleCompact}
