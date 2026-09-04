@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import type { Screen } from './types'
+import { AuthProvider } from './auth/AuthContext'
 import { GameProvider } from './game/GameContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import BottomNav from './components/BottomNav'
@@ -8,6 +9,8 @@ import HomeScreen from './screens/HomeScreen'
 import GameModeScreen from './screens/GameModeScreen'
 import StakeConfigScreen from './screens/StakeConfigScreen'
 import LobbyScreen from './screens/LobbyScreen'
+import OnlineLobbyScreen from './screens/OnlineLobbyScreen'
+import AuthScreen from './screens/AuthScreen'
 import GameTableScreen from './screens/GameTableScreen'
 import RoundResultScreen from './screens/RoundResultScreen'
 import VictoryScreen from './screens/VictoryScreen'
@@ -25,6 +28,8 @@ const NO_NAV_SCREENS: Screen[] = [
   'victory',
   'defeat',
   'lobby',
+  'onlineLobby',
+  'auth',
   'gameMode',
   'stakeConfig',
   'rules',
@@ -32,41 +37,54 @@ const NO_NAV_SCREENS: Screen[] = [
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('splash')
+  /** Écran vers lequel revenir après auth (ex: onlineLobby). */
+  const [authReturnTo, setAuthReturnTo] = useState<Screen>('home')
 
-  const navigate = (s: Screen) => setScreen(s)
+  const navigate = (s: Screen) => {
+    if (s === 'auth') {
+      // Si on vient d'un mode online, y retourner après login
+      if (screen === 'gameMode' || screen === 'onlineLobby') {
+        setAuthReturnTo('onlineLobby')
+      } else if (screen === 'profile') {
+        setAuthReturnTo('profile')
+      } else {
+        setAuthReturnTo('home')
+      }
+    }
+    setScreen(s)
+  }
   const showNav = !NO_NAV_SCREENS.includes(screen)
 
   return (
     <div className="app-root">
-      {/* Texture de fond (visible surtout sur très grands écrans si shell limité) */}
       <div className="app-root-pattern" aria-hidden />
 
-      {/*
-        Shell principal : plein viewport sur mobile / tablette.
-        Sur desktop large, largeur max confortable centrée (voir index.css).
-      */}
       <div className="app-shell">
         <ErrorBoundary>
-          <GameProvider>
-            <div key={screen} className="anim-fade-in app-screen" style={{ position: 'absolute', inset: 0 }}>
-              {screen === 'splash' && <SplashScreen onNavigate={navigate} />}
-              {screen === 'home' && <HomeScreen onNavigate={navigate} />}
-              {screen === 'gameMode' && <GameModeScreen onNavigate={navigate} />}
-              {screen === 'stakeConfig' && <StakeConfigScreen onNavigate={navigate} />}
-              {screen === 'lobby' && <LobbyScreen onNavigate={navigate} />}
-              {screen === 'gameTable' && <GameTableScreen onNavigate={navigate} />}
-              {screen === 'roundResult' && <RoundResultScreen onNavigate={navigate} />}
-              {screen === 'victory' && <VictoryScreen onNavigate={navigate} />}
-              {screen === 'defeat' && <DefeatScreen onNavigate={navigate} />}
-              {screen === 'profile' && <ProfileScreen onNavigate={navigate} />}
-              {screen === 'leaderboard' && <LeaderboardScreen onNavigate={navigate} />}
-              {screen === 'stats' && <StatsScreen onNavigate={navigate} />}
-              {screen === 'achievements' && <AchievementsScreen onNavigate={navigate} />}
-              {screen === 'rules' && <RulesScreen onNavigate={navigate} />}
-            </div>
+          <AuthProvider>
+            <GameProvider>
+              <div key={screen} className="anim-fade-in app-screen" style={{ position: 'absolute', inset: 0 }}>
+                {screen === 'splash' && <SplashScreen onNavigate={navigate} />}
+                {screen === 'home' && <HomeScreen onNavigate={navigate} />}
+                {screen === 'gameMode' && <GameModeScreen onNavigate={navigate} />}
+                {screen === 'stakeConfig' && <StakeConfigScreen onNavigate={navigate} />}
+                {screen === 'lobby' && <LobbyScreen onNavigate={navigate} />}
+                {screen === 'onlineLobby' && <OnlineLobbyScreen onNavigate={navigate} />}
+                {screen === 'auth' && <AuthScreen onNavigate={navigate} returnTo={authReturnTo} />}
+                {screen === 'gameTable' && <GameTableScreen onNavigate={navigate} />}
+                {screen === 'roundResult' && <RoundResultScreen onNavigate={navigate} />}
+                {screen === 'victory' && <VictoryScreen onNavigate={navigate} />}
+                {screen === 'defeat' && <DefeatScreen onNavigate={navigate} />}
+                {screen === 'profile' && <ProfileScreen onNavigate={navigate} />}
+                {screen === 'leaderboard' && <LeaderboardScreen onNavigate={navigate} />}
+                {screen === 'stats' && <StatsScreen onNavigate={navigate} />}
+                {screen === 'achievements' && <AchievementsScreen onNavigate={navigate} />}
+                {screen === 'rules' && <RulesScreen onNavigate={navigate} />}
+              </div>
 
-            {showNav && <BottomNav active={screen} onNavigate={navigate} />}
-          </GameProvider>
+              {showNav && <BottomNav active={screen} onNavigate={navigate} />}
+            </GameProvider>
+          </AuthProvider>
         </ErrorBoundary>
       </div>
     </div>

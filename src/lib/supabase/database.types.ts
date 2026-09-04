@@ -1,22 +1,5 @@
 // ==========================================================================
 // database.types.ts — Miroir TypeScript du schéma Supabase `kora_*`.
-//
-// Écrit à la main en miroir EXACT de la migration SQL appliquée
-// (kora_schema_and_auth_foundations) — le générateur automatique
-// (Supabase:generate_typescript_types) n'a pas répondu au moment de
-// l'écriture. À REMPLACER par le générateur dès qu'il redevient
-// disponible, pour ne jamais risquer une dérive entre ce fichier et le
-// schéma réel :
-//
-//   npx supabase gen types typescript --project-id acqxiwedxproqjffnerb > src/lib/supabase/database.types.ts
-//
-// Note sur les colonnes `bigint` (capital, gains...) : Postgres les
-// renvoie dans une plage largement inférieure à Number.MAX_SAFE_INTEGER
-// pour ce jeu (montants en FCFA, jamais des milliards), donc typées ici
-// en `number` par pragmatisme — cohérent avec le reste du client
-// (game/payout.ts, types.ts) qui traite déjà tout le capital en `number`.
-// Si un jour les montants pouvaient dépasser 2^53, il faudrait revoir ce
-// choix (PostgREST peut sérialiser les bigint en string).
 // ==========================================================================
 
 export type ComboTypeDb = 'simple' | 'kora' | '33' | 'trinity' | 'kmt'
@@ -79,9 +62,6 @@ export interface Database {
           special_rule_counts: SpecialRuleCountsDb
           updated_at: string
         }
-        // Écriture exclusivement service role — pas de shape client-side
-        // significative, mais on la garde pour typer un futur usage
-        // depuis une Edge Function (mêmes outils, même client typé).
         Insert: Partial<Database['public']['Tables']['kora_lifetime_stats']['Row']> & { user_id: string }
         Update: Partial<Database['public']['Tables']['kora_lifetime_stats']['Row']>
       }
@@ -93,6 +73,8 @@ export interface Database {
           starting_capital: number
           deck_variant: DeckVariantDb
           created_by: string
+          min_buy_in: number
+          max_buy_in: number
           created_at: string
           started_at: string | null
           finished_at: string | null
@@ -104,6 +86,8 @@ export interface Database {
           starting_capital: number
           deck_variant?: DeckVariantDb
           created_by: string
+          min_buy_in?: number
+          max_buy_in?: number
           created_at?: string
           started_at?: string | null
           finished_at?: string | null
@@ -146,8 +130,6 @@ export interface Database {
           outcome: unknown | null
           created_at: string
         }
-        // Serveur-only (aucune policy d'écriture client) — shape présente
-        // pour usage futur côté Edge Function uniquement.
         Insert: Partial<Database['public']['Tables']['kora_rounds']['Row']> & { table_id: string; round_number: number }
         Update: Partial<Database['public']['Tables']['kora_rounds']['Row']>
       }
@@ -160,7 +142,6 @@ export interface Database {
           cards: unknown
           revealed: boolean
         }
-        // Serveur-only également.
         Insert: Partial<Database['public']['Tables']['kora_round_hands']['Row']> & {
           round_id: string
           user_id: string

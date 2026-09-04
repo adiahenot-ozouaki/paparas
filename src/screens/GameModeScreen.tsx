@@ -1,4 +1,5 @@
 import type { Screen } from '../types'
+import { useAuth } from '../auth/AuthContext'
 
 const MODES = [
   {
@@ -7,104 +8,115 @@ const MODES = [
     desc: 'Affronte trois adversaires IA immédiatement.',
     icon: '⚡',
     color: '#D6A84F',
-    cards: ['♠ A', '♥ 10', '♦ 9'],
-    badge: 'POPULAIRE',
-  },
-  {
-    id: 'friends',
-    title: 'Avec amis',
-    desc: 'Multijoueur entre amis — bientôt disponible.',
-    icon: '👥',
-    color: '#176B50',
-    cards: ['♠ 7', '♥ 3', '♦ 8'],
-    badge: null,
-    disabled: true,
+    badge: 'POPULAIRE' as string | null,
+    online: false,
+    screen: 'stakeConfig' as Screen,
   },
   {
     id: 'private',
     title: 'Partie privée',
-    desc: 'Table privée sur invitation — bientôt disponible.',
+    desc: 'Crée ou rejoins une table en ligne (amis).',
     icon: '🔒',
+    color: '#176B50',
+    badge: 'ONLINE' as string | null,
+    online: true,
+    screen: 'onlineLobby' as Screen,
+  },
+  {
+    id: 'friends',
+    title: 'Avec amis',
+    desc: 'Même flux que la table privée — code à partager.',
+    icon: '👥',
     color: '#6B5B17',
-    cards: ['♠ 5', '♥ 9', '♦ 4'],
-    badge: null,
-    disabled: true,
+    badge: 'ONLINE' as string | null,
+    online: true,
+    screen: 'onlineLobby' as Screen,
   },
   {
     id: 'training',
     title: 'Entraînement',
-    desc: 'Même table IA, idéal pour apprendre les règles.',
+    desc: 'Table IA pour apprendre les règles.',
     icon: '🤖',
     color: '#2E3748',
-    cards: ['♠ 6', '♥ 6', '♦ 8'],
-    badge: 'GRATUIT',
+    badge: 'GRATUIT' as string | null,
+    online: false,
+    screen: 'stakeConfig' as Screen,
   },
 ]
 
 export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
+  const { user } = useAuth()
+
+  function handleMode(mode: (typeof MODES)[number]) {
+    if (mode.online && !user) {
+      onNavigate('auth')
+      return
+    }
+    onNavigate(mode.screen)
+  }
+
   return (
-    <div style={{
-      position: 'absolute',
-      inset: 0,
-      background: '#0B0D10',
-      overflowY: 'auto',
-      paddingBottom: 80,
-    }}>
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        background: '#0B0D10',
+        overflowY: 'auto',
+        paddingBottom: 80,
+      }}
+    >
       <div className="pattern-african" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
 
-      {/* Header */}
       <div style={{ padding: '20px 20px 0', position: 'relative' }}>
-        <button onClick={() => onNavigate('home')} style={{
-          background: 'rgba(255,255,255,0.06)',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 12,
-          width: 40,
-          height: 40,
-          color: '#fff',
-          fontSize: 18,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: 20,
-        }}>
+        <button
+          onClick={() => onNavigate('home')}
+          style={{
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 12,
+            width: 40,
+            height: 40,
+            color: '#fff',
+            fontSize: 18,
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: 20,
+          }}
+        >
           ←
         </button>
         <h1 className="font-display" style={{ fontSize: 28, fontWeight: 800, margin: '0 0 4px', letterSpacing: '0.02em' }}>
           Mode de jeu
         </h1>
-        <p style={{ color: '#A9B0B7', fontSize: 14, margin: 0 }}>Choisis comment tu veux jouer</p>
+        <p style={{ color: '#A9B0B7', fontSize: 14, margin: 0 }}>
+          Solo libre · Online nécessite un compte{user ? ' ✓' : ''}
+        </p>
       </div>
 
-      {/* Mode cards */}
       <div style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        {MODES.map((mode, i) => {
-          const disabled = Boolean(mode.disabled)
-          return (
-            <button
-              key={mode.id}
-              className="anim-fade-in-up"
-              disabled={disabled}
-              onClick={() => {
-                if (!disabled) onNavigate('stakeConfig')
-              }}
+        {MODES.map((mode, i) => (
+          <button
+            key={mode.id}
+            className="anim-fade-in-up"
+            onClick={() => handleMode(mode)}
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 20,
+              padding: '20px',
+              cursor: 'pointer',
+              textAlign: 'left',
+              animationDelay: `${i * 0.07}s`,
+              position: 'relative',
+              overflow: 'hidden',
+              display: 'block',
+              width: '100%',
+            }}
+          >
+            <div
               style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 20,
-                padding: '20px',
-                cursor: disabled ? 'not-allowed' : 'pointer',
-                textAlign: 'left',
-                animationDelay: `${i * 0.07}s`,
-                position: 'relative',
-                overflow: 'hidden',
-                transition: 'border-color 0.2s, transform 0.1s',
-                display: 'block',
-                width: '100%',
-                opacity: disabled ? 0.55 : 1,
-              }}
-            >
-              <div style={{
                 position: 'absolute',
                 top: 0,
                 left: 0,
@@ -112,95 +124,79 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
                 height: '100%',
                 background: `linear-gradient(180deg, ${mode.color}, transparent)`,
                 borderRadius: '20px 0 0 20px',
-              }} />
-
-              <div style={{
-                position: 'absolute',
-                right: 16,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                display: 'flex',
-              }}>
-                {mode.cards.map((c, ci) => (
-                  <div key={ci} style={{
-                    width: 28,
-                    height: 40,
-                    background: '#F5F1E8',
-                    borderRadius: 6,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 10,
-                    fontWeight: 700,
-                    color: c.includes('♥') || c.includes('♦') ? '#C94B4B' : '#1a1a1a',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.4)',
-                    transform: `rotate(${(ci - 1) * 8}deg) translateX(${ci * -6}px)`,
-                    fontFamily: 'Plus Jakarta Sans',
-                  }}>
-                    {c}
-                  </div>
-                ))}
-              </div>
-
-              <div style={{ paddingLeft: 12, paddingRight: 100 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: 22 }}>{mode.icon}</span>
-                  <span className="font-display" style={{ color: '#fff', fontSize: 17, fontWeight: 700 }}>
-                    {mode.title}
-                  </span>
-                  {mode.badge && (
-                    <span style={{
-                      background: mode.badge === 'POPULAIRE' ? 'rgba(214,168,79,0.2)' : 'rgba(76,175,118,0.2)',
-                      color: mode.badge === 'POPULAIRE' ? '#D6A84F' : '#4CAF76',
+              }}
+            />
+            <div style={{ paddingLeft: 12 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
+                <span style={{ fontSize: 22 }}>{mode.icon}</span>
+                <span className="font-display" style={{ color: '#fff', fontSize: 17, fontWeight: 700 }}>
+                  {mode.title}
+                </span>
+                {mode.badge && (
+                  <span
+                    style={{
+                      background:
+                        mode.badge === 'ONLINE'
+                          ? 'rgba(23,107,80,0.25)'
+                          : mode.badge === 'POPULAIRE'
+                            ? 'rgba(214,168,79,0.2)'
+                            : 'rgba(76,175,118,0.2)',
+                      color:
+                        mode.badge === 'ONLINE'
+                          ? '#4CAF76'
+                          : mode.badge === 'POPULAIRE'
+                            ? '#D6A84F'
+                            : '#4CAF76',
                       fontSize: 9,
                       fontWeight: 700,
                       padding: '2px 8px',
                       borderRadius: 99,
                       letterSpacing: '0.08em',
                       fontFamily: 'Plus Jakarta Sans',
-                    }}>
-                      {mode.badge}
-                    </span>
-                  )}
-                  {disabled && (
-                    <span style={{
+                    }}
+                  >
+                    {mode.badge}
+                  </span>
+                )}
+                {mode.online && !user && (
+                  <span
+                    style={{
                       background: 'rgba(255,255,255,0.06)',
-                      color: '#5b636b',
+                      color: '#A9B0B7',
                       fontSize: 9,
                       fontWeight: 700,
                       padding: '2px 8px',
                       borderRadius: 99,
-                      letterSpacing: '0.06em',
-                      fontFamily: 'Plus Jakarta Sans',
-                    }}>
-                      BIENTÔT
-                    </span>
-                  )}
-                </div>
-                <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>{mode.desc}</p>
+                    }}
+                  >
+                    CONNEXION
+                  </span>
+                )}
               </div>
-            </button>
-          )
-        })}
+              <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>{mode.desc}</p>
+            </div>
+          </button>
+        ))}
       </div>
 
-      {/* Tables actives — pas de backend matchmaking pour l'instant */}
       <div style={{ padding: '0 20px 24px' }}>
         <h3 className="font-display" style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px', color: '#fff' }}>
           Tables actives
         </h3>
-        <div style={{
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 16,
-          padding: '18px 16px',
-          textAlign: 'center',
-        }}>
+        <div
+          style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 16,
+            padding: '18px 16px',
+            textAlign: 'center',
+          }}
+        >
           <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 6px' }}>
-            Aucune table publique pour le moment.
+            Matchmaking public bientôt.
           </p>
           <p style={{ color: '#5b636b', fontSize: 12, margin: 0 }}>
-            Lancez une partie rapide pour jouer contre l'IA.
+            Utilisez « Partie privée » pour jouer avec un code.
           </p>
         </div>
       </div>
