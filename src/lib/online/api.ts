@@ -23,11 +23,18 @@ export interface SeatWithProfile extends KoraTablePlayer {
   profile: Pick<KoraProfile, 'username' | 'avatar'> | null
 }
 
-export interface EngineStateResponse {
-  state: RoundState
-  roundNumber?: number
-  eliminatedSeats?: number[]
-  error?: string
+export interface OpenLobbyTable {
+  table: KoraTable
+  seatCount: number
+  code: string
+}
+
+export interface MyActiveTable {
+  tableId: string
+  status: KoraTable['status']
+  baseStake: number
+  seatIndex: number
+  code: string
 }
 
 function edgeFunctionUrl(): string {
@@ -35,7 +42,6 @@ function edgeFunctionUrl(): string {
   return `${base.replace(/\/$/, '')}/functions/v1/kora-game-engine`
 }
 
-/** Appel authentifié à l'edge function. */
 export async function callEngine(
   action: OnlineEngineAction,
   tableId: string,
@@ -66,11 +72,6 @@ export async function callEngine(
   return { ok: res.ok, status: res.status, body }
 }
 
-/**
- * L'edge renvoie les mains adverses en `null` par carte.
- * On conserve la longueur (cartes restantes) avec des stubs face cachée
- * pour l'UI, sans exposer les vraies valeurs.
- */
 export function parsePublicState(raw: unknown): RoundState {
   const s = raw as RoundState & { hands: (Card | null)[][] }
   const hands: Card[][] = (s.hands ?? []).map(hand =>
@@ -82,13 +83,11 @@ export function parsePublicState(raw: unknown): RoundState {
         rank: 0,
         pointValue: 0,
         state: 'back' as const,
-        // id synthétique pour éviter collisions UI
-        ...( { _hidden: true, _i: i } as object),
+        ...({ _hidden: true, _i: i } as object),
       } as Card
     }),
   )
 
-  // Garantir 4 sièges
   while (hands.length < NUM_SEATS) hands.push([])
 
   return {
@@ -236,11 +235,86 @@ export async function fetchSeatsWithProfiles(tableId: string): Promise<{
   }
 }
 
+/** Tables en lobby avec au moins une place libre (aperçu matchmaking). */
+export async function listOpenLobbyTables(limit = 12): Promise<{
+  tables: OpenLobbyTable[]
+  error: string | null
+}> {
+  const { data: rows, error } = await supabase
+    .from('kora_tables')
+    .select('*')
+    .eq('status', 'lobby')
+    .order('created_at', { ascending: false })
+    .limit(limit)
+
+  if (error) return { tables: [], error: error.message }
+  const tables = (rows ?? []) as KoraTable[]
+  if (tables.length === 0) return { tables: [], error: null }
+
+  const ids = tables.map(t => t.id)
+  const { data: seats } = await supabase.from('kora_table_players').select('table_id').in('table_id', ids)
+  const counts = new Map<string, number>()
+  for (const s of seats ?? []) {
+    counts.set(s.table_id, (counts.get(s.table_id) ?? 0) + 1)
+  }
+
+  return {
+    tables: tables
+      .map(t => ({
+        table: t,
+        seatCount: counts.get(t.id) ?? 0,
+        code: tableInviteCode(t.id),
+      }))
+      .filter(t => t.seatCount < NUM_SEATS),
+    error: null,
+  }
+}
+
+/** Tables où le joueur est encore assis (lobby ou playing) — pour reconnexion. */
+export async function findMyActiveTables(userId: string): Promise<{
+  tables: MyActiveTable[]
+  error: string | null
+}> {
+  const { data: seats, error } = await supabase
+    .from('kora_table_players')
+    .select('table_id, seat_index')
+    .eq('user_id', userId)
+
+  if (error) return { tables: [], error: error.message }
+  const seatRows = seats ?? []
+  if (seatRows.length === 0) return { tables: [], error: null }
+
+  const ids = seatRows.map(s => s.table_id)
+  const { data: tables, error: tErr } = await supabase
+    .from('kora_tables')
+    .select('*')
+    .in('id', ids)
+    .in('status', ['lobby', 'playing'])
+
+  if (tErr) return { tables: [], error: tErr.message }
+
+  const byId = new Map((tables ?? []).map(t => [t.id, t as KoraTable]))
+  const result: MyActiveTable[] = []
+  for (const s of seatRows) {
+    const t = byId.get(s.table_id)
+    if (!t) continue
+    result.push({
+      tableId: t.id,
+      status: t.status,
+      baseStake: t.base_stake,
+      seatIndex: s.seat_index,
+      code: tableInviteCode(t.id),
+    })
+  }
+  // playing d'abord
+  result.sort((a, b) => (a.status === 'playing' ? -1 : 1) - (b.status === 'playing' ? -1 : 1))
+  return { tables: result, error: null }
+}
+
 export function tableInviteCode(tableId: string): string {
   return tableId.replace(/-/g, '').slice(0, 8).toUpperCase()
 }
 
-/** Pivote les indices pour que mon siège soit en vue 0 (sud). */
 export function toViewIndex(physicalIndex: number, mySeat: number): number {
   return (physicalIndex - mySeat + NUM_SEATS) % NUM_SEATS
 }

@@ -7,12 +7,15 @@ import {
   createOnlineTable,
   fetchSeatsWithProfiles,
   fetchTable,
+  findMyActiveTables,
   joinOnlineTable,
+  listOpenLobbyTables,
   setSeatReady,
   tableInviteCode,
+  type OpenLobbyTable,
   type SeatWithProfile,
 } from '../lib/online/api'
-import { setActiveOnlineTableId } from '../lib/online/session'
+import { getActiveOnlineTableId, setActiveOnlineTableId } from '../lib/online/session'
 import { supabase } from '../lib/supabase/client'
 import type { KoraTable } from '../lib/supabase/database.types'
 
@@ -28,6 +31,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
   const [joinCode, setJoinCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [openTables, setOpenTables] = useState<OpenLobbyTable[]>([])
 
   const mySeat = useMemo(
     () => (user ? seats.find(s => s.user_id === user.id) : undefined),
@@ -56,6 +60,62 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
     },
     [goToTable],
   )
+
+  const refreshOpenList = useCallback(async () => {
+    const open = await listOpenLobbyTables(10)
+    if (!open.error) setOpenTables(open.tables)
+  }, [])
+
+  // Reconnexion auto si session ou siège actif
+  useEffect(() => {
+    if (authLoading || !user) return
+    let cancelled = false
+    ;(async () => {
+      const stored = getActiveOnlineTableId()
+      if (stored) {
+        const t = await fetchTable(stored)
+        if (!cancelled && t.table && (t.table.status === 'lobby' || t.table.status === 'playing')) {
+          const seatsNow = await fetchSeatsWithProfiles(stored)
+          const stillSeated = seatsNow.seats.some(s => s.user_id === user.id)
+          if (stillSeated) {
+            if (t.table.status === 'playing') {
+              goToTable(stored)
+              return
+            }
+            setTable(t.table)
+            setSeats(seatsNow.seats)
+            setPhase('table')
+            return
+          }
+        }
+      }
+      const mine = await findMyActiveTables(user.id)
+      if (cancelled || mine.error || mine.tables.length === 0) return
+      const preferred = mine.tables.find(x => x.status === 'playing') ?? mine.tables[0]
+      if (preferred.status === 'playing') {
+        goToTable(preferred.tableId)
+        return
+      }
+      const t = await fetchTable(preferred.tableId)
+      const s = await fetchSeatsWithProfiles(preferred.tableId)
+      if (!cancelled && t.table) {
+        setTable(t.table)
+        setSeats(s.seats)
+        setPhase('table')
+        setActiveOnlineTableId(preferred.tableId)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [authLoading, user, goToTable])
+
+  useEffect(() => {
+    if (phase !== 'menu') return
+    void refreshOpenList()
+    const id = setInterval(() => void refreshOpenList(), 5000)
+    return () => clearInterval(id)
+  }, [phase, refreshOpenList])
 
   useEffect(() => {
     if (!table?.id) return
@@ -120,33 +180,17 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
       setBusy(false)
       return
     }
+    setActiveOnlineTableId(created.id)
     setTable(created)
     await refresh(created.id)
     setPhase('table')
     setBusy(false)
   }
 
-  async function handleJoin() {
+  async function handleJoinById(tableId: string) {
     if (!user) return
-    const raw = joinCode.trim()
-    if (!raw) {
-      setError('Entrez le code ou l’UUID de la table.')
-      return
-    }
     setBusy(true)
     setError(null)
-
-    let tableId = raw
-    if (!raw.includes('-') && raw.length <= 12) {
-      const { data } = await supabase.from('kora_tables').select('id, status').eq('status', 'lobby').limit(40)
-      const match = (data ?? []).find(t => tableInviteCode(t.id) === raw.toUpperCase().replace(/-/g, ''))
-      if (!match) {
-        setError('Aucune table lobby avec ce code. Vérifiez le code ou collez l’UUID complet.')
-        setBusy(false)
-        return
-      }
-      tableId = match.id
-    }
 
     const { table: t, error: tErr } = await fetchTable(tableId)
     if (tErr || !t) {
@@ -155,11 +199,9 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
       return
     }
     if (t.status === 'playing') {
-      // Rejoindre une table déjà en cours seulement si déjà assis
       const seatsNow = await fetchSeatsWithProfiles(t.id)
       const already = seatsNow.seats.find(s => s.user_id === user.id)
       if (already) {
-        setTable(t)
         goToTable(t.id)
         setBusy(false)
         return
@@ -189,10 +231,37 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
       }
     }
 
+    setActiveOnlineTableId(t.id)
     setTable(t)
     await refresh(t.id)
     setPhase('table')
     setBusy(false)
+  }
+
+  async function handleJoin() {
+    if (!user) return
+    const raw = joinCode.trim()
+    if (!raw) {
+      setError('Entrez le code ou l’UUID de la table.')
+      return
+    }
+    setBusy(true)
+    setError(null)
+
+    let tableId = raw
+    if (!raw.includes('-') && raw.length <= 12) {
+      const { data } = await supabase.from('kora_tables').select('id, status').eq('status', 'lobby').limit(40)
+      const match = (data ?? []).find(t => tableInviteCode(t.id) === raw.toUpperCase().replace(/-/g, ''))
+      if (!match) {
+        setError('Aucune table lobby avec ce code. Vérifiez le code ou collez l’UUID complet.')
+        setBusy(false)
+        return
+      }
+      tableId = match.id
+    }
+
+    setBusy(false)
+    await handleJoinById(tableId)
   }
 
   async function handleToggleReady() {
@@ -232,6 +301,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
     setSeats([])
     setPhase('menu')
     setBusy(false)
+    void refreshOpenList()
   }
 
   if (authLoading || !user) {
@@ -366,6 +436,47 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
                 Rejoindre
               </button>
             </div>
+
+            <div>
+              <p className="font-display" style={{ color: '#fff', fontSize: 14, fontWeight: 700, margin: '0 0 10px' }}>
+                Tables ouvertes
+              </p>
+              {openTables.length === 0 ? (
+                <p style={{ color: '#5b636b', fontSize: 12, margin: 0 }}>Aucune table en lobby pour l’instant.</p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {openTables.map(t => (
+                    <button
+                      key={t.table.id}
+                      disabled={busy}
+                      onClick={() => void handleJoinById(t.table.id)}
+                      style={{
+                        width: '100%',
+                        textAlign: 'left',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.08)',
+                        borderRadius: 14,
+                        padding: '12px 14px',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                      }}
+                    >
+                      <div>
+                        <p className="font-display" style={{ color: '#fff', fontSize: 14, fontWeight: 700, margin: 0 }}>
+                          {t.code}
+                        </p>
+                        <p style={{ color: '#A9B0B7', fontSize: 11, margin: '2px 0 0' }}>
+                          Mise {t.table.base_stake.toLocaleString('fr-FR')} · {t.seatCount}/4
+                        </p>
+                      </div>
+                      <span style={{ color: '#D6A84F', fontSize: 12, fontWeight: 700 }}>S’asseoir →</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -404,9 +515,6 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
                 Mise {table.base_stake.toLocaleString('fr-FR')} · Buy-in{' '}
                 {table.min_buy_in.toLocaleString('fr-FR')}–{table.max_buy_in.toLocaleString('fr-FR')} ·{' '}
                 {seats.length}/4
-              </p>
-              <p style={{ color: '#5b636b', fontSize: 11, margin: '8px 0 0', wordBreak: 'break-all' }}>
-                UUID : {table.id}
               </p>
             </div>
 

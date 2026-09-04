@@ -1,15 +1,11 @@
 import type { Player } from '../../types'
 import type { RoundState } from '../../game/round'
-import {
-  SEAT_NAMES,
-  SEAT_AVATARS,
-} from '../../game/GameContext'
 import { OpponentPanel } from '../OpponentPanel'
 import { PlayedCardsStack } from './PlayedCardsStack'
 
 // ==========================================================================
-// GameTableArea — grille CSS. Les cartes jouées restent dans les piles de
-// chaque siège (playLog). Aucun doublon au centre du tapis.
+// GameTableArea — grille CSS. Pseudos / avatars viennent de `players`
+// (solo IA ou online). Les cartes jouées restent dans les piles de siège.
 // ==========================================================================
 
 interface GameTableAreaProps {
@@ -33,6 +29,17 @@ export function GameTableArea({
       ? roundState.currentTrick.starterIndex
       : null
 
+  const seat = (i: number) => ({
+    name: players[i]?.name ?? `Siège ${i + 1}`,
+    avatar: players[i]?.avatar ?? '∅',
+    capital: players[i]?.capital ?? 0,
+    eliminated: !!players[i]?.isEliminated,
+  })
+
+  const north = seat(2)
+  const west = seat(3)
+  const east = seat(1)
+
   return (
     <div
       style={{
@@ -48,72 +55,61 @@ export function GameTableArea({
         paddingRight: 4,
       }}
     >
-      {/* Nord — Lebe */}
       <div style={{ gridArea: 'north', justifySelf: 'center', alignSelf: 'start' }}>
         <OpponentPanel
           position="top"
-          name={SEAT_NAMES[2]}
-          avatar={SEAT_AVATARS[2]}
-          capital={players[2].capital}
-          cardsLeft={roundState.hands[2].length}
+          name={north.name}
+          avatar={north.avatar}
+          capital={north.capital}
+          cardsLeft={roundState.hands[2]?.length ?? 0}
           isActive={currentPlayerIndex === 2}
           isBanked={roundState.bankedPlayers.includes(2)}
           isLeader={trickLeaderIndex === 2}
-          isEliminated={!!players[2].isEliminated}
+          isEliminated={north.eliminated}
           compactMode={compactMode}
-          playedCards={roundState.playLog[2]}
+          playedCards={roundState.playLog[2] ?? []}
           playedCardsHighlightLast={roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex === 2}
           stackSize={stackSize}
         />
       </div>
 
-      {/* Ouest — Goju */}
       <div style={{ gridArea: 'west', alignSelf: 'center', justifySelf: 'center' }}>
         <OpponentPanel
           position="left"
-          name={SEAT_NAMES[3]}
-          avatar={SEAT_AVATARS[3]}
-          capital={players[3].capital}
-          cardsLeft={roundState.hands[3].length}
+          name={west.name}
+          avatar={west.avatar}
+          capital={west.capital}
+          cardsLeft={roundState.hands[3]?.length ?? 0}
           isActive={currentPlayerIndex === 3}
           isBanked={roundState.bankedPlayers.includes(3)}
           isLeader={trickLeaderIndex === 3}
-          isEliminated={!!players[3].isEliminated}
+          isEliminated={west.eliminated}
           compactMode={compactMode}
-          playedCards={roundState.playLog[3]}
+          playedCards={roundState.playLog[3] ?? []}
           playedCardsHighlightLast={roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex === 3}
           stackSize={stackSize}
         />
       </div>
 
-      {/* Est — Binu */}
       <div style={{ gridArea: 'east', alignSelf: 'center', justifySelf: 'center' }}>
         <OpponentPanel
           position="right"
-          name={SEAT_NAMES[1]}
-          avatar={SEAT_AVATARS[1]}
-          capital={players[1].capital}
-          cardsLeft={roundState.hands[1].length}
+          name={east.name}
+          avatar={east.avatar}
+          capital={east.capital}
+          cardsLeft={roundState.hands[1]?.length ?? 0}
           isActive={currentPlayerIndex === 1}
           isBanked={roundState.bankedPlayers.includes(1)}
           isLeader={trickLeaderIndex === 1}
-          isEliminated={!!players[1].isEliminated}
+          isEliminated={east.eliminated}
           compactMode={compactMode}
-          playedCards={roundState.playLog[1]}
+          playedCards={roundState.playLog[1] ?? []}
           playedCardsHighlightLast={roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex === 1}
           stackSize={stackSize}
         />
       </div>
 
-      {/* Centre — décor de tapis uniquement */}
-      <div
-        style={{
-          gridArea: 'center',
-          position: 'relative',
-          minWidth: 0,
-          minHeight: 0,
-        }}
-      >
+      <div style={{ gridArea: 'center', position: 'relative', minWidth: 0, minHeight: 0 }}>
         <div
           className="table-oval"
           style={{
@@ -125,10 +121,9 @@ export function GameTableArea({
         />
       </div>
 
-      {/* Sud — pile "Vous" */}
       <div style={{ gridArea: 'south', justifySelf: 'center', alignSelf: 'end', marginTop: 6 }}>
         <PlayedCardsStack
-          cards={roundState.playLog[0]}
+          cards={roundState.playLog[0] ?? []}
           orientation="horizontal"
           size={stackSize}
           showLeadIndicator={trickLeaderIndex === 0}

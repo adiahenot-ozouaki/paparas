@@ -1,5 +1,8 @@
+import { useEffect, useState } from 'react'
 import type { Screen } from '../types'
 import { useAuth } from '../auth/AuthContext'
+import { findMyActiveTables, listOpenLobbyTables, type MyActiveTable, type OpenLobbyTable } from '../lib/online/api'
+import { setActiveOnlineTableId } from '../lib/online/session'
 
 const MODES = [
   {
@@ -46,6 +49,29 @@ const MODES = [
 
 export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const { user } = useAuth()
+  const [myTables, setMyTables] = useState<MyActiveTable[]>([])
+  const [openTables, setOpenTables] = useState<OpenLobbyTable[]>([])
+  const [listError, setListError] = useState<string | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      if (user) {
+        const mine = await findMyActiveTables(user.id)
+        if (!cancelled && !mine.error) setMyTables(mine.tables)
+      } else {
+        setMyTables([])
+      }
+      const open = await listOpenLobbyTables(8)
+      if (!cancelled) {
+        if (open.error) setListError(open.error)
+        else setOpenTables(open.tables)
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   function handleMode(mode: (typeof MODES)[number]) {
     if (mode.online && !user) {
@@ -53,6 +79,12 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
       return
     }
     onNavigate(mode.screen)
+  }
+
+  function resumeTable(t: MyActiveTable) {
+    setActiveOnlineTableId(t.tableId)
+    if (t.status === 'playing') onNavigate('onlineGameTable')
+    else onNavigate('onlineLobby')
   }
 
   return (
@@ -94,6 +126,34 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
           Solo libre · Online nécessite un compte{user ? ' ✓' : ''}
         </p>
       </div>
+
+      {myTables.length > 0 && (
+        <div style={{ padding: '16px 20px 0' }}>
+          {myTables.slice(0, 2).map(t => (
+            <button
+              key={t.tableId}
+              onClick={() => resumeTable(t)}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                background: 'linear-gradient(135deg, rgba(18,60,50,0.65), rgba(16,21,26,0.85))',
+                border: '1px solid rgba(214,168,79,0.35)',
+                borderRadius: 16,
+                padding: '14px 16px',
+                cursor: 'pointer',
+                marginBottom: 10,
+              }}
+            >
+              <p className="font-display text-gold" style={{ fontSize: 14, fontWeight: 700, margin: '0 0 4px' }}>
+                {t.status === 'playing' ? '▶ Reprendre la partie' : '↩ Retour au lobby'}
+              </p>
+              <p style={{ color: '#A9B0B7', fontSize: 12, margin: 0 }}>
+                Code {t.code} · mise {t.baseStake.toLocaleString('fr-FR')} · siège {t.seatIndex + 1}
+              </p>
+            </button>
+          ))}
+        </div>
+      )}
 
       <div style={{ padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {MODES.map((mode, i) => (
@@ -181,24 +241,65 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
 
       <div style={{ padding: '0 20px 24px' }}>
         <h3 className="font-display" style={{ fontSize: 16, fontWeight: 700, margin: '0 0 12px', color: '#fff' }}>
-          Tables actives
+          Tables ouvertes
         </h3>
-        <div
-          style={{
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 16,
-            padding: '18px 16px',
-            textAlign: 'center',
-          }}
-        >
-          <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 6px' }}>
-            Matchmaking public bientôt.
-          </p>
-          <p style={{ color: '#5b636b', fontSize: 12, margin: 0 }}>
-            Utilisez « Partie privée » pour jouer avec un code.
-          </p>
-        </div>
+        {listError && (
+          <p style={{ color: '#C94B4B', fontSize: 12, margin: '0 0 8px' }}>{listError}</p>
+        )}
+        {openTables.length === 0 ? (
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.08)',
+              borderRadius: 16,
+              padding: '18px 16px',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 6px' }}>Aucune table en lobby pour l’instant.</p>
+            <p style={{ color: '#5b636b', fontSize: 12, margin: 0 }}>
+              Créez-en une via « Partie privée » ou attendez un hôte.
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {openTables.map(t => (
+              <button
+                key={t.table.id}
+                onClick={() => {
+                  if (!user) {
+                    onNavigate('auth')
+                    return
+                  }
+                  onNavigate('onlineLobby')
+                }}
+                style={{
+                  width: '100%',
+                  textAlign: 'left',
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 14,
+                  padding: '12px 14px',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  gap: 8,
+                }}
+              >
+                <div>
+                  <p className="font-display" style={{ color: '#fff', fontSize: 14, fontWeight: 700, margin: 0 }}>
+                    {t.code}
+                  </p>
+                  <p style={{ color: '#A9B0B7', fontSize: 11, margin: '2px 0 0' }}>
+                    Mise {t.table.base_stake.toLocaleString('fr-FR')} · {t.seatCount}/4
+                  </p>
+                </div>
+                <span style={{ color: '#D6A84F', fontSize: 12, fontWeight: 700 }}>Rejoindre →</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   )
