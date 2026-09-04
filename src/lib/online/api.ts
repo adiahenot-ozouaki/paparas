@@ -1,11 +1,10 @@
 // ==========================================================================
 // api.ts — Client online Garam (lobby + edge function).
-//
-// Lobby (créer / rejoindre / prêt) = PostgREST + RLS.
-// Actions de jeu (start_table, play_card, …) = Edge Function kora-game-engine.
 // ==========================================================================
 
 import { supabase } from '../supabase/client'
+import type { Card } from '../../types'
+import type { RoundState } from '../../game/round'
 import type { DeckVariantDb, KoraProfile, KoraTable, KoraTablePlayer } from '../supabase/database.types'
 
 const NUM_SEATS = 4
@@ -22,6 +21,13 @@ export type OnlineEngineAction =
 
 export interface SeatWithProfile extends KoraTablePlayer {
   profile: Pick<KoraProfile, 'username' | 'avatar'> | null
+}
+
+export interface EngineStateResponse {
+  state: RoundState
+  roundNumber?: number
+  eliminatedSeats?: number[]
+  error?: string
 }
 
 function edgeFunctionUrl(): string {
@@ -58,6 +64,45 @@ export async function callEngine(
     body = { error: 'Réponse non JSON du serveur.' }
   }
   return { ok: res.ok, status: res.status, body }
+}
+
+/**
+ * L'edge renvoie les mains adverses en `null` par carte.
+ * On conserve la longueur (cartes restantes) avec des stubs face cachée
+ * pour l'UI, sans exposer les vraies valeurs.
+ */
+export function parsePublicState(raw: unknown): RoundState {
+  const s = raw as RoundState & { hands: (Card | null)[][] }
+  const hands: Card[][] = (s.hands ?? []).map(hand =>
+    (hand ?? []).map((c, i) => {
+      if (c && typeof c === 'object' && 'suit' in c && c.suit) return c as Card
+      return {
+        suit: '♠' as const,
+        value: '3' as const,
+        rank: 0,
+        pointValue: 0,
+        state: 'back' as const,
+        // id synthétique pour éviter collisions UI
+        ...( { _hidden: true, _i: i } as object),
+      } as Card
+    }),
+  )
+
+  // Garantir 4 sièges
+  while (hands.length < NUM_SEATS) hands.push([])
+
+  return {
+    phase: s.phase,
+    variant: s.variant,
+    numPlayers: s.numPlayers ?? NUM_SEATS,
+    hands,
+    currentTrick: s.currentTrick,
+    playLog: s.playLog ?? [[], [], [], []],
+    trickWinners: s.trickWinners ?? [],
+    lastTrickWinnerIndex: s.lastTrickWinnerIndex ?? null,
+    bankedPlayers: s.bankedPlayers ?? [],
+    outcome: s.outcome ?? null,
+  }
 }
 
 export async function createOnlineTable(params: {
@@ -97,7 +142,6 @@ export async function createOnlineTable(params: {
   return { table: data as KoraTable, error: null }
 }
 
-/** S'asseoir sur le premier siège libre (ou un siège demandé). */
 export async function joinOnlineTable(params: {
   tableId: string
   userId: string
@@ -192,7 +236,77 @@ export async function fetchSeatsWithProfiles(tableId: string): Promise<{
   }
 }
 
-/** Code court affichable (8 premiers caractères de l'UUID). */
 export function tableInviteCode(tableId: string): string {
   return tableId.replace(/-/g, '').slice(0, 8).toUpperCase()
+}
+
+/** Pivote les indices pour que mon siège soit en vue 0 (sud). */
+export function toViewIndex(physicalIndex: number, mySeat: number): number {
+  return (physicalIndex - mySeat + NUM_SEATS) % NUM_SEATS
+}
+
+export function rotateRoundStateForView(state: RoundState, mySeat: number): RoundState {
+  const mapArr = <T,>(arr: T[]): T[] => {
+    const out = new Array(NUM_SEATS) as T[]
+    for (let p = 0; p < NUM_SEATS; p++) out[toViewIndex(p, mySeat)] = arr[p]
+    return out
+  }
+
+  const mapIdx = (i: number | null) => (i === null ? null : toViewIndex(i, mySeat))
+
+  return {
+    ...state,
+    hands: mapArr(state.hands),
+    playLog: mapArr(state.playLog),
+    bankedPlayers: state.bankedPlayers.map(i => toViewIndex(i, mySeat)),
+    trickWinners: state.trickWinners.map(i => toViewIndex(i, mySeat)),
+    lastTrickWinnerIndex: mapIdx(state.lastTrickWinnerIndex),
+    currentTrick: state.currentTrick
+      ? {
+          ...state.currentTrick,
+          starterIndex: toViewIndex(state.currentTrick.starterIndex, mySeat),
+          playedCards: state.currentTrick.playedCards.map(pc => ({
+            ...pc,
+            playerIndex: toViewIndex(pc.playerIndex, mySeat),
+          })),
+        }
+      : null,
+    outcome: state.outcome
+      ? state.outcome.kind === 'normal'
+        ? {
+            ...state.outcome,
+            roundWinnerIndex: toViewIndex(state.outcome.roundWinnerIndex, mySeat),
+            bankedPlayerIndexes: state.outcome.bankedPlayerIndexes.map(i => toViewIndex(i, mySeat)),
+            payout: {
+              ...state.outcome.payout,
+              winners: state.outcome.payout.winners.map(w => ({
+                ...w,
+                playerIndex: toViewIndex(w.playerIndex, mySeat),
+              })),
+              losers: state.outcome.payout.losers.map(w => ({
+                ...w,
+                playerIndex: toViewIndex(w.playerIndex, mySeat),
+              })),
+            },
+          }
+        : {
+            ...state.outcome,
+            winners: state.outcome.winners.map(w => ({
+              ...w,
+              playerIndex: toViewIndex(w.playerIndex, mySeat),
+            })),
+            payout: {
+              ...state.outcome.payout,
+              winners: state.outcome.payout.winners.map(w => ({
+                ...w,
+                playerIndex: toViewIndex(w.playerIndex, mySeat),
+              })),
+              losers: state.outcome.payout.losers.map(w => ({
+                ...w,
+                playerIndex: toViewIndex(w.playerIndex, mySeat),
+              })),
+            },
+          }
+      : null,
+  }
 }

@@ -9,6 +9,7 @@ export type Screen =
   | 'stakeConfig'
   | 'lobby'
   | 'onlineLobby'
+  | 'onlineGameTable'
   | 'auth'
   | 'gameTable'
   | 'roundResult'
@@ -22,13 +23,6 @@ export type Screen =
 
 export type Suit = '♥' | '♦' | '♣' | '♠'
 
-/**
- * Variante de paquet. Détermine l'étendue des valeurs jouées.
- *   '8'  -> 3 à 8   (6 cartes/couleur, 23 cartes au total)
- *   '9'  -> 3 à 9   (7 cartes/couleur, 27 cartes au total)
- *   '10' -> 3 à 10  (8 cartes/couleur, 31 cartes au total)  — mode Vitesse
- *   'as' -> 3 à 10 + As (9 cartes/couleur, 35 cartes au total) — mode Classique
- */
 export type DeckVariant = '8' | '9' | '10' | 'as'
 
 export type CardValue = '3' | '4' | '5' | '6' | '7' | '8' | '9' | '10' | 'A'

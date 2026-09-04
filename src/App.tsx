@@ -10,6 +10,7 @@ import GameModeScreen from './screens/GameModeScreen'
 import StakeConfigScreen from './screens/StakeConfigScreen'
 import LobbyScreen from './screens/LobbyScreen'
 import OnlineLobbyScreen from './screens/OnlineLobbyScreen'
+import OnlineGameTableScreen from './screens/OnlineGameTableScreen'
 import AuthScreen from './screens/AuthScreen'
 import GameTableScreen from './screens/GameTableScreen'
 import RoundResultScreen from './screens/RoundResultScreen'
@@ -24,6 +25,7 @@ import RulesScreen from './screens/RulesScreen'
 const NO_NAV_SCREENS: Screen[] = [
   'splash',
   'gameTable',
+  'onlineGameTable',
   'roundResult',
   'victory',
   'defeat',
@@ -37,13 +39,11 @@ const NO_NAV_SCREENS: Screen[] = [
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('splash')
-  /** Écran vers lequel revenir après auth (ex: onlineLobby). */
   const [authReturnTo, setAuthReturnTo] = useState<Screen>('home')
 
   const navigate = (s: Screen) => {
     if (s === 'auth') {
-      // Si on vient d'un mode online, y retourner après login
-      if (screen === 'gameMode' || screen === 'onlineLobby') {
+      if (screen === 'gameMode' || screen === 'onlineLobby' || screen === 'onlineGameTable') {
         setAuthReturnTo('onlineLobby')
       } else if (screen === 'profile') {
         setAuthReturnTo('profile')
@@ -70,6 +70,7 @@ export default function App() {
                 {screen === 'stakeConfig' && <StakeConfigScreen onNavigate={navigate} />}
                 {screen === 'lobby' && <LobbyScreen onNavigate={navigate} />}
                 {screen === 'onlineLobby' && <OnlineLobbyScreen onNavigate={navigate} />}
+                {screen === 'onlineGameTable' && <OnlineGameTableScreen onNavigate={navigate} />}
                 {screen === 'auth' && <AuthScreen onNavigate={navigate} returnTo={authReturnTo} />}
                 {screen === 'gameTable' && <GameTableScreen onNavigate={navigate} />}
                 {screen === 'roundResult' && <RoundResultScreen onNavigate={navigate} />}

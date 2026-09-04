@@ -12,13 +12,9 @@ import {
   tableInviteCode,
   type SeatWithProfile,
 } from '../lib/online/api'
+import { setActiveOnlineTableId } from '../lib/online/session'
 import { supabase } from '../lib/supabase/client'
 import type { KoraTable } from '../lib/supabase/database.types'
-
-// ==========================================================================
-// OnlineLobbyScreen — table privée en ligne (cash game).
-// Créer / rejoindre par code, sièges Realtime, prêt, start_table.
-// ==========================================================================
 
 type Phase = 'menu' | 'table'
 
@@ -32,7 +28,6 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
   const [joinCode, setJoinCode] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [statusMsg, setStatusMsg] = useState<string | null>(null)
 
   const mySeat = useMemo(
     () => (user ? seats.find(s => s.user_id === user.id) : undefined),
@@ -42,16 +37,26 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
   const allReady = seats.length >= 2 && seats.every(s => s.is_ready)
   const canStart = isHost && allReady && table?.status === 'lobby'
 
-  const refresh = useCallback(async (tableId: string) => {
-    const [t, s] = await Promise.all([fetchTable(tableId), fetchSeatsWithProfiles(tableId)])
-    if (t.table) setTable(t.table)
-    if (!s.error) setSeats(s.seats)
-    if (t.table?.status === 'playing') {
-      setStatusMsg('La table a démarré — table de jeu online à brancher ensuite.')
-    }
-  }, [])
+  const goToTable = useCallback(
+    (tableId: string) => {
+      setActiveOnlineTableId(tableId)
+      onNavigate('onlineGameTable')
+    },
+    [onNavigate],
+  )
 
-  // Realtime sièges + statut table
+  const refresh = useCallback(
+    async (tableId: string) => {
+      const [t, s] = await Promise.all([fetchTable(tableId), fetchSeatsWithProfiles(tableId)])
+      if (t.table) setTable(t.table)
+      if (!s.error) setSeats(s.seats)
+      if (t.table?.status === 'playing') {
+        goToTable(tableId)
+      }
+    },
+    [goToTable],
+  )
+
   useEffect(() => {
     if (!table?.id) return
     const tableId = table.id
@@ -74,7 +79,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
       )
       .subscribe()
 
-    const poll = setInterval(() => void refresh(tableId), 4000)
+    const poll = setInterval(() => void refresh(tableId), 3000)
 
     return () => {
       clearInterval(poll)
@@ -83,9 +88,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
   }, [table?.id, refresh])
 
   useEffect(() => {
-    if (!authLoading && !user) {
-      onNavigate('auth')
-    }
+    if (!authLoading && !user) onNavigate('auth')
   }, [authLoading, user, onNavigate])
 
   async function handleCreate() {
@@ -133,7 +136,6 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
     setBusy(true)
     setError(null)
 
-    // Accepte UUID complet ou préfixe 8 caractères
     let tableId = raw
     if (!raw.includes('-') && raw.length <= 12) {
       const { data } = await supabase.from('kora_tables').select('id, status').eq('status', 'lobby').limit(40)
@@ -152,8 +154,22 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
       setBusy(false)
       return
     }
+    if (t.status === 'playing') {
+      // Rejoindre une table déjà en cours seulement si déjà assis
+      const seatsNow = await fetchSeatsWithProfiles(t.id)
+      const already = seatsNow.seats.find(s => s.user_id === user.id)
+      if (already) {
+        setTable(t)
+        goToTable(t.id)
+        setBusy(false)
+        return
+      }
+      setError('Cette table a déjà démarré.')
+      setBusy(false)
+      return
+    }
     if (t.status !== 'lobby') {
-      setError('Cette table n’est plus en lobby.')
+      setError('Cette table n’est plus disponible.')
       setBusy(false)
       return
     }
@@ -199,9 +215,9 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
       setBusy(false)
       return
     }
-    setStatusMsg('Table démarrée côté serveur. Écran de jeu online : prochaine étape.')
-    await refresh(table.id)
+    setActiveOnlineTableId(table.id)
     setBusy(false)
+    onNavigate('onlineGameTable')
   }
 
   async function handleLeave() {
@@ -211,6 +227,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
     }
     setBusy(true)
     await callEngine('leave_table', table.id)
+    setActiveOnlineTableId(null)
     setTable(null)
     setSeats([])
     setPhase('menu')
@@ -279,21 +296,6 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
             }}
           >
             {error}
-          </div>
-        )}
-        {statusMsg && (
-          <div
-            style={{
-              background: 'rgba(214,168,79,0.12)',
-              border: '1px solid rgba(214,168,79,0.35)',
-              borderRadius: 12,
-              padding: '12px 14px',
-              marginBottom: 16,
-              color: '#D6A84F',
-              fontSize: 13,
-            }}
-          >
-            {statusMsg}
           </div>
         )}
 
@@ -454,13 +456,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
                       )}
                     </div>
                     {seat && (
-                      <span
-                        style={{
-                          color: seat.is_ready ? '#4CAF76' : '#A9B0B7',
-                          fontSize: 11,
-                          fontWeight: 600,
-                        }}
-                      >
+                      <span style={{ color: seat.is_ready ? '#4CAF76' : '#A9B0B7', fontSize: 11, fontWeight: 600 }}>
                         {seat.is_ready ? 'Prêt' : 'Attente'}
                       </span>
                     )}
