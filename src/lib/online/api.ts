@@ -37,6 +37,15 @@ export interface MyActiveTable {
   code: string
 }
 
+export interface LeaderboardEntry {
+  userId: string
+  username: string
+  avatar: string
+  netGainTotal: number
+  totalRoundsWon: number
+  gamesWon: number
+}
+
 function edgeFunctionUrl(): string {
   const base = import.meta.env.VITE_SUPABASE_URL as string
   return `${base.replace(/\/$/, '')}/functions/v1/kora-game-engine`
@@ -235,7 +244,6 @@ export async function fetchSeatsWithProfiles(tableId: string): Promise<{
   }
 }
 
-/** Tables en lobby avec au moins une place libre (aperçu matchmaking). */
 export async function listOpenLobbyTables(limit = 12): Promise<{
   tables: OpenLobbyTable[]
   error: string | null
@@ -270,7 +278,6 @@ export async function listOpenLobbyTables(limit = 12): Promise<{
   }
 }
 
-/** Tables où le joueur est encore assis (lobby ou playing) — pour reconnexion. */
 export async function findMyActiveTables(userId: string): Promise<{
   tables: MyActiveTable[]
   error: string | null
@@ -306,9 +313,43 @@ export async function findMyActiveTables(userId: string): Promise<{
       code: tableInviteCode(t.id),
     })
   }
-  // playing d'abord
   result.sort((a, b) => (a.status === 'playing' ? -1 : 1) - (b.status === 'playing' ? -1 : 1))
   return { tables: result, error: null }
+}
+
+/** Classement réel depuis kora_lifetime_stats + kora_profiles (nécessite session). */
+export async function fetchOnlineLeaderboard(limit = 30): Promise<{
+  entries: LeaderboardEntry[]
+  error: string | null
+}> {
+  const { data: stats, error } = await supabase
+    .from('kora_lifetime_stats')
+    .select('user_id, net_gain_total, total_rounds_won, games_won')
+    .order('net_gain_total', { ascending: false })
+    .limit(limit)
+
+  if (error) return { entries: [], error: error.message }
+  const rows = stats ?? []
+  if (rows.length === 0) return { entries: [], error: null }
+
+  const ids = rows.map(r => r.user_id)
+  const { data: profiles } = await supabase.from('kora_profiles').select('id, username, avatar').in('id', ids)
+  const byId = new Map((profiles ?? []).map(p => [p.id, p]))
+
+  return {
+    entries: rows.map(r => {
+      const p = byId.get(r.user_id)
+      return {
+        userId: r.user_id,
+        username: p?.username ?? 'Joueur',
+        avatar: p?.avatar ?? '🦅',
+        netGainTotal: r.net_gain_total ?? 0,
+        totalRoundsWon: r.total_rounds_won ?? 0,
+        gamesWon: r.games_won ?? 0,
+      }
+    }),
+    error: null,
+  }
 }
 
 export function tableInviteCode(tableId: string): string {
