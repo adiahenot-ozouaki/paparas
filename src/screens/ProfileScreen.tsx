@@ -1,14 +1,31 @@
+import { useEffect, useState } from 'react'
 import type { Screen } from '../types'
 import { useGame, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
-import { useAuth } from '../auth/AuthContext'
+import { useAuth, validateUsername } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { ACHIEVEMENTS, getUnlockedAchievements } from '../game/achievements'
 
 const WINS_PER_LEVEL = 5
 
+const AVATAR_CHOICES = ['🦅', '🐆', '🦁', '🐊', '🐘', '🦏', '🦒', '🦓', '🐒', '🐍', '🐢', '🦋', '🌴', '☀️', '⭐', '🎯']
+
 export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const { players, lifetimeStats } = useGame()
-  const { user, profile, signOut } = useAuth()
+  const { user, profile, signOut, updateProfile } = useAuth()
+
+  const [editing, setEditing] = useState(false)
+  const [usernameDraft, setUsernameDraft] = useState('')
+  const [avatarDraft, setAvatarDraft] = useState('🦅')
+  const [saving, setSaving] = useState(false)
+  const [editError, setEditError] = useState<string | null>(null)
+  const [savedOk, setSavedOk] = useState(false)
+
+  useEffect(() => {
+    if (profile) {
+      setUsernameDraft(profile.username)
+      setAvatarDraft(profile.avatar || '🦅')
+    }
+  }, [profile])
 
   const capital = players[HUMAN_INDEX].capital
   const winRatio =
@@ -37,6 +54,33 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
     },
     { label: 'Capital maximum', value: lifetimeStats.maxCapitalEver.toLocaleString('fr-FR'), icon: '📊' },
   ]
+
+  async function handleSaveProfile() {
+    setEditError(null)
+    setSavedOk(false)
+    const v = validateUsername(usernameDraft)
+    if (v) {
+      setEditError(v)
+      return
+    }
+    setSaving(true)
+    const { error } = await updateProfile({ username: usernameDraft, avatar: avatarDraft })
+    setSaving(false)
+    if (error) {
+      setEditError(error)
+      return
+    }
+    setSavedOk(true)
+    setEditing(false)
+  }
+
+  function startEditing() {
+    setUsernameDraft(profile?.username ?? '')
+    setAvatarDraft(profile?.avatar || '🦅')
+    setEditError(null)
+    setSavedOk(false)
+    setEditing(true)
+  }
 
   return (
     <div
@@ -84,7 +128,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
                 boxShadow: '0 0 24px rgba(214,168,79,0.25)',
               }}
             >
-              {displayAvatar}
+              {editing ? avatarDraft : displayAvatar}
             </div>
             <div
               style={{
@@ -102,10 +146,32 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
               </span>
             </div>
           </div>
-          <div style={{ flex: 1 }}>
-            <h2 className="font-display" style={{ color: '#fff', fontSize: 22, fontWeight: 800, margin: '0 0 4px' }}>
-              {displayName}
-            </h2>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {editing ? (
+              <input
+                value={usernameDraft}
+                onChange={e => setUsernameDraft(e.target.value)}
+                maxLength={20}
+                placeholder="Votre pseudo"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(214,168,79,0.35)',
+                  borderRadius: 12,
+                  padding: '10px 12px',
+                  color: '#fff',
+                  fontSize: 18,
+                  fontFamily: 'Cinzel, serif',
+                  fontWeight: 700,
+                  marginBottom: 6,
+                }}
+              />
+            ) : (
+              <h2 className="font-display" style={{ color: '#fff', fontSize: 22, fontWeight: 800, margin: '0 0 4px' }}>
+                {displayName}
+              </h2>
+            )}
             <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 8px' }}>
               {user
                 ? user.email
@@ -134,15 +200,83 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
           </div>
         </div>
 
-        <div style={{ position: 'relative', marginTop: 16, display: 'flex', gap: 8 }}>
+        {user && editing && (
+          <div style={{ position: 'relative', marginTop: 16 }}>
+            <p style={{ color: '#A9B0B7', fontSize: 11, margin: '0 0 8px', letterSpacing: '0.08em' }}>AVATAR</p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+              {AVATAR_CHOICES.map(a => (
+                <button
+                  key={a}
+                  type="button"
+                  onClick={() => setAvatarDraft(a)}
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 12,
+                    fontSize: 20,
+                    cursor: 'pointer',
+                    border: a === avatarDraft ? '2px solid #D6A84F' : '1px solid rgba(255,255,255,0.1)',
+                    background: a === avatarDraft ? 'rgba(214,168,79,0.15)' : 'rgba(255,255,255,0.04)',
+                  }}
+                >
+                  {a}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {editError && (
+          <p role="alert" style={{ position: 'relative', color: '#C94B4B', fontSize: 12, margin: '12px 0 0' }}>
+            {editError}
+          </p>
+        )}
+        {savedOk && !editing && (
+          <p style={{ position: 'relative', color: '#4CAF76', fontSize: 12, margin: '12px 0 0' }}>Profil enregistré.</p>
+        )}
+
+        <div style={{ position: 'relative', marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
           {user ? (
-            <button
-              className="btn-secondary"
-              onClick={() => void signOut()}
-              style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}
-            >
-              Se déconnecter
-            </button>
+            <>
+              {editing ? (
+                <>
+                  <button
+                    className="btn-primary glow-gold"
+                    disabled={saving}
+                    onClick={() => void handleSaveProfile()}
+                    style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12, opacity: saving ? 0.6 : 1 }}
+                  >
+                    {saving ? 'Enregistrement…' : 'Enregistrer'}
+                  </button>
+                  <button
+                    className="btn-secondary"
+                    disabled={saving}
+                    onClick={() => {
+                      setEditing(false)
+                      setEditError(null)
+                    }}
+                    style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}
+                  >
+                    Annuler
+                  </button>
+                </>
+              ) : (
+                <button
+                  className="btn-primary glow-gold"
+                  onClick={startEditing}
+                  style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}
+                >
+                  Modifier le profil
+                </button>
+              )}
+              <button
+                className="btn-secondary"
+                onClick={() => void signOut()}
+                style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}
+              >
+                Se déconnecter
+              </button>
+            </>
           ) : (
             <button
               className="btn-primary glow-gold"

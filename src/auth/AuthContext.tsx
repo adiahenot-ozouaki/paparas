@@ -4,34 +4,33 @@ import { supabase } from '../lib/supabase/client'
 import type { KoraProfile } from '../lib/supabase/database.types'
 
 // ==========================================================================
-// AuthContext — fondation d'authentification, INDÉPENDANTE de GameContext.
-//
-// Volontairement séparé de game/GameContext.tsx : ce dernier gère encore
-// aujourd'hui la partie 100% locale/solo (localStorage, IA). Ce contexte
-// gère l'identité du joueur (compte Supabase Auth + kora_profiles) sans
-// rien changer au flux de navigation existant — App.tsx n'est PAS encore
-// modifié pour exiger une connexion avant de jouer en solo. Le branchement
-// entre "un compte connecté" et "une partie en ligne réelle" est l'étape
-// suivante (portage serveur de round.ts), pas celle-ci.
-//
-// Pas de mot de passe stocké ni manipulé ici au-delà de sa transmission à
-// supabase-js — Supabase Auth gère le hachage et le stockage côté serveur.
+// AuthContext — identité joueur (Supabase Auth + kora_profiles).
 // ==========================================================================
 
+const USERNAME_MIN = 2
+const USERNAME_MAX = 20
+const USERNAME_RE = /^[\p{L}\p{N}_.\- ]+$/u
+
+export function validateUsername(raw: string): string | null {
+  const username = raw.trim()
+  if (username.length < USERNAME_MIN) return `Au moins ${USERNAME_MIN} caractères.`
+  if (username.length > USERNAME_MAX) return `Maximum ${USERNAME_MAX} caractères.`
+  if (!USERNAME_RE.test(username)) return 'Lettres, chiffres, espaces, _ . - uniquement.'
+  return null
+}
+
 interface AuthContextValue {
-  /** null tant que la session n'a pas encore été résolue au premier chargement. */
   session: Session | null
   user: User | null
-  /** Ligne kora_profiles correspondante (username/avatar). null si pas encore chargée ou si déconnecté. */
   profile: KoraProfile | null
-  /** true uniquement pendant la résolution initiale de session (évite un flash "déconnecté" au chargement). */
   isLoading: boolean
 
   signUp: (email: string, password: string) => Promise<{ error: string | null }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
-  /** Recharge la ligne kora_profiles depuis la base (ex: après modification du pseudo). */
   refreshProfile: () => Promise<void>
+  /** Met à jour username et/ou avatar sur kora_profiles (RLS: son propre id). */
+  updateProfile: (patch: { username?: string; avatar?: string }) => Promise<{ error: string | null }>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
@@ -44,9 +43,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const loadProfile = useCallback(async (userId: string) => {
     const { data, error } = await supabase.from('kora_profiles').select('*').eq('id', userId).maybeSingle()
     if (error) {
-      // Non bloquant : l'utilisateur reste connecté même si le profil n'a
-      // pas pu être chargé (ex: latence réseau) — un nouvel essai est
-      // possible via refreshProfile().
       console.error('[AuthContext] Échec du chargement de kora_profiles :', error.message)
       return
     }
@@ -83,9 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({ email, password })
-    // kora_profiles + kora_lifetime_stats sont auto-provisionnés côté
-    // serveur par le trigger kora_handle_new_user (voir la migration SQL)
-    // dès que l'inscription est confirmée — rien à faire côté client ici.
     return { error: error?.message ?? null }
   }, [])
 
@@ -104,6 +97,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [session, loadProfile])
 
+  const updateProfile = useCallback(
+    async (patch: { username?: string; avatar?: string }) => {
+      if (!session?.user) return { error: 'Non connecté.' }
+
+      const updates: { username?: string; avatar?: string } = {}
+
+      if (patch.username !== undefined) {
+        const trimmed = patch.username.trim()
+        const v = validateUsername(trimmed)
+        if (v) return { error: v }
+        updates.username = trimmed
+      }
+      if (patch.avatar !== undefined) {
+        const avatar = patch.avatar.trim()
+        if (!avatar || avatar.length > 8) return { error: 'Avatar invalide.' }
+        updates.avatar = avatar
+      }
+      if (Object.keys(updates).length === 0) return { error: null }
+
+      const { data, error } = await supabase
+        .from('kora_profiles')
+        .update(updates)
+        .eq('id', session.user.id)
+        .select('*')
+        .maybeSingle()
+
+      if (error) {
+        // Contrainte d’unicité username si présente en base
+        if (error.code === '23505' || /unique|duplicate/i.test(error.message)) {
+          return { error: 'Ce pseudo est déjà pris.' }
+        }
+        return { error: error.message }
+      }
+      if (data) setProfile(data as KoraProfile)
+      else await loadProfile(session.user.id)
+      return { error: null }
+    },
+    [session, loadProfile],
+  )
+
   const value = useMemo<AuthContextValue>(
     () => ({
       session,
@@ -114,8 +147,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signIn,
       signOut,
       refreshProfile,
+      updateProfile,
     }),
-    [session, profile, isLoading, signUp, signIn, signOut, refreshProfile],
+    [session, profile, isLoading, signUp, signIn, signOut, refreshProfile, updateProfile],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
