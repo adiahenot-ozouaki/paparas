@@ -9,12 +9,14 @@ import type { KoraProfile } from '../lib/supabase/database.types'
 
 const USERNAME_MIN = 2
 const USERNAME_MAX = 20
-const USERNAME_RE = /^[\p{L}\p{N}_.\- ]+$/u
+/** Lettres unicode, chiffres, espace, underscore, point, tiret — pas de contrôles. */
+const USERNAME_RE = /^[\p{L}\p{N}][\p{L}\p{N}_.\- ]{0,18}[\p{L}\p{N}]$|^[\p{L}\p{N}]{2}$/u
 
 export function validateUsername(raw: string): string | null {
-  const username = raw.trim()
+  const username = raw.trim().replace(/\s+/g, ' ')
   if (username.length < USERNAME_MIN) return `Au moins ${USERNAME_MIN} caractères.`
   if (username.length > USERNAME_MAX) return `Maximum ${USERNAME_MAX} caractères.`
+  if (/[\u0000-\u001F\u007F]/.test(username)) return 'Caractères de contrôle interdits.'
   if (!USERNAME_RE.test(username)) return 'Lettres, chiffres, espaces, _ . - uniquement.'
   return null
 }
@@ -29,7 +31,6 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
   refreshProfile: () => Promise<void>
-  /** Met à jour username et/ou avatar sur kora_profiles (RLS: son propre id). */
   updateProfile: (patch: { username?: string; avatar?: string }) => Promise<{ error: string | null }>
 }
 
@@ -104,27 +105,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const updates: { username?: string; avatar?: string } = {}
 
       if (patch.username !== undefined) {
-        const trimmed = patch.username.trim()
+        const trimmed = patch.username.trim().replace(/\s+/g, ' ')
         const v = validateUsername(trimmed)
         if (v) return { error: v }
         updates.username = trimmed
       }
       if (patch.avatar !== undefined) {
+        // Un seul emoji / glyphe court — refuse les chaînes longues (injection UI)
         const avatar = patch.avatar.trim()
-        if (!avatar || avatar.length > 8) return { error: 'Avatar invalide.' }
+        if (!avatar || [...avatar].length > 4) return { error: 'Avatar invalide.' }
         updates.avatar = avatar
       }
       if (Object.keys(updates).length === 0) return { error: null }
 
+      // Toujours filtrer sur auth.uid() — la RLS double la protection.
       const { data, error } = await supabase
         .from('kora_profiles')
         .update(updates)
         .eq('id', session.user.id)
-        .select('*')
+        .select('id, username, avatar, created_at')
         .maybeSingle()
 
       if (error) {
-        // Contrainte d’unicité username si présente en base
         if (error.code === '23505' || /unique|duplicate/i.test(error.message)) {
           return { error: 'Ce pseudo est déjà pris.' }
         }
