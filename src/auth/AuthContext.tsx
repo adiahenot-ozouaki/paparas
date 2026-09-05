@@ -42,12 +42,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   const loadProfile = useCallback(async (userId: string) => {
-    const { data, error } = await supabase.from('kora_profiles').select('*').eq('id', userId).maybeSingle()
+    // Garantit profil + ligne stats (RPC idempotente)
+    await supabase.rpc('kora_ensure_player_rows', { p_user_id: userId })
+
+    const { data, error } = await supabase
+      .from('kora_profiles')
+      .select('id, username, avatar, wallet_balance, created_at')
+      .eq('id', userId)
+      .maybeSingle()
     if (error) {
       console.error('[AuthContext] Échec du chargement de kora_profiles :', error.message)
       return
     }
-    setProfile(data)
+    setProfile(data as KoraProfile | null)
   }, [])
 
   useEffect(() => {
@@ -111,19 +118,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updates.username = trimmed
       }
       if (patch.avatar !== undefined) {
-        // Un seul emoji / glyphe court — refuse les chaînes longues (injection UI)
         const avatar = patch.avatar.trim()
         if (!avatar || [...avatar].length > 4) return { error: 'Avatar invalide.' }
         updates.avatar = avatar
       }
       if (Object.keys(updates).length === 0) return { error: null }
 
-      // Toujours filtrer sur auth.uid() — la RLS double la protection.
       const { data, error } = await supabase
         .from('kora_profiles')
         .update(updates)
         .eq('id', session.user.id)
-        .select('id, username, avatar, created_at')
+        .select('id, username, avatar, wallet_balance, created_at')
         .maybeSingle()
 
       if (error) {
