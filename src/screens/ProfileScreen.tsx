@@ -4,13 +4,14 @@ import { useGame, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
 import { useAuth, validateUsername } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { ACHIEVEMENTS, getUnlockedAchievements } from '../game/achievements'
+import { fetchWallet } from '../lib/persistence/cloud'
 
 const WINS_PER_LEVEL = 5
 
 const AVATAR_CHOICES = ['🦅', '🐆', '🦁', '🐊', '🐘', '🦏', '🦒', '🦓', '🐒', '🐍', '🐢', '🦋', '🌴', '☀️', '⭐', '🎯']
 
 export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  const { players, lifetimeStats } = useGame()
+  const { players, lifetimeStats, statsSyncing, refreshCloudStats } = useGame()
   const { user, profile, signOut, updateProfile } = useAuth()
 
   const [editing, setEditing] = useState(false)
@@ -19,13 +20,29 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
   const [saving, setSaving] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
   const [savedOk, setSavedOk] = useState(false)
+  const [walletBalance, setWalletBalance] = useState<number | null>(null)
 
   useEffect(() => {
     if (profile) {
       setUsernameDraft(profile.username)
       setAvatarDraft(profile.avatar || '🦅')
+      if (typeof profile.wallet_balance === 'number') setWalletBalance(profile.wallet_balance)
     }
   }, [profile])
+
+  useEffect(() => {
+    if (!user) {
+      setWalletBalance(null)
+      return
+    }
+    let cancelled = false
+    void fetchWallet().then(({ wallet }) => {
+      if (!cancelled && wallet) setWalletBalance(wallet.balance)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user])
 
   const capital = players[HUMAN_INDEX].capital
   const winRatio =
@@ -178,6 +195,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
                 : lifetimeStats.gamesPlayed > 0
                   ? `${lifetimeStats.gamesPlayed} parties (local)`
                   : 'Compte local — connectez-vous pour le online'}
+              {statsSyncing ? ' · sync…' : ''}
             </p>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -271,6 +289,13 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
               )}
               <button
                 className="btn-secondary"
+                onClick={() => void refreshCloudStats()}
+                style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}
+              >
+                {statsSyncing ? 'Sync…' : 'Sync stats'}
+              </button>
+              <button
+                className="btn-secondary"
                 onClick={() => void signOut()}
                 style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}
               >
@@ -289,7 +314,36 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
         </div>
       </div>
 
-      <div style={{ padding: '16px 20px 0' }}>
+      <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        {user && walletBalance !== null && (
+          <div
+            style={{
+              background: 'linear-gradient(135deg, rgba(214,168,79,0.12), rgba(16,21,26,0.8))',
+              border: '1px solid rgba(214,168,79,0.35)',
+              borderRadius: 18,
+              padding: '18px 20px',
+            }}
+          >
+            <p
+              style={{
+                color: '#A9B0B7',
+                fontSize: 11,
+                fontFamily: 'Plus Jakarta Sans',
+                letterSpacing: '0.1em',
+                margin: '0 0 4px',
+              }}
+            >
+              WALLET (compte)
+            </p>
+            <div className="text-gold font-display" style={{ fontSize: 28, fontWeight: 800 }}>
+              {walletBalance.toLocaleString('fr-FR')} FCFA
+            </div>
+            <p style={{ color: '#A9B0B7', fontSize: 11, margin: '6px 0 0' }}>
+              Buy-in online débité ici · cash-out recrédit à la sortie de table
+            </p>
+          </div>
+        )}
+
         <div
           style={{
             background: 'linear-gradient(135deg, rgba(18,60,50,0.6), rgba(16,21,26,0.8))',
@@ -311,9 +365,9 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
                 margin: '0 0 4px',
               }}
             >
-              CAPITAL ACTUEL (local)
+              CAPITAL PARTIE SOLO
             </p>
-            <div className="text-gold font-display" style={{ fontSize: 30, fontWeight: 800 }}>
+            <div className="text-gold font-display" style={{ fontSize: 26, fontWeight: 800 }}>
               {capital.toLocaleString('fr-FR')} FCFA
             </div>
           </div>
