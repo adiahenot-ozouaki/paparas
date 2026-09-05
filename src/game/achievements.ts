@@ -1,28 +1,17 @@
-import type { LifetimeStats } from './GameContext'
+import type { LifetimeStats } from '../lib/persistence/stats'
 
 // ==========================================================================
-// game/achievements.ts — Définitions des hauts faits.
-//
-// Contrairement à l'ancien AchievementsScreen (liste statique avec des
-// booléens "unlocked" codés en dur), chaque achievement est ici une pure
-// fonction de LifetimeStats : isUnlocked(stats) => boolean. Il n'y a donc
-// AUCUN état de déblocage à stocker séparément ni à synchroniser — le
-// statut "débloqué" se recalcule à chaque lecture à partir des vraies
-// statistiques cumulées (game/GameContext.tsx), ce qui élimine toute
-// classe de bug de désynchronisation.
-//
-// Reste volontairement dans game/ (pas de import React) pour respecter la
-// même convention de pureté que le reste du moteur de jeu : ce fichier
-// est testable en isolation et réutilisable tel quel côté serveur le jour
-// où les statistiques seront calculées côté backend.
-//
-// Catégorie "Adversaires" volontairement absente : elle nécessiterait de
-// tracer les victoires PAR adversaire, une donnée qui n'existe pas encore
-// dans LifetimeStats. Mieux vaut ne pas l'avoir que d'inventer des
-// chiffres, comme c'était le cas avant ce nettoyage.
+// game/achievements.ts — Hauts faits dérivés purement de LifetimeStats.
+// Aucun booléen "unlocked" stocké : isUnlocked(stats) se recalcule à chaque
+// lecture. Optionnel : localStorage des ids "déjà vus" pour toasts / badge NEW.
 // ==========================================================================
 
 export type AchievementCategory = 'Progression' | 'Combos' | 'Règles spéciales' | 'Finance'
+
+export interface AchievementProgress {
+  current: number
+  target: number
+}
 
 export interface AchievementDef {
   id: string
@@ -32,6 +21,8 @@ export interface AchievementDef {
   icon: string
   color: string
   isUnlocked: (stats: LifetimeStats) => boolean
+  /** Progression vers le seuil (pour barre UI). Absent = binaire. */
+  progress?: (stats: LifetimeStats) => AchievementProgress
 }
 
 export const ACHIEVEMENTS: AchievementDef[] = [
@@ -44,6 +35,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '🎮',
     color: '#A9B0B7',
     isUnlocked: s => s.gamesPlayed >= 1,
+    progress: s => ({ current: Math.min(s.gamesPlayed, 1), target: 1 }),
   },
   {
     id: 'first_win',
@@ -53,6 +45,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '🏆',
     color: '#D6A84F',
     isUnlocked: s => s.gamesWon >= 1,
+    progress: s => ({ current: Math.min(s.gamesWon, 1), target: 1 }),
   },
   {
     id: 'ten_wins',
@@ -62,6 +55,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '🏅',
     color: '#D6A84F',
     isUnlocked: s => s.gamesWon >= 10,
+    progress: s => ({ current: Math.min(s.gamesWon, 10), target: 10 }),
   },
   {
     id: 'fifty_wins',
@@ -71,6 +65,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '👑',
     color: '#F0D58A',
     isUnlocked: s => s.gamesWon >= 50,
+    progress: s => ({ current: Math.min(s.gamesWon, 50), target: 50 }),
   },
   {
     id: 'hundred_rounds',
@@ -80,6 +75,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '🎯',
     color: '#176B50',
     isUnlocked: s => s.totalRoundsWon >= 100,
+    progress: s => ({ current: Math.min(s.totalRoundsWon, 100), target: 100 }),
   },
   {
     id: 'five_hundred_tricks',
@@ -89,6 +85,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '✨',
     color: '#9B59B6',
     isUnlocked: s => s.totalTricksWon >= 500,
+    progress: s => ({ current: Math.min(s.totalTricksWon, 500), target: 500 }),
   },
 
   // --- Combos ---
@@ -100,6 +97,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '🃏',
     color: '#4CAF76',
     isUnlocked: s => s.comboCounts.kora >= 1,
+    progress: s => ({ current: Math.min(s.comboCounts.kora, 1), target: 1 }),
   },
   {
     id: 'first_33',
@@ -109,6 +107,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '♦',
     color: '#D6A84F',
     isUnlocked: s => s.comboCounts['33'] >= 1,
+    progress: s => ({ current: Math.min(s.comboCounts['33'], 1), target: 1 }),
   },
   {
     id: 'first_trinity',
@@ -118,6 +117,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '♠',
     color: '#9B59B6',
     isUnlocked: s => s.comboCounts.trinity >= 1,
+    progress: s => ({ current: Math.min(s.comboCounts.trinity, 1), target: 1 }),
   },
   {
     id: 'first_kmt',
@@ -127,6 +127,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '⚡',
     color: '#C94B4B',
     isUnlocked: s => s.comboCounts.kmt >= 1,
+    progress: s => ({ current: Math.min(s.comboCounts.kmt, 1), target: 1 }),
   },
 
   // --- Règles spéciales ---
@@ -138,6 +139,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '♥',
     color: '#D6A84F',
     isUnlocked: s => s.specialRuleCounts.flush >= 1,
+    progress: s => ({ current: Math.min(s.specialRuleCounts.flush, 1), target: 1 }),
   },
   {
     id: 'first_21',
@@ -147,6 +149,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '🔢',
     color: '#4CAF76',
     isUnlocked: s => s.specialRuleCounts['21'] >= 1,
+    progress: s => ({ current: Math.min(s.specialRuleCounts['21'], 1), target: 1 }),
   },
   {
     id: 'first_t7',
@@ -156,6 +159,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '7️⃣',
     color: '#9B59B6',
     isUnlocked: s => s.specialRuleCounts.t7 >= 1,
+    progress: s => ({ current: Math.min(s.specialRuleCounts.t7, 1), target: 1 }),
   },
 
   // --- Finance ---
@@ -163,10 +167,11 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     id: 'positive_net',
     category: 'Finance',
     name: 'Dans le vert',
-    desc: 'Avoir un gain net cumulé positif sur l\'ensemble de vos parties.',
+    desc: "Avoir un gain net cumulé positif sur l'ensemble de vos parties.",
     icon: '💰',
     color: '#4CAF76',
     isUnlocked: s => s.netGainTotal > 0,
+    progress: s => ({ current: s.netGainTotal > 0 ? 1 : 0, target: 1 }),
   },
   {
     id: 'capital_10k',
@@ -176,6 +181,7 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '💵',
     color: '#D6A84F',
     isUnlocked: s => s.maxCapitalEver >= 10_000,
+    progress: s => ({ current: Math.min(s.maxCapitalEver, 10_000), target: 10_000 }),
   },
   {
     id: 'capital_50k',
@@ -185,11 +191,81 @@ export const ACHIEVEMENTS: AchievementDef[] = [
     icon: '💎',
     color: '#F0D58A',
     isUnlocked: s => s.maxCapitalEver >= 50_000,
+    progress: s => ({ current: Math.min(s.maxCapitalEver, 50_000), target: 50_000 }),
   },
 ]
 
-export const ACHIEVEMENT_CATEGORIES: AchievementCategory[] = ['Progression', 'Combos', 'Règles spéciales', 'Finance']
+export const ACHIEVEMENT_CATEGORIES: AchievementCategory[] = [
+  'Progression',
+  'Combos',
+  'Règles spéciales',
+  'Finance',
+]
 
 export function getUnlockedAchievements(stats: LifetimeStats): AchievementDef[] {
   return ACHIEVEMENTS.filter(a => a.isUnlocked(stats))
+}
+
+export function getAchievementProgress(
+  def: AchievementDef,
+  stats: LifetimeStats,
+): AchievementProgress | null {
+  return def.progress?.(stats) ?? null
+}
+
+/** Ids débloqués dans `next` mais pas dans `prev` (nouveaux hauts faits). */
+export function diffNewlyUnlocked(prev: LifetimeStats, next: LifetimeStats): AchievementDef[] {
+  return ACHIEVEMENTS.filter(a => !a.isUnlocked(prev) && a.isUnlocked(next))
+}
+
+// --------------------------------------------------------------------------
+// "Déjà vu" — purement UX (badge NEW / éviter de re-toaster)
+// --------------------------------------------------------------------------
+
+const STORAGE_KEY_SEEN = 'kora:achievementsSeen:v1'
+
+export function loadSeenAchievementIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_SEEN)
+    if (!raw) return new Set()
+    const arr = JSON.parse(raw) as string[]
+    return new Set(Array.isArray(arr) ? arr : [])
+  } catch {
+    return new Set()
+  }
+}
+
+export function saveSeenAchievementIds(ids: Set<string>): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_SEEN, JSON.stringify([...ids]))
+  } catch {
+    // ignore
+  }
+}
+
+/** Marque comme vus les ids fournis ; retourne le set à jour. */
+export function markAchievementsSeen(ids: string[]): Set<string> {
+  const seen = loadSeenAchievementIds()
+  for (const id of ids) seen.add(id)
+  saveSeenAchievementIds(seen)
+  return seen
+}
+
+/**
+ * Au premier calcul après chargement : si un achievement est déjà débloqué
+ * mais jamais "vu", on peut soit le toaster, soit le pré-marquer vu.
+ * `seedSeenFromStats` pré-marque tout ce qui est déjà unlocked (pas de spam
+ * au premier lancement après update de l'app).
+ */
+export function seedSeenFromStats(stats: LifetimeStats): Set<string> {
+  const seen = loadSeenAchievementIds()
+  let changed = false
+  for (const a of ACHIEVEMENTS) {
+    if (a.isUnlocked(stats) && !seen.has(a.id)) {
+      seen.add(a.id)
+      changed = true
+    }
+  }
+  if (changed) saveSeenAchievementIds(seen)
+  return seen
 }
