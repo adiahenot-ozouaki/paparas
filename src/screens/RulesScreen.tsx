@@ -12,10 +12,36 @@ const SECTIONS = [
   { id: 'elim', title: 'Élimination', icon: '💀' },
 ]
 
+/** Aligné sur deck.ts VALUE_ORDER + retrait de la plus forte Pique. */
 const VARIANTS = [
-  { id: '9', label: 'Variante 9', values: ['3', '4', '5', '6', '7', '8', '9'] as const, size: 27, mode: 'certains modes' },
-  { id: '10', label: 'Variante 10', values: ['3', '4', '5', '6', '7', '8', '9', '10'] as const, size: 31, mode: 'mode Vitesse' },
-  { id: 'as', label: 'Variante As', values: ['3', '4', '5', '6', '7', '8', '9', '10', 'A'] as const, size: 35, mode: 'mode Classique' },
+  {
+    id: '8',
+    label: 'Variante 8',
+    values: ['3', '4', '5', '6', '7', '8'] as const,
+    size: 23,
+    mode: 'partie courte',
+  },
+  {
+    id: '9',
+    label: 'Variante 9',
+    values: ['3', '4', '5', '6', '7', '8', '9'] as const,
+    size: 27,
+    mode: 'certains modes',
+  },
+  {
+    id: '10',
+    label: 'Variante 10',
+    values: ['3', '4', '5', '6', '7', '8', '9', '10'] as const,
+    size: 31,
+    mode: 'mode Vitesse',
+  },
+  {
+    id: 'as',
+    label: 'Variante As',
+    values: ['3', '4', '5', '6', '7', '8', '9', '10', 'A'] as const,
+    size: 35,
+    mode: 'mode Classique',
+  },
 ]
 
 export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
@@ -26,7 +52,7 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
       <div>
         <p style={{ color: '#A9B0B7', fontSize: 14, marginBottom: 12 }}>
           Kora ne se joue PAS avec un paquet de 52 cartes classique. Il n'y a jamais de Valet, de Dame ou de Roi —
-          après le 10, on passe directement à l'As. Trois variantes de paquet existent selon le mode de jeu :
+          après le 10, on passe directement à l'As. Quatre variantes de paquet existent selon le mode de jeu :
         </p>
 
         {VARIANTS.map(v => (
@@ -66,22 +92,35 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
           }}
         >
           <p style={{ color: '#C94B4B', fontSize: 12, margin: 0, fontWeight: 600 }}>
-            ⚠️ La plus forte carte de Pique de la variante est retirée du paquet avant chaque partie (par exemple
-            l'As de Pique en mode Classique). Cette carte n'existe donc jamais en jeu.
+            ⚠️ La plus forte carte de Pique de la variante est retirée du paquet avant chaque partie (8 de Pique
+            en variante 8, 9♠ en variante 9, 10♠ en variante 10, As de Pique en mode Classique). Cette carte
+            n'existe donc jamais en jeu.
           </p>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {([['♥', 'Cœur', '#C94B4B'], ['♦', 'Carreau', '#C94B4B'], ['♣', 'Trèfle', '#4CAF76'], ['♠', 'Pique', '#A9B0B7']] as [Suit, string, string][]).map(([s, name, color]) => (
-            <div key={name} style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: `1px solid ${color}30`,
-              borderRadius: 14,
-              padding: '14px',
-              textAlign: 'center',
-            }}>
+          {(
+            [
+              ['♥', 'Cœur', '#C94B4B'],
+              ['♦', 'Carreau', '#C94B4B'],
+              ['♣', 'Trèfle', '#4CAF76'],
+              ['♠', 'Pique', '#A9B0B7'],
+            ] as [Suit, string, string][]
+          ).map(([s, name, color]) => (
+            <div
+              key={name}
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: `1px solid ${color}30`,
+                borderRadius: 14,
+                padding: '14px',
+                textAlign: 'center',
+              }}
+            >
               <p style={{ color, fontSize: 28, margin: '0 0 4px' }}>{s}</p>
-              <p style={{ color: '#fff', fontSize: 13, fontFamily: 'Plus Jakarta Sans', fontWeight: 600, margin: 0 }}>{name}</p>
+              <p style={{ color: '#fff', fontSize: 13, fontFamily: 'Plus Jakarta Sans', fontWeight: 600, margin: 0 }}>
+                {name}
+              </p>
             </div>
           ))}
         </div>
@@ -97,17 +136,26 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
         </p>
         <div style={{ display: 'flex', justifyContent: 'center', gap: -16, marginBottom: 20 }}>
           {([0, 1, 2, 3, 4] as const).map(i => (
-            <div key={i} style={{ transform: `rotate(${(i - 2) * 8}deg) translateY(${Math.abs(i - 2) * 4}px)`, marginLeft: i > 0 ? -20 : 0, zIndex: i }}>
+            <div
+              key={i}
+              style={{
+                transform: `rotate(${(i - 2) * 8}deg) translateY(${Math.abs(i - 2) * 4}px)`,
+                marginLeft: i > 0 ? -20 : 0,
+                zIndex: i,
+              }}
+            >
               <PlayingCard suit="♠" value="A" state="back" size="md" />
             </div>
           ))}
         </div>
-        <div style={{
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 14,
-          padding: '14px 16px',
-        }}>
+        <div
+          style={{
+            background: 'rgba(255,255,255,0.04)',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 14,
+            padding: '14px 16px',
+          }}
+        >
           <p style={{ color: '#fff', fontSize: 13, margin: '0 0 8px', fontFamily: 'Plus Jakarta Sans', fontWeight: 600 }}>
             Qui a la main ?
           </p>
@@ -126,19 +174,31 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
     ),
     follow: (
       <div>
-        <div style={{
-          background: 'rgba(201,75,75,0.1)',
-          border: '1.5px solid rgba(201,75,75,0.3)',
-          borderRadius: 16,
-          padding: '16px',
-          textAlign: 'center',
-          marginBottom: 20,
-        }}>
-          <p style={{ color: '#C94B4B', fontSize: 11, fontFamily: 'Plus Jakarta Sans', letterSpacing: '0.1em', margin: '0 0 8px' }}>
+        <div
+          style={{
+            background: 'rgba(201,75,75,0.1)',
+            border: '1.5px solid rgba(201,75,75,0.3)',
+            borderRadius: 16,
+            padding: '16px',
+            textAlign: 'center',
+            marginBottom: 20,
+          }}
+        >
+          <p
+            style={{
+              color: '#C94B4B',
+              fontSize: 11,
+              fontFamily: 'Plus Jakarta Sans',
+              letterSpacing: '0.1em',
+              margin: '0 0 8px',
+            }}
+          >
             COULEUR DEMANDÉE
           </p>
           <p style={{ fontSize: 48, color: '#C94B4B', margin: 0, lineHeight: 1 }}>♥</p>
-          <p style={{ color: '#A9B0B7', fontSize: 12, margin: '8px 0 0' }}>Cœur demandé — tu dois jouer un cœur si tu en as</p>
+          <p style={{ color: '#A9B0B7', fontSize: 12, margin: '8px 0 0' }}>
+            Cœur demandé — tu dois jouer un cœur si tu en as
+          </p>
         </div>
         <p style={{ color: '#A9B0B7', fontSize: 14, marginBottom: 12 }}>
           Règle fondamentale : le joueur qui ouvre le pli joue la carte de son choix, et sa couleur devient la
@@ -162,17 +222,21 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
             <PlayingCard key={i} suit="♥" value={v} state={i === 2 ? 'winner' : 'played'} size="md" />
           ))}
         </div>
-        <div style={{
-          background: 'rgba(240,213,138,0.08)',
-          border: '1px solid rgba(240,213,138,0.2)',
-          borderRadius: 14,
-          padding: '12px 16px',
-          textAlign: 'center',
-        }}>
+        <div
+          style={{
+            background: 'rgba(240,213,138,0.08)',
+            border: '1px solid rgba(240,213,138,0.2)',
+            borderRadius: 14,
+            padding: '12px 16px',
+            textAlign: 'center',
+          }}
+        >
           <span className="text-gold font-display" style={{ fontSize: 16, fontWeight: 700 }}>
             ♥ 9 remporte le pli !
           </span>
-          <p style={{ color: '#A9B0B7', fontSize: 12, margin: '4px 0 0' }}>Le neuf de cœur est le plus fort parmi les cœurs joués</p>
+          <p style={{ color: '#A9B0B7', fontSize: 12, margin: '4px 0 0' }}>
+            Le neuf de cœur est le plus fort parmi les cœurs joués
+          </p>
         </div>
       </div>
     ),
@@ -181,8 +245,8 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
         <p style={{ color: '#A9B0B7', fontSize: 14, marginBottom: 8 }}>
           Le joueur qui remporte le <strong style={{ color: '#fff' }}>dernier pli (le 5e)</strong> remporte le
           round. Le multiplicateur de gain ne dépend PAS du nombre total de 3 dans sa main, mais du nombre de{' '}
-          <strong style={{ color: '#fff' }}>cartes de valeur 3 jouées consécutivement en fin de manche</strong>{' '}
-          par ce gagnant.
+          <strong style={{ color: '#fff' }}>cartes de valeur 3 jouées consécutivement en fin de manche</strong> par
+          ce gagnant.
         </p>
         <p style={{ color: '#A9B0B7', fontSize: 13, marginBottom: 16 }}>
           Il n'existe qu'une seule carte de valeur 3 par couleur (4 au total dans tout le paquet) — le combo KMT,
@@ -195,31 +259,40 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
           { name: 'Trinity', mult: '×8', desc: '3 trois consécutifs en fin de manche', color: '#9B59B6' },
           { name: 'KMT', mult: '×16', desc: '4 trois consécutifs — les 4 trois du paquet', color: '#C94B4B' },
         ].map((c, i) => (
-          <div key={i} style={{
-            background: `${c.color}08`,
-            border: `1px solid ${c.color}25`,
-            borderRadius: 14,
-            padding: '12px 16px',
-            marginBottom: 8,
-            display: 'flex',
-            alignItems: 'center',
-            gap: 12,
-          }}>
-            <div style={{
-              width: 48,
-              height: 48,
+          <div
+            key={i}
+            style={{
+              background: `${c.color}08`,
+              border: `1px solid ${c.color}25`,
               borderRadius: 14,
-              background: `${c.color}15`,
-              border: `1.5px solid ${c.color}40`,
+              padding: '12px 16px',
+              marginBottom: 8,
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-            }}>
-              <span className="font-display" style={{ color: c.color, fontSize: 14, fontWeight: 800 }}>{c.mult}</span>
+              gap: 12,
+            }}
+          >
+            <div
+              style={{
+                width: 48,
+                height: 48,
+                borderRadius: 14,
+                background: `${c.color}15`,
+                border: `1.5px solid ${c.color}40`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+              }}
+            >
+              <span className="font-display" style={{ color: c.color, fontSize: 14, fontWeight: 800 }}>
+                {c.mult}
+              </span>
             </div>
             <div>
-              <p className="font-display" style={{ color: c.color, fontSize: 15, fontWeight: 800, margin: '0 0 2px' }}>{c.name}</p>
+              <p className="font-display" style={{ color: c.color, fontSize: 15, fontWeight: 800, margin: '0 0 2px' }}>
+                {c.name}
+              </p>
               <p style={{ color: '#A9B0B7', fontSize: 12, margin: 0 }}>{c.desc}</p>
             </div>
           </div>
@@ -241,7 +314,12 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
             cards: ['A', '9', '8', '7', '6'] as const,
             suit: '♠' as Suit,
           },
-          { name: '21', color: '#4CAF76', desc: 'La somme des 5 cartes de la main est exactement égale à 21 (l\'As vaut 11).', expr: '3 + 4 + 5 + 4 + 5 = 21' },
+          {
+            name: '21',
+            color: '#4CAF76',
+            desc: "La somme des 5 cartes de la main est exactement égale à 21 (l'As vaut 11).",
+            expr: '3 + 4 + 5 + 4 + 5 = 21',
+          },
           {
             name: 'T7',
             color: '#9B59B6',
@@ -250,14 +328,19 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
             suit: '♦' as Suit,
           },
         ].map((s, i) => (
-          <div key={i} style={{
-            background: `${s.color}08`,
-            border: `1.5px solid ${s.color}30`,
-            borderRadius: 18,
-            padding: '18px',
-            marginBottom: 14,
-          }}>
-            <div className="font-display" style={{ color: s.color, fontSize: 26, fontWeight: 800, marginBottom: 6 }}>{s.name}</div>
+          <div
+            key={i}
+            style={{
+              background: `${s.color}08`,
+              border: `1.5px solid ${s.color}30`,
+              borderRadius: 18,
+              padding: '18px',
+              marginBottom: 14,
+            }}
+          >
+            <div className="font-display" style={{ color: s.color, fontSize: 26, fontWeight: 800, marginBottom: 6 }}>
+              {s.name}
+            </div>
             <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 12px' }}>{s.desc}</p>
             {s.cards && (
               <div style={{ display: 'flex', gap: 6 }}>
@@ -267,13 +350,17 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
               </div>
             )}
             {s.expr && (
-              <div style={{
-                background: 'rgba(255,255,255,0.05)',
-                borderRadius: 10,
-                padding: '8px 14px',
-                display: 'inline-block',
-              }}>
-                <span className="font-display" style={{ color: s.color, fontSize: 14, fontWeight: 700 }}>{s.expr}</span>
+              <div
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  borderRadius: 10,
+                  padding: '8px 14px',
+                  display: 'inline-block',
+                }}
+              >
+                <span className="font-display" style={{ color: s.color, fontSize: 14, fontWeight: 700 }}>
+                  {s.expr}
+                </span>
               </div>
             )}
           </div>
@@ -295,22 +382,26 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
     ),
     elim: (
       <div>
-        <div style={{
-          background: 'rgba(201,75,75,0.1)',
-          border: '1.5px solid rgba(201,75,75,0.3)',
-          borderRadius: 20,
-          padding: '24px',
-          textAlign: 'center',
-          marginBottom: 20,
-        }}>
+        <div
+          style={{
+            background: 'rgba(201,75,75,0.1)',
+            border: '1.5px solid rgba(201,75,75,0.3)',
+            borderRadius: 20,
+            padding: '24px',
+            textAlign: 'center',
+            marginBottom: 20,
+          }}
+        >
           <p style={{ fontSize: 40, margin: '0 0 8px' }}>💀</p>
           <p className="font-display" style={{ color: '#C94B4B', fontSize: 20, fontWeight: 800, margin: '0 0 8px' }}>
             JOUEUR ÉLIMINÉ
           </p>
           <div className="font-display" style={{ color: '#C94B4B', fontSize: 32, fontWeight: 800, margin: '0 0 4px' }}>
-            &lt; mise de base
+            < mise de base
           </div>
-          <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>Capital insuffisant pour continuer (500 FCFA par défaut)</p>
+          <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>
+            Capital insuffisant pour continuer (500 FCFA par défaut)
+          </p>
         </div>
         <p style={{ color: '#A9B0B7', fontSize: 14, marginBottom: 12 }}>
           La mise de base est définie avant le début de la partie — <strong style={{ color: '#fff' }}>500 FCFA</strong>{' '}
@@ -327,33 +418,37 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
   }
 
   return (
-    <div style={{
-      position: 'absolute',
-      inset: 0,
-      background: '#0B0D10',
-      display: 'flex',
-      flexDirection: 'column',
-      overflow: 'hidden',
-    }}>
+    <div
+      style={{
+        position: 'absolute',
+        inset: 0,
+        background: '#0B0D10',
+        display: 'flex',
+        flexDirection: 'column',
+        overflow: 'hidden',
+      }}
+    >
       <div className="pattern-african" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
 
-      {/* Header */}
       <div style={{ padding: '20px 20px 0', flexShrink: 0, position: 'relative' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-          <button onClick={() => onNavigate('home')} style={{
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 12,
-            width: 40,
-            height: 40,
-            color: '#fff',
-            fontSize: 18,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            flexShrink: 0,
-          }}>
+          <button
+            onClick={() => onNavigate('home')}
+            style={{
+              background: 'rgba(255,255,255,0.06)',
+              border: '1px solid rgba(255,255,255,0.1)',
+              borderRadius: 12,
+              width: 40,
+              height: 40,
+              color: '#fff',
+              fontSize: 18,
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0,
+            }}
+          >
             ←
           </button>
           <h1 className="font-display" style={{ fontSize: 24, fontWeight: 800, margin: 0 }}>
@@ -361,7 +456,6 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
           </h1>
         </div>
 
-        {/* Section nav */}
         <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 8 }}>
           {SECTIONS.map(s => (
             <button
@@ -392,7 +486,6 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
         </div>
       </div>
 
-      {/* Content */}
       <div style={{ flex: 1, overflow: 'auto', padding: '20px' }}>
         <div className="anim-fade-in" key={active}>
           {CONTENT[active]}
