@@ -4,6 +4,7 @@ import { AuthProvider } from './auth/AuthContext'
 import { GameProvider } from './game/GameContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import BottomNav from './components/BottomNav'
+import AchievementToast from './components/AchievementToast'
 import SplashScreen from './screens/SplashScreen'
 import HomeScreen from './screens/HomeScreen'
 import GameModeScreen from './screens/GameModeScreen'
@@ -63,6 +64,7 @@ export default function App() {
         <ErrorBoundary>
           <AuthProvider>
             <GameProvider>
+              <AchievementToast />
               <div key={screen} className="anim-fade-in app-screen" style={{ position: 'absolute', inset: 0 }}>
                 {screen === 'splash' && <SplashScreen onNavigate={navigate} />}
                 {screen === 'home' && <HomeScreen onNavigate={navigate} />}
