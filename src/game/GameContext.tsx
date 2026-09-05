@@ -10,9 +10,22 @@ import {
   type GameStakeConfig,
   type GameEndMode,
 } from './payout'
+import { useAuth } from '../auth/AuthContext'
+import {
+  DEFAULT_LIFETIME_STATS,
+  mergeSoloAndOnline,
+  pushSoloLifetimeStats,
+  syncOnLogin,
+} from '../lib/persistence/stats'
 
 // ==========================================================================
 // GameContext — état de partie partagé entre écrans.
+//
+// Stats :
+//  - soloStats  → localStorage + kora_solo_lifetime_stats (si connecté)
+//  - onlineStats → kora_lifetime_stats (edge function only)
+//  - lifetimeStats (exposé) = mergeSoloAndOnline(solo, online)
+// Achievements / profil / stats UI lisent lifetimeStats (déjà dérivés).
 // ==========================================================================
 
 export const SEAT_NAMES = ['Vous', 'Binu', 'Lebe', 'Goju']
@@ -78,7 +91,7 @@ function savePersistedGame(snapshot: PersistedGameSnapshot) {
   try {
     localStorage.setItem(STORAGE_KEY_ACTIVE_GAME, JSON.stringify(snapshot))
   } catch {
-    // ignore
+    // ignore (quota / mode privé)
   }
 }
 
@@ -105,25 +118,16 @@ export interface LifetimeStats {
   specialRuleCounts: Record<SpecialRuleType, number>
 }
 
-const DEFAULT_LIFETIME_STATS: LifetimeStats = {
-  gamesPlayed: 0,
-  gamesWon: 0,
-  totalRoundsWon: 0,
-  totalTricksWon: 0,
-  bestComboEver: null,
-  netGainTotal: 0,
-  totalGains: 0,
-  totalLosses: 0,
-  maxCapitalEver: 0,
-  minCapitalEver: 0,
-  comboCounts: { simple: 0, kora: 0, '33': 0, trinity: 0, kmt: 0 },
-  specialRuleCounts: { flush: 0, '21': 0, t7: 0 },
-}
-
-function loadLifetimeStats(): LifetimeStats {
+function loadSoloStats(): LifetimeStats {
   try {
     const raw = localStorage.getItem(STORAGE_KEY_LIFETIME_STATS)
-    if (!raw) return DEFAULT_LIFETIME_STATS
+    if (!raw) {
+      return {
+        ...DEFAULT_LIFETIME_STATS,
+        comboCounts: { ...DEFAULT_LIFETIME_STATS.comboCounts },
+        specialRuleCounts: { ...DEFAULT_LIFETIME_STATS.specialRuleCounts },
+      }
+    }
     const parsed = JSON.parse(raw) as Partial<LifetimeStats>
     return {
       ...DEFAULT_LIFETIME_STATS,
@@ -132,11 +136,15 @@ function loadLifetimeStats(): LifetimeStats {
       specialRuleCounts: { ...DEFAULT_LIFETIME_STATS.specialRuleCounts, ...(parsed.specialRuleCounts ?? {}) },
     }
   } catch {
-    return DEFAULT_LIFETIME_STATS
+    return {
+      ...DEFAULT_LIFETIME_STATS,
+      comboCounts: { ...DEFAULT_LIFETIME_STATS.comboCounts },
+      specialRuleCounts: { ...DEFAULT_LIFETIME_STATS.specialRuleCounts },
+    }
   }
 }
 
-function saveLifetimeStats(stats: LifetimeStats) {
+function saveSoloStatsLocal(stats: LifetimeStats) {
   try {
     localStorage.setItem(STORAGE_KEY_LIFETIME_STATS, JSON.stringify(stats))
   } catch {
@@ -154,9 +162,14 @@ interface GameContextValue {
   gameStartedAt: number
   stakeConfig: GameStakeConfig
   deckVariant: DeckVariant
+  /** Stats affichées = solo + online mergés. */
   lifetimeStats: LifetimeStats
-  /** Dernier résultat de checkGameOver (raison de fin, gagnant). */
+  /** Stats solo uniquement (localStorage / kora_solo_lifetime_stats). */
+  soloStats: LifetimeStats
+  /** Stats online uniquement (kora_lifetime_stats). */
+  onlineStats: LifetimeStats
   lastGameOver: GameOverCheck | null
+  statsSyncing: boolean
 
   setRoundState: (updater: RoundState | ((prev: RoundState) => RoundState)) => void
   configureGame: (
@@ -177,12 +190,16 @@ interface GameContextValue {
   bankPlayerAction: (playerIndex: number) => void
   claimVictoryAction: (playerIndex: number) => void
   recordGameResult: (won: boolean) => void
+  refreshCloudStats: () => Promise<void>
 }
 
 const GameContext = createContext<GameContextValue | null>(null)
 
 export function GameProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
   const initialSnapshot = useRef<PersistedGameSnapshot | null>(loadPersistedGame()).current
+  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const lastSyncedUser = useRef<string | null>(null)
 
   const [players, setPlayers] = useState<Player[]>(
     () => initialSnapshot?.players ?? createInitialPlayers(DEFAULT_STAKE_CONFIG.startingCapital),
@@ -200,8 +217,73 @@ export function GameProvider({ children }: { children: ReactNode }) {
   const [stakeConfig, setStakeConfig] = useState<GameStakeConfig>(initialSnapshot?.stakeConfig ?? DEFAULT_STAKE_CONFIG)
   const [deckVariant, setDeckVariant] = useState<DeckVariant>(initialSnapshot?.deckVariant ?? DEFAULT_DECK_VARIANT)
   const [started, setStarted] = useState(initialSnapshot?.started ?? false)
-  const [lifetimeStats, setLifetimeStats] = useState<LifetimeStats>(() => loadLifetimeStats())
+  const [soloStats, setSoloStats] = useState<LifetimeStats>(() => loadSoloStats())
+  const [onlineStats, setOnlineStats] = useState<LifetimeStats>(() => ({
+    ...DEFAULT_LIFETIME_STATS,
+    comboCounts: { ...DEFAULT_LIFETIME_STATS.comboCounts },
+    specialRuleCounts: { ...DEFAULT_LIFETIME_STATS.specialRuleCounts },
+  }))
+  const [statsSyncing, setStatsSyncing] = useState(false)
   const [lastGameOver, setLastGameOver] = useState<GameOverCheck | null>(initialSnapshot?.lastGameOver ?? null)
+
+  const lifetimeStats = useMemo(() => mergeSoloAndOnline(soloStats, onlineStats), [soloStats, onlineStats])
+
+  const persistSolo = useCallback(
+    (next: LifetimeStats) => {
+      saveSoloStatsLocal(next)
+      const uid = user?.id
+      if (!uid) return
+      if (syncTimer.current) clearTimeout(syncTimer.current)
+      syncTimer.current = setTimeout(() => {
+        void pushSoloLifetimeStats(uid, next).then(({ error }) => {
+          if (error) console.warn('[GameContext] push solo stats:', error)
+        })
+      }, 600)
+    },
+    [user?.id],
+  )
+
+  const refreshCloudStats = useCallback(async () => {
+    if (!user?.id) return
+    setStatsSyncing(true)
+    try {
+      const result = await syncOnLogin(user.id, soloStats)
+      setSoloStats(result.solo)
+      saveSoloStatsLocal(result.solo)
+      setOnlineStats(result.online)
+      if (result.error) console.warn('[GameContext] syncOnLogin:', result.error)
+    } finally {
+      setStatsSyncing(false)
+    }
+  }, [user?.id, soloStats])
+
+  // Login / changement de compte → merge local ↔ cloud
+  useEffect(() => {
+    if (!user?.id) {
+      lastSyncedUser.current = null
+      setOnlineStats({
+        ...DEFAULT_LIFETIME_STATS,
+        comboCounts: { ...DEFAULT_LIFETIME_STATS.comboCounts },
+        specialRuleCounts: { ...DEFAULT_LIFETIME_STATS.specialRuleCounts },
+      })
+      return
+    }
+    if (lastSyncedUser.current === user.id) return
+    lastSyncedUser.current = user.id
+    let cancelled = false
+    setStatsSyncing(true)
+    void syncOnLogin(user.id, loadSoloStats()).then(result => {
+      if (cancelled) return
+      setSoloStats(result.solo)
+      saveSoloStatsLocal(result.solo)
+      setOnlineStats(result.online)
+      setStatsSyncing(false)
+      if (result.error) console.warn('[GameContext] syncOnLogin:', result.error)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [user?.id])
 
   const configureGame = useCallback(
     (
@@ -273,13 +355,14 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const newHumanCapital = players[HUMAN_INDEX].capital + humanDelta
     const humanTricksThisRound = roundState.trickWinners.filter(w => w === HUMAN_INDEX).length
 
-    setLifetimeStats(prev => {
+    setSoloStats(prev => {
       const comboCounts =
         outcome.kind === 'normal' && outcome.roundWinnerIndex === HUMAN_INDEX
           ? { ...prev.comboCounts, [outcome.combo]: prev.comboCounts[outcome.combo] + 1 }
           : prev.comboCounts
 
-      const humanSpecialWin = outcome.kind === 'specialWin' ? outcome.winners.find(w => w.playerIndex === HUMAN_INDEX) : undefined
+      const humanSpecialWin =
+        outcome.kind === 'specialWin' ? outcome.winners.find(w => w.playerIndex === HUMAN_INDEX) : undefined
       const specialRuleCounts = humanSpecialWin
         ? humanSpecialWin.rules.reduce(
             (acc, rule) => ({ ...acc, [rule]: acc[rule] + 1 }),
@@ -297,12 +380,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
         comboCounts,
         specialRuleCounts,
       }
-      saveLifetimeStats(next)
+      persistSolo(next)
       return next
     })
 
     setPayoutApplied(true)
-  }, [payoutApplied, roundState, stakeConfig, players])
+  }, [payoutApplied, roundState, stakeConfig, players, persistSolo])
 
   const startNextRound = useCallback(() => {
     if (!roundState.outcome) return
@@ -337,7 +420,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const recordGameResult = useCallback(
     (won: boolean) => {
-      setLifetimeStats(prev => {
+      setSoloStats(prev => {
         const comboMultiplierOf = (c: ComboType | null) => (c === null ? 0 : getComboMultiplier(c))
         const humanBest = bestCombo[HUMAN_INDEX]
         const bestComboEver =
@@ -352,12 +435,12 @@ export function GameProvider({ children }: { children: ReactNode }) {
           bestComboEver,
           netGainTotal: prev.netGainTotal + netGain,
         }
-        saveLifetimeStats(next)
+        persistSolo(next)
         return next
       })
       clearPersistedGame()
     },
-    [players, roundsWon, bestCombo, stakeConfig],
+    [players, roundsWon, bestCombo, stakeConfig, persistSolo],
   )
 
   useEffect(() => {
@@ -388,7 +471,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       stakeConfig,
       deckVariant,
       lifetimeStats,
+      soloStats,
+      onlineStats,
       lastGameOver,
+      statsSyncing,
       setRoundState,
       configureGame,
       startNewGame,
@@ -399,6 +485,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       bankPlayerAction,
       claimVictoryAction,
       recordGameResult,
+      refreshCloudStats,
     }),
     [
       players,
@@ -411,7 +498,10 @@ export function GameProvider({ children }: { children: ReactNode }) {
       stakeConfig,
       deckVariant,
       lifetimeStats,
+      soloStats,
+      onlineStats,
       lastGameOver,
+      statsSyncing,
       setRoundState,
       configureGame,
       startNewGame,
@@ -422,6 +512,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       bankPlayerAction,
       claimVictoryAction,
       recordGameResult,
+      refreshCloudStats,
     ],
   )
 
