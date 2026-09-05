@@ -30,18 +30,21 @@ export interface Database {
           id: string
           username: string
           avatar: string
+          wallet_balance: number
           created_at: string
         }
         Insert: {
           id: string
           username: string
           avatar?: string
+          wallet_balance?: number
           created_at?: string
         }
         Update: {
           id?: string
           username?: string
           avatar?: string
+          wallet_balance?: number
           created_at?: string
         }
       }
@@ -149,6 +152,16 @@ export interface Database {
           cards: unknown
         }
         Update: Partial<Database['public']['Tables']['kora_round_hands']['Row']>
+      }
+    }
+    Functions: {
+      kora_ensure_player_rows: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
+      kora_merge_lifetime_stats: {
+        Args: { p_stats: Record<string, unknown> }
+        Returns: Database['public']['Tables']['kora_lifetime_stats']['Row']
       }
     }
   }
