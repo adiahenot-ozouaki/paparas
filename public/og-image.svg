@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0B0D10"/>
+      <stop offset="50%" stop-color="#0D2318"/>
+      <stop offset="100%" stop-color="#123C32"/>
+    </linearGradient>
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#D6A84F"/>
+      <stop offset="50%" stop-color="#F0D58A"/>
+      <stop offset="100%" stop-color="#C8963A"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <g opacity="0.08" stroke="#D6A84F" stroke-width="1" fill="none">
+    <polygon points="100,50 140,90 100,130 60,90"/>
+    <polygon points="300,80 340,120 300,160 260,120"/>
+    <polygon points="900,60 940,100 900,140 860,100"/>
+    <polygon points="1050,400 1090,440 1050,480 1010,440"/>
+    <polygon points="150,450 190,490 150,530 110,490"/>
+    <polygon points="750,480 790,520 750,560 710,520"/>
+  </g>
+  <g transform="translate(120,165)">
+    <rect width="220" height="220" rx="40" fill="#123C32" stroke="#D6A84F" stroke-width="6"/>
+    <g transform="translate(42,30) scale(5.5)">
+      <path d="M12 2 C12 2 4 9 4 15 C4 19 7.5 21 10.5 20 C10 22 8 23 6 23 L18 23 C16 23 14 22 13.5 20 C16.5 21 20 19 20 15 C20 9 12 2 12 2 Z" fill="#D6A84F"/>
+    </g>
+  </g>
+  <text x="400" y="280" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="72" font-weight="800" fill="url(#gold)">Garam Paparas</text>
+  <text x="400" y="360" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="36" font-weight="500" fill="#F5F1E8">Jeu de cartes Kora</text>
+  <text x="400" y="420" font-family="system-ui, -apple-system, 'Segoe UI', sans-serif" font-size="24" font-weight="400" fill="#A9B0B7">Plis · Combos · Mises · Solo &amp; en ligne</text>
+  <rect x="0" y="610" width="1200" height="20" fill="#D6A84F" opacity="0.85"/>
+</svg>
