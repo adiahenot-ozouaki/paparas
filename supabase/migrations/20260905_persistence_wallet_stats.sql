@@ -1,17 +1,20 @@
 -- ==========================================================================
 -- 20260905_persistence_wallet_stats.sql
 -- Wallet de compte + merge sécurisé des stats lifetime (local ↔ cloud).
--- À appliquer dans le SQL Editor Supabase.
+--
+-- NOTE : si `wallet_balance` existe déjà (migration wallet_solo_stats, DEFAULT 5000),
+-- ADD COLUMN IF NOT EXISTS ne change PAS le DEFAULT. Voir alors
+-- 20260905_persistence_cleanup.sql pour figer DEFAULT 5000 + bootstrap unifié.
 -- ==========================================================================
 
 -- --------------------------------------------------------------------------
--- 1. Wallet sur le profil
+-- 1. Wallet sur le profil (5000 = startingCapital solo)
 -- --------------------------------------------------------------------------
 ALTER TABLE public.kora_profiles
-  ADD COLUMN IF NOT EXISTS wallet_balance integer NOT NULL DEFAULT 10000;
+  ADD COLUMN IF NOT EXISTS wallet_balance integer NOT NULL DEFAULT 5000;
 
 COMMENT ON COLUMN public.kora_profiles.wallet_balance IS
-  'Capital de compte (FCFA). Buy-in online débitent, cash-out crédite.';
+  'Capital de compte (FCFA). Défaut 5000. Buy-in online débite, cash-out crédite.';
 
 -- --------------------------------------------------------------------------
 -- 2. Garantir une ligne stats + profil à la création du user auth
@@ -32,12 +35,18 @@ BEGIN
   v_username := 'j_' || substr(replace(p_user_id::text, '-', ''), 1, 10);
 
   INSERT INTO public.kora_profiles (id, username, avatar, wallet_balance)
-  VALUES (p_user_id, v_username, '🦅', 10000)
+  VALUES (p_user_id, v_username, '🦅', 5000)
   ON CONFLICT (id) DO NOTHING;
 
   INSERT INTO public.kora_lifetime_stats (user_id)
   VALUES (p_user_id)
   ON CONFLICT (user_id) DO NOTHING;
+
+  IF to_regclass('public.kora_solo_lifetime_stats') IS NOT NULL THEN
+    INSERT INTO public.kora_solo_lifetime_stats (user_id)
+    VALUES (p_user_id)
+    ON CONFLICT (user_id) DO NOTHING;
+  END IF;
 END;
 $$;
 
@@ -65,9 +74,6 @@ CREATE TRIGGER on_auth_user_created_kora
 
 -- --------------------------------------------------------------------------
 -- 3. Merge upward des stats (client envoie un snapshot local ; serveur garde le max)
---    Limite la triche grossière multi-device additive, mais autorise la reprise
---    d'un appareil unique + cloud. Les incréments online restent autoritaires
---    via l'edge function (service role).
 -- --------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.kora_merge_lifetime_stats(p_stats jsonb)
 RETURNS public.kora_lifetime_stats
@@ -120,7 +126,6 @@ BEGIN
   v_net          := GREATEST(cur.net_gain_total, COALESCE((p_stats->>'net_gain_total')::int, 0));
   v_max_cap      := GREATEST(cur.max_capital_ever, COALESCE((p_stats->>'max_capital_ever')::int, 0));
 
-  -- min capital : plus petit non nul, sinon 0
   v_min_cap := cur.min_capital_ever;
   IF COALESCE((p_stats->>'min_capital_ever')::int, 0) > 0 THEN
     IF v_min_cap = 0 THEN
@@ -181,12 +186,6 @@ $$;
 
 REVOKE ALL ON FUNCTION public.kora_merge_lifetime_stats(jsonb) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION public.kora_merge_lifetime_stats(jsonb) TO authenticated;
-
--- --------------------------------------------------------------------------
--- 4. Lecture wallet (propre ligne) — UPDATE direct interdit : cash-out via edge
--- --------------------------------------------------------------------------
--- SELECT déjà couvert par kora_profiles_select_authenticated.
--- On n'ouvre PAS UPDATE wallet_balance au client.
 
 -- Backfill stats manquantes pour profils existants
 INSERT INTO public.kora_lifetime_stats (user_id)
