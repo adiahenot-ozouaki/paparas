@@ -1,35 +1,70 @@
 <!doctype html>
-<html lang="<!-- figma:lang -->">
+<html lang="fr">
   <head>
-    <!-- figma:head-start -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-    <!-- Préconnexion aux polices Google Fonts (chargées via @import dans index.css) -->
-    <!-- pour réduire le délai de premier affichage du texte. -->
+    <!-- SEO de base -->
+    <title>Garam Paparas — Jeu de cartes Kora</title>
+    <meta
+      name="description"
+      content="Garam Paparas : jeu de plis africain (variante Kora). Solo contre 3 IA, mises, combos et règles spéciales. Jouez en local ou en ligne."
+    />
+    <meta name="keywords" content="Kora, Garam, Paparas, jeu de cartes, plis, Afrique, cartes" />
+    <meta name="author" content="Garam Paparas" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Préconnexion polices (chargées via @import dans index.css) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- Couleur de la barre de navigation / interface système sur mobile, -->
-    <!-- alignée sur le fond sombre de l'app plutôt que le blanc par défaut. -->
+    <!-- Thème / système -->
     <meta name="theme-color" content="#0B0D10" />
     <meta name="color-scheme" content="dark" />
 
-    <!-- Rendu plus proche d'une app native si ajoutée à l'écran d'accueil (iOS/Android). -->
+    <!-- PWA / écran d'accueil -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Paparas" />
+    <meta name="application-name" content="Garam Paparas" />
 
-    <title><!-- figma:title --></title>
-    <!-- figma:head-end -->
+    <!-- Icônes -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+
+    <!-- Open Graph (Facebook, LinkedIn, iMessage, etc.) -->
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="fr_FR" />
+    <meta property="og:site_name" content="Garam Paparas" />
+    <meta property="og:title" content="Garam Paparas — Jeu de cartes Kora" />
+    <meta
+      property="og:description"
+      content="Jeu de plis africain (variante Kora). Solo contre 3 IA, mises configurables, combos et victoires spéciales."
+    />
+    <!-- Remplacer par l’URL publique réelle une fois déployé -->
+    <meta property="og:url" content="https://paparas.app/" />
+    <meta property="og:image" content="https://paparas.app/og-image.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Garam Paparas — table de jeu Kora" />
+
+    <!-- Twitter / X -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Garam Paparas — Jeu de cartes Kora" />
+    <meta
+      name="twitter:description"
+      content="Jeu de plis africain (variante Kora). Solo contre 3 IA, mises, combos et règles spéciales."
+    />
+    <meta name="twitter:image" content="https://paparas.app/og-image.png" />
   </head>
   <body>
-    <!-- figma:body-start -->
     <div id="root"></div>
     <noscript>
-      Garam Paparas nécessite JavaScript pour fonctionner. Merci d'activer JavaScript dans votre navigateur.
+      Garam Paparas nécessite JavaScript pour fonctionner. Merci d'activer JavaScript dans votre
+      navigateur.
     </noscript>
     <script type="module" src="/src/main.tsx"></script>
-    <!-- figma:body-end -->
   </body>
 </html>
