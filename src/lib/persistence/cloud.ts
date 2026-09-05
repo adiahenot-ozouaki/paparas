@@ -12,6 +12,9 @@ import {
   type LifetimeStats,
 } from './stats'
 
+/** Aligné sur kora_profiles.wallet_balance DEFAULT et startingCapital solo. */
+export const DEFAULT_WALLET_BALANCE = 5000
+
 export interface WalletInfo {
   balance: number
   username: string
@@ -84,10 +87,32 @@ export async function fetchWallet(): Promise<{ wallet: WalletInfo | null; error:
 
   return {
     wallet: {
-      balance: (data as { wallet_balance?: number }).wallet_balance ?? 10000,
+      balance: (data as { wallet_balance?: number }).wallet_balance ?? DEFAULT_WALLET_BALANCE,
       username: data.username,
       avatar: data.avatar,
     },
     error: null,
   }
+}
+
+/** Débite le wallet (buy-in). Retourne le nouveau solde. */
+export async function walletDebit(amount: number): Promise<{ balance: number | null; error: string | null }> {
+  if (amount <= 0) return { balance: null, error: 'Montant invalide.' }
+  const { data, error } = await supabase.rpc('kora_wallet_adjust', {
+    p_delta: -amount,
+    p_reason: 'buy_in',
+  })
+  if (error) return { balance: null, error: error.message }
+  return { balance: data as number, error: null }
+}
+
+/** Crédite le wallet (cash-out côté client si besoin). */
+export async function walletCredit(amount: number): Promise<{ balance: number | null; error: string | null }> {
+  if (amount <= 0) return { balance: null, error: 'Montant invalide.' }
+  const { data, error } = await supabase.rpc('kora_wallet_adjust', {
+    p_delta: amount,
+    p_reason: 'cash_out',
+  })
+  if (error) return { balance: null, error: error.message }
+  return { balance: data as number, error: null }
 }
