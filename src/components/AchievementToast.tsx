@@ -15,6 +15,7 @@ import type { LifetimeStats } from '../lib/persistence/stats'
 // ==========================================================================
 
 const DISPLAY_MS = 4200
+const EXIT_MS = 320
 
 export default function AchievementToast() {
   const { lifetimeStats } = useGame()
@@ -23,6 +24,10 @@ export default function AchievementToast() {
   const [queue, setQueue] = useState<AchievementDef[]>([])
   const [current, setCurrent] = useState<AchievementDef | null>(null)
   const [visible, setVisible] = useState(false)
+  const queueRef = useRef(queue)
+  queueRef.current = queue
+  const hideTimerRef = useRef<number | null>(null)
+  const clearTimerRef = useRef<number | null>(null)
 
   // Premier rendu : ne pas toaster l'historique déjà débloqué
   useEffect(() => {
@@ -49,18 +54,46 @@ export default function AchievementToast() {
     setQueue(q => [...q, ...fresh])
   }, [lifetimeStats])
 
+  // Défile la file : un toast à la fois.
+  // Important : le timer de disparition vit dans un effet séparé qui ne
+  // dépend QUE de `current`. Sinon setQueue() dans le même cycle annulait
+  // le setTimeout et le toast restait collé à l'écran.
   useEffect(() => {
-    if (current || queue.length === 0) return
-    const [next, ...rest] = queue
+    if (current !== null) return
+    if (queueRef.current.length === 0) return
+    const [next, ...rest] = queueRef.current
     setQueue(rest)
     setCurrent(next)
     setVisible(true)
-    const t = window.setTimeout(() => {
-      setVisible(false)
-      window.setTimeout(() => setCurrent(null), 320)
-    }, DISPLAY_MS)
-    return () => window.clearTimeout(t)
   }, [queue, current])
+
+  useEffect(() => {
+    if (!current) return
+
+    if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current)
+    if (clearTimerRef.current) window.clearTimeout(clearTimerRef.current)
+
+    setVisible(true)
+    hideTimerRef.current = window.setTimeout(() => {
+      setVisible(false)
+      clearTimerRef.current = window.setTimeout(() => {
+        setCurrent(null)
+        clearTimerRef.current = null
+      }, EXIT_MS)
+      hideTimerRef.current = null
+    }, DISPLAY_MS)
+
+    return () => {
+      if (hideTimerRef.current) {
+        window.clearTimeout(hideTimerRef.current)
+        hideTimerRef.current = null
+      }
+      if (clearTimerRef.current) {
+        window.clearTimeout(clearTimerRef.current)
+        clearTimerRef.current = null
+      }
+    }
+  }, [current])
 
   if (!current) return null
 
@@ -68,6 +101,7 @@ export default function AchievementToast() {
     <div
       role="status"
       aria-live="polite"
+      className="achievement-toast"
       style={{
         position: 'fixed',
         top: 'max(16px, env(safe-area-inset-top, 0px))',
