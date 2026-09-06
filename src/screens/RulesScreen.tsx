@@ -618,7 +618,7 @@ function SectionEnd() {
           JOUEUR ÉLIMINÉ
         </p>
         <p className="font-display" style={{ color: '#C94B4B', fontSize: 26, fontWeight: 800, margin: '0 0 4px' }}>
-          capital {'<'} mise
+          la capital inférieure à la mise
         </p>
         <p style={{ color: '#A9B0B7', fontSize: 12, margin: 0 }}>Ex. mise 500 FCFA → éliminé sous 500</p>
       </div>
