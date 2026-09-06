@@ -1,0 +1,15 @@
+{
+  "title": "Garam Paparas",
+  "description": "Jeu de plis Kora — Garam Paparas",
+  "language": "fr",
+  "robots": {
+    "index": true
+  },
+  "icons": {},
+  "openGraph": {},
+  "analytics": {},
+  "customScripts": {},
+  "accessibility": {
+    "addBypassLinks": false
+  }
+}
