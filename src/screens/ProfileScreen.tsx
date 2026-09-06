@@ -126,189 +126,195 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
 
   return (
     <ScreenShell className="profile-screen">
-      <div className="profile-hero">
-        <div className="profile-hero-row">
-          <div className="profile-avatar-wrap">
-            <div className="profile-avatar">{editing ? avatarDraft : displayAvatar}</div>
-            <div className="profile-level-badge">
-              <span className="font-display profile-level-num">{level}</span>
-            </div>
-          </div>
+      <div className="profile-layout">
+        <div className="profile-main">
+          <div className="profile-hero">
+            <div className="profile-hero-row">
+              <div className="profile-avatar-wrap">
+                <div className="profile-avatar">{editing ? avatarDraft : displayAvatar}</div>
+                <div className="profile-level-badge">
+                  <span className="font-display profile-level-num">{level}</span>
+                </div>
+              </div>
 
-          <div className="profile-hero-meta">
-            {editing ? (
-              <input
-                className="ui-field profile-username-input"
-                value={usernameDraft}
-                onChange={e => setUsernameDraft(e.target.value)}
-                maxLength={20}
-                placeholder="Votre pseudo"
-              />
-            ) : (
-              <h2 className="font-display profile-name">{displayName}</h2>
+              <div className="profile-hero-meta">
+                {editing ? (
+                  <input
+                    className="ui-field profile-username-input"
+                    value={usernameDraft}
+                    onChange={e => setUsernameDraft(e.target.value)}
+                    maxLength={20}
+                    placeholder="Votre pseudo"
+                  />
+                ) : (
+                  <h2 className="font-display profile-name">{displayName}</h2>
+                )}
+                <p className="profile-sub">
+                  {user
+                    ? user.email
+                    : lifetimeStats.gamesPlayed > 0
+                      ? `${lifetimeStats.gamesPlayed} parties (local)`
+                      : 'Compte local — connectez-vous pour le online'}
+                  {statsSyncing ? ' · sync…' : ''}
+                </p>
+                <div className="profile-xp">
+                  <div className="profile-xp-labels">
+                    <span className="profile-xp-level">Niv. {level}</span>
+                    <span className="font-display profile-xp-pct">{xpPercent}%</span>
+                  </div>
+                  <div className="profile-xp-bar">
+                    <div className="profile-xp-fill" style={{ width: `${xpPercent}%` }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {user && editing && (
+              <div className="profile-avatar-picker">
+                <p className="profile-section-label">Avatar</p>
+                <div className="profile-avatar-grid">
+                  {AVATAR_CHOICES.map(a => (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => setAvatarDraft(a)}
+                      className={`profile-avatar-choice${a === avatarDraft ? ' is-selected' : ''}`}
+                    >
+                      {a}
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
-            <p className="profile-sub">
-              {user
-                ? user.email
-                : lifetimeStats.gamesPlayed > 0
-                  ? `${lifetimeStats.gamesPlayed} parties (local)`
-                  : 'Compte local — connectez-vous pour le online'}
-              {statsSyncing ? ' · sync…' : ''}
-            </p>
-            <div className="profile-xp">
-              <div className="profile-xp-labels">
-                <span className="profile-xp-level">Niv. {level}</span>
-                <span className="font-display profile-xp-pct">{xpPercent}%</span>
-              </div>
-              <div className="profile-xp-bar">
-                <div className="profile-xp-fill" style={{ width: `${xpPercent}%` }} />
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {user && editing && (
-          <div className="profile-avatar-picker">
-            <p className="profile-section-label">Avatar</p>
-            <div className="profile-avatar-grid">
-              {AVATAR_CHOICES.map(a => (
-                <button
-                  key={a}
-                  type="button"
-                  onClick={() => setAvatarDraft(a)}
-                  className={`profile-avatar-choice${a === avatarDraft ? ' is-selected' : ''}`}
-                >
-                  {a}
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
+            {editError && (
+              <p role="alert" className="profile-msg profile-msg--error">
+                {editError}
+              </p>
+            )}
+            {savedOk && !editing && <p className="profile-msg profile-msg--ok">Profil enregistré.</p>}
 
-        {editError && (
-          <p role="alert" className="profile-msg profile-msg--error">
-            {editError}
-          </p>
-        )}
-        {savedOk && !editing && <p className="profile-msg profile-msg--ok">Profil enregistré.</p>}
-
-        <div className="profile-actions">
-          {user ? (
-            <>
-              {editing ? (
+            <div className="profile-actions">
+              {user ? (
                 <>
-                  <UiButton disabled={saving} onClick={() => void handleSaveProfile()} className="profile-btn">
-                    {saving ? 'Enregistrement…' : 'Enregistrer'}
+                  {editing ? (
+                    <>
+                      <UiButton disabled={saving} onClick={() => void handleSaveProfile()} className="profile-btn">
+                        {saving ? 'Enregistrement…' : 'Enregistrer'}
+                      </UiButton>
+                      <UiButton
+                        variant="secondary"
+                        disabled={saving}
+                        onClick={() => {
+                          setEditing(false)
+                          setEditError(null)
+                        }}
+                        className="profile-btn"
+                      >
+                        Annuler
+                      </UiButton>
+                    </>
+                  ) : (
+                    <UiButton onClick={startEditing} className="profile-btn">
+                      Modifier le profil
+                    </UiButton>
+                  )}
+                  <UiButton variant="secondary" onClick={() => void refreshCloudStats()} className="profile-btn">
+                    {statsSyncing ? 'Sync…' : 'Sync stats'}
                   </UiButton>
-                  <UiButton
-                    variant="secondary"
-                    disabled={saving}
-                    onClick={() => {
-                      setEditing(false)
-                      setEditError(null)
-                    }}
-                    className="profile-btn"
-                  >
-                    Annuler
+                  <UiButton variant="secondary" onClick={() => void signOut()} className="profile-btn">
+                    Se déconnecter
                   </UiButton>
                 </>
               ) : (
-                <UiButton onClick={startEditing} className="profile-btn">
-                  Modifier le profil
+                <UiButton onClick={() => onNavigate('auth')} className="profile-btn">
+                  Connexion / Inscription
                 </UiButton>
               )}
-              <UiButton variant="secondary" onClick={() => void refreshCloudStats()} className="profile-btn">
-                {statsSyncing ? 'Sync…' : 'Sync stats'}
-              </UiButton>
-              <UiButton variant="secondary" onClick={() => void signOut()} className="profile-btn">
-                Se déconnecter
-              </UiButton>
-            </>
-          ) : (
-            <UiButton onClick={() => onNavigate('auth')} className="profile-btn">
-              Connexion / Inscription
-            </UiButton>
-          )}
-        </div>
-      </div>
+            </div>
+          </div>
 
-      <ThemeToggle />
+          <ThemeToggle />
 
-      <div className={`profile-money-grid${user && walletBalance !== null ? ' profile-money-grid--2' : ''}`}>
-        {user && walletBalance !== null && (
-          <MoneyCard variant="gold" label="Wallet" amount={walletBalance} icon="💰" subtitle="FCFA · online" />
-        )}
-        <MoneyCard variant="green" label="Solo" amount={capital} icon="🃏" subtitle="FCFA · partie en cours" />
-      </div>
-
-      <section className="profile-section">
-        <h3 className="font-display profile-section-title">Statistiques</h3>
-        <div className="profile-stats-grid">
-          {STATS.map(s => (
-            <StatTile key={s.label} icon={s.icon} value={s.value} label={s.label} className="profile-stat" />
-          ))}
-        </div>
-      </section>
-
-      <section className="profile-section">
-        <div className="profile-section-head">
-          <h3 className="font-display profile-section-title">Historique</h3>
-          {history.length > 0 && (
-            <UiButton variant="ghost" onClick={handleClearHistory} className="profile-clear">
-              Effacer
-            </UiButton>
-          )}
-        </div>
-
-        {history.length === 0 ? (
-          <EmptyState
-            title="Aucune partie enregistrée"
-            description="Les parties solo terminées apparaîtront ici (30 max)."
-          />
-        ) : (
-          <div className="profile-history-list">
-            {history.slice(0, 15).map(h => (
-              <SectionCard key={h.id} className="profile-history-item">
-                <div className="profile-history-row">
-                  <div className={`profile-history-icon${h.won ? ' is-win' : ' is-loss'}`}>{h.won ? '🏆' : '💀'}</div>
-                  <div className="profile-history-body">
-                    <div className="profile-history-title-row">
-                      <span className="font-display profile-history-result">{h.won ? 'Victoire' : 'Défaite'}</span>
-                      <span className="profile-history-mode">{h.mode === 'solo' ? 'Solo' : 'Online'}</span>
-                    </div>
-                    <p className="profile-history-meta">
-                      {formatHistoryDate(h.at)}
-                      {h.bestCombo ? ` · ${COMBO_LABEL[h.bestCombo as keyof typeof COMBO_LABEL] ?? h.bestCombo}` : ''}
-                      {` · ${h.roundsWon} rounds`}
-                    </p>
-                  </div>
-                  <span className={`font-display profile-history-gain ${h.netGain >= 0 ? 'text-success' : 'text-danger'}`}>
-                    {h.netGain >= 0 ? '+' : ''}
-                    {h.netGain.toLocaleString('fr-FR')}
-                  </span>
-                </div>
-              </SectionCard>
-            ))}
-            {history.length > 15 && (
-              <p className="profile-history-more">+{history.length - 15} plus anciennes</p>
+          <div className={`profile-money-grid${user && walletBalance !== null ? ' profile-money-grid--2' : ''}`}>
+            {user && walletBalance !== null && (
+              <MoneyCard variant="gold" label="Wallet" amount={walletBalance} icon="💰" subtitle="FCFA · online" />
             )}
+            <MoneyCard variant="green" label="Solo" amount={capital} icon="🃏" subtitle="FCFA · partie en cours" />
           </div>
-        )}
-      </section>
+        </div>
 
-      <div className="profile-section">
-        <SectionCard onClick={() => onNavigate('achievements')} className="profile-achievements">
-          <div className="profile-achievements-row">
-            <span className="profile-achievements-left">
-              <span className="profile-achievements-emoji">🏅</span>
-              <span className="font-display profile-achievements-label">Achievements</span>
-              <span className="profile-achievements-count">
-                {unlockedAchievements}/{ACHIEVEMENTS.length}
-              </span>
-            </span>
-            <span className="profile-achievements-arrow">→</span>
+        <aside className="profile-side">
+          <section className="profile-section">
+            <h3 className="font-display profile-section-title">Statistiques</h3>
+            <div className="profile-stats-grid">
+              {STATS.map(s => (
+                <StatTile key={s.label} icon={s.icon} value={s.value} label={s.label} className="profile-stat" />
+              ))}
+            </div>
+          </section>
+
+          <section className="profile-section">
+            <div className="profile-section-head">
+              <h3 className="font-display profile-section-title">Historique</h3>
+              {history.length > 0 && (
+                <UiButton variant="ghost" onClick={handleClearHistory} className="profile-clear">
+                  Effacer
+                </UiButton>
+              )}
+            </div>
+
+            {history.length === 0 ? (
+              <EmptyState
+                title="Aucune partie enregistrée"
+                description="Les parties solo terminées apparaîtront ici (30 max)."
+              />
+            ) : (
+              <div className="profile-history-list">
+                {history.slice(0, 15).map(h => (
+                  <SectionCard key={h.id} className="profile-history-item">
+                    <div className="profile-history-row">
+                      <div className={`profile-history-icon${h.won ? ' is-win' : ' is-loss'}`}>{h.won ? '🏆' : '💀'}</div>
+                      <div className="profile-history-body">
+                        <div className="profile-history-title-row">
+                          <span className="font-display profile-history-result">{h.won ? 'Victoire' : 'Défaite'}</span>
+                          <span className="profile-history-mode">{h.mode === 'solo' ? 'Solo' : 'Online'}</span>
+                        </div>
+                        <p className="profile-history-meta">
+                          {formatHistoryDate(h.at)}
+                          {h.bestCombo ? ` · ${COMBO_LABEL[h.bestCombo as keyof typeof COMBO_LABEL] ?? h.bestCombo}` : ''}
+                          {` · ${h.roundsWon} rounds`}
+                        </p>
+                      </div>
+                      <span className={`font-display profile-history-gain ${h.netGain >= 0 ? 'text-success' : 'text-danger'}`}>
+                        {h.netGain >= 0 ? '+' : ''}
+                        {h.netGain.toLocaleString('fr-FR')}
+                      </span>
+                    </div>
+                  </SectionCard>
+                ))}
+                {history.length > 15 && (
+                  <p className="profile-history-more">+{history.length - 15} plus anciennes</p>
+                )}
+              </div>
+            )}
+          </section>
+
+          <div className="profile-section">
+            <SectionCard onClick={() => onNavigate('achievements')} className="profile-achievements">
+              <div className="profile-achievements-row">
+                <span className="profile-achievements-left">
+                  <span className="profile-achievements-emoji">🏅</span>
+                  <span className="font-display profile-achievements-label">Achievements</span>
+                  <span className="profile-achievements-count">
+                    {unlockedAchievements}/{ACHIEVEMENTS.length}
+                  </span>
+                </span>
+                <span className="profile-achievements-arrow">→</span>
+              </div>
+            </SectionCard>
           </div>
-        </SectionCard>
+        </aside>
       </div>
     </ScreenShell>
   )
