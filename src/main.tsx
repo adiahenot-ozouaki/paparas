@@ -5,6 +5,7 @@ import './theme/theme.css'
 import './index.css'
 import './theme/theme-bridge.css'
 import './screens/screens.css'
+import './screens/screens-lms.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
