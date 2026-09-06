@@ -4,6 +4,7 @@ import { useGame, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
 import { useAuth, validateUsername } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { ACHIEVEMENTS, getUnlockedAchievements } from '../game/achievements'
+import { getPlayerProgress } from '../game/progression'
 import { fetchWallet } from '../lib/persistence/cloud'
 import {
   type GameHistoryEntry,
@@ -20,8 +21,6 @@ import {
   ThemeToggle,
   UiButton,
 } from '../components/ui'
-
-const WINS_PER_LEVEL = 5
 
 const AVATAR_CHOICES = ['🦅', '🐆', '🦁', '🐊', '🐘', '🦏', '🦒', '🦓', '🐒', '🐍', '🐢', '🦋', '🌴', '☀️', '⭐', '🎯']
 
@@ -69,9 +68,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
     lifetimeStats.gamesPlayed > 0
       ? ((lifetimeStats.gamesWon / lifetimeStats.gamesPlayed) * 100).toFixed(1)
       : '0.0'
-  const level = 1 + Math.floor(lifetimeStats.gamesWon / WINS_PER_LEVEL)
-  const xpInLevel = lifetimeStats.gamesWon % WINS_PER_LEVEL
-  const xpPercent = Math.round((xpInLevel / WINS_PER_LEVEL) * 100)
+  const progress = getPlayerProgress(lifetimeStats)
   const bestComboLabel = lifetimeStats.bestComboEver ? COMBO_LABEL[lifetimeStats.bestComboEver] : '—'
   const unlockedAchievements = getUnlockedAchievements(lifetimeStats).length
   const displayName = profile?.username ?? 'Vous'
@@ -133,7 +130,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
               <div className="profile-avatar-wrap">
                 <div className="profile-avatar">{editing ? avatarDraft : displayAvatar}</div>
                 <div className="profile-level-badge">
-                  <span className="font-display profile-level-num">{level}</span>
+                  <span className="font-display profile-level-num">{progress.level}</span>
                 </div>
               </div>
 
@@ -150,6 +147,8 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
                   <h2 className="font-display profile-name">{displayName}</h2>
                 )}
                 <p className="profile-sub">
+                  {progress.title}
+                  {' · '}
                   {user
                     ? user.email
                     : lifetimeStats.gamesPlayed > 0
@@ -159,11 +158,13 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
                 </p>
                 <div className="profile-xp">
                   <div className="profile-xp-labels">
-                    <span className="profile-xp-level">Niv. {level}</span>
-                    <span className="font-display profile-xp-pct">{xpPercent}%</span>
+                    <span className="profile-xp-level">
+                      Niv. {progress.level} · {progress.xpInLevel}/{progress.xpToNext} XP
+                    </span>
+                    <span className="font-display profile-xp-pct">{progress.percent}%</span>
                   </div>
                   <div className="profile-xp-bar">
-                    <div className="profile-xp-fill" style={{ width: `${xpPercent}%` }} />
+                    <div className="profile-xp-fill" style={{ width: `${progress.percent}%` }} />
                   </div>
                 </div>
               </div>

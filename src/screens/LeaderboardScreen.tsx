@@ -2,11 +2,11 @@ import { useEffect, useState } from 'react'
 import type { Screen } from '../types'
 import { useGame, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
 import { useAuth } from '../auth/AuthContext'
+import { getPlayerProgress } from '../game/progression'
 import { fetchOnlineLeaderboard, type LeaderboardEntry } from '../lib/online/api'
 import { AlertBanner, EmptyState, PageHeader, ScreenShell, SectionCard, UiButton } from '../components/ui'
 
 const TABS = ['Local', 'En ligne'] as const
-const WINS_PER_LEVEL = 5
 
 function OnlineRow({
   e,
@@ -74,11 +74,10 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
 
   const youName = profile?.username ?? 'Vous'
   const youAvatar = profile?.avatar ?? SEAT_AVATARS[HUMAN_INDEX]
-  const youLevel = 1 + Math.floor(lifetimeStats.gamesWon / WINS_PER_LEVEL)
+  const progress = getPlayerProgress(lifetimeStats)
 
   const top3 = online.slice(0, 3)
   const rest = online.slice(3)
-  // Podium order: 2nd | 1st | 3rd
   const podiumOrder =
     top3.length >= 3
       ? [
@@ -119,8 +118,9 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                   <span className="lb-you-pill">VOUS</span>
                 </div>
                 <p className="lb-sub">
-                  Niv. {youLevel} · {lifetimeStats.gamesWon} victoire{lifetimeStats.gamesWon > 1 ? 's' : ''} ·{' '}
-                  {lifetimeStats.gamesPlayed} partie{lifetimeStats.gamesPlayed > 1 ? 's' : ''}
+                  Niv. {progress.level} · {progress.title} · {lifetimeStats.gamesWon} victoire
+                  {lifetimeStats.gamesWon > 1 ? 's' : ''} · {lifetimeStats.gamesPlayed} partie
+                  {lifetimeStats.gamesPlayed > 1 ? 's' : ''}
                 </p>
               </div>
               <div className="lb-score">

@@ -4,6 +4,7 @@ import { useGame, HUMAN_INDEX, SEAT_AVATARS } from '../game/GameContext'
 import { useAuth } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { ACHIEVEMENTS, getUnlockedAchievements } from '../game/achievements'
+import { getPlayerProgress } from '../game/progression'
 import { fetchWallet } from '../lib/persistence/cloud'
 import { findMyActiveTables, type MyActiveTable } from '../lib/online/api'
 import { setActiveOnlineTableId } from '../lib/online/session'
@@ -23,7 +24,6 @@ const QUICK_LINKS: { label: string; icon: string; screen: Screen }[] = [
   { label: 'Règles', icon: '📖', screen: 'rules' },
 ]
 
-const WINS_PER_LEVEL = 5
 const PLAY_NAV_DELAY_MS = 280
 
 export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
@@ -39,12 +39,12 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
   const [activeTables, setActiveTables] = useState<MyActiveTable[]>([])
   const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const { winRatio, level, unlockedCount, bestComboLabel, netGain, gamesPlayed, gamesWon } = useMemo(() => {
+  const { winRatio, progress, unlockedCount, bestComboLabel, netGain, gamesPlayed, gamesWon } = useMemo(() => {
     const gp = lifetimeStats.gamesPlayed
     const gw = lifetimeStats.gamesWon
     return {
       winRatio: gp > 0 ? ((gw / gp) * 100).toFixed(1) : '0.0',
-      level: 1 + Math.floor(gw / WINS_PER_LEVEL),
+      progress: getPlayerProgress(lifetimeStats),
       unlockedCount: getUnlockedAchievements(lifetimeStats).length,
       bestComboLabel: lifetimeStats.bestComboEver ? COMBO_LABEL[lifetimeStats.bestComboEver] : null,
       netGain: lifetimeStats.netGainTotal,
@@ -136,7 +136,9 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
             <p className="home-header-status">{user ? 'Connecté' : 'Bienvenue'}</p>
             <div className="home-header-name-row">
               <h3 className="font-display home-header-name">{displayName}</h3>
-              <span className="home-level-pill">Niv. {level}</span>
+              <span className="home-level-pill">
+                Niv. {progress.level} · {progress.title}
+              </span>
             </div>
           </div>
           <IconButton onClick={goProfile} aria-label="Profil">
@@ -257,7 +259,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
                 <SectionCard className="home-win-card">
                   <div className="home-win-row">
                     <span className="home-win-label">
-                      {gamesWon}/{gamesPlayed} victoires
+                      {gamesWon}/{gamesPlayed} victoires · Niv. {progress.level}
                     </span>
                     <span className={`font-display home-win-gain ${netGain >= 0 ? 'text-success' : 'text-danger'}`}>
                       {netGain >= 0 ? '+' : ''}
@@ -265,7 +267,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
                     </span>
                   </div>
                   <div className="home-win-bar">
-                    <div className="home-win-bar-fill" style={{ width: `${Math.min(100, Number(winRatio))}%` }} />
+                    <div className="home-win-bar-fill" style={{ width: `${progress.percent}%` }} />
                   </div>
                 </SectionCard>
 
