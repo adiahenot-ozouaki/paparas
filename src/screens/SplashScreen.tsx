@@ -57,186 +57,51 @@ export default function SplashScreen({ onNavigate }: { onNavigate: (s: Screen) =
     onNavigate('home')
   }, [readyToLeave, isLoading, onNavigate])
 
-  return (
-    <div
-      role="status"
-      aria-label="Chargement Garam Paparas"
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'var(--kora-void)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        overflow: 'hidden',
-      }}
-    >
-      <div className="pattern-african" style={{ position: 'absolute', inset: 0, opacity: 0.45 }} />
+  const show = (min: number) => phase >= min || preferSkip
 
-      <div
-        style={{
-          position: 'absolute',
-          width: 300,
-          height: 300,
-          borderRadius: '50%',
-          background: 'radial-gradient(circle, rgba(23,107,80,0.2) 0%, transparent 70%)',
-          opacity: phase >= 1 || preferSkip ? 1 : 0,
-          transition: 'opacity 0.8s ease',
-        }}
-      />
+  return (
+    <div className="splash-screen" role="status" aria-label="Chargement Garam Paparas">
+      <div className="pattern-african splash-pattern" />
+
+      <div className={`splash-glow${show(1) ? ' is-visible' : ''}`} />
 
       {phase >= 3 && !preferSkip && (
         <>
-          <div
-            style={{
-              position: 'absolute',
-              width: 200,
-              height: 200,
-              borderRadius: '50%',
-              border: '1.5px solid rgba(214,168,79,0.45)',
-              animation: 'haloExpand 1.4s ease-out forwards',
-            }}
-          />
-          <div
-            style={{
-              position: 'absolute',
-              width: 200,
-              height: 200,
-              borderRadius: '50%',
-              border: '1px solid rgba(214,168,79,0.25)',
-              animation: 'haloExpand 1.4s ease-out 0.25s forwards',
-            }}
-          />
+          <div className="splash-halo" />
+          <div className="splash-halo splash-halo--delayed" />
         </>
       )}
 
       <div
-        style={{
-          opacity: phase >= 1 || preferSkip ? 1 : 0,
-          transform: phase >= 1 || preferSkip ? 'scale(1)' : 'scale(0.55)',
-          transition: preferSkip
-            ? 'opacity 0.35s ease, transform 0.35s ease'
-            : 'all 0.65s cubic-bezier(0.34, 1.56, 0.64, 1)',
-          marginBottom: 20,
-        }}
+        className={`splash-logo-wrap${show(1) ? ' is-visible' : ''}${preferSkip ? ' is-skip' : ''}`}
       >
-        <div
-          style={{
-            width: 88,
-            height: 88,
-            borderRadius: 24,
-            background: 'linear-gradient(145deg, var(--kora-green) 0%, var(--kora-green-deep) 55%, var(--kora-void) 100%)',
-            border: '2px solid rgba(214,168,79,0.65)',
-            boxShadow: '0 0 36px rgba(214,168,79,0.22), 0 10px 28px rgba(0,0,0,0.55)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            position: 'relative',
-            overflow: 'hidden',
-          }}
-        >
-          <div
-            style={{
-              position: 'relative',
-              width: 36,
-              height: 48,
-              borderRadius: 6,
-              background: 'var(--kora-card-bg)',
-              border: '1.5px solid rgba(214,168,79,0.5)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <span style={{ fontSize: 22, color: 'var(--kora-gold)', lineHeight: 1 }}>♠</span>
+        <div className="splash-logo">
+          <div className="splash-logo-card">
+            <span className="splash-logo-suit">♠</span>
           </div>
         </div>
       </div>
 
-      <div
-        style={{
-          opacity: phase >= 2 || preferSkip ? 1 : 0,
-          transform: phase >= 2 || preferSkip ? 'translateY(0)' : 'translateY(16px)',
-          transition: 'all 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-          textAlign: 'center',
-        }}
-      >
-        <h1
-          className="text-shimmer font-display"
-          style={{
-            fontSize: preferSkip ? 42 : 52,
-            fontWeight: 800,
-            letterSpacing: '0.16em',
-            lineHeight: 1,
-            margin: 0,
-          }}
-        >
+      <div className={`splash-brand${show(2) ? ' is-visible' : ''}`}>
+        <h1 className={`text-shimmer font-display splash-title${preferSkip ? ' splash-title--compact' : ''}`}>
           GARAM
         </h1>
-        <p
-          style={{
-            color: 'var(--kora-muted)',
-            fontSize: 13,
-            fontFamily: 'Plus Jakarta Sans',
-            fontWeight: 600,
-            letterSpacing: '0.36em',
-            textTransform: 'uppercase',
-            margin: '10px 0 0',
-            opacity: phase >= 3 || preferSkip ? 1 : 0,
-            transition: 'opacity 0.4s ease',
-          }}
-        >
-          PAPARAS
-        </p>
+        <p className={`splash-subtitle${show(3) ? ' is-visible' : ''}`}>PAPARAS</p>
       </div>
 
-      <div
-        style={{
-          opacity: phase >= 4 || preferSkip ? 1 : 0,
-          transition: 'opacity 0.4s ease',
-          marginTop: 28,
-          display: 'flex',
-          gap: 8,
-          alignItems: 'center',
-        }}
-      >
-        <div style={{ width: 20, height: 1, background: 'rgba(214,168,79,0.4)' }} />
-        <span style={{ color: 'var(--kora-muted-2)', fontSize: 11, letterSpacing: '0.14em', fontFamily: 'Plus Jakarta Sans' }}>
-          JEU DE PLIS · KORA
-        </span>
-        <div style={{ width: 20, height: 1, background: 'rgba(214,168,79,0.4)' }} />
+      <div className={`splash-tagline${show(4) ? ' is-visible' : ''}`}>
+        <div className="splash-tagline-line" />
+        <span className="splash-tagline-text">JEU DE PLIS · KORA</span>
+        <div className="splash-tagline-line" />
       </div>
 
-      <div
-        style={{
-          position: 'absolute',
-          bottom: 'max(40px, env(safe-area-inset-bottom, 0px))',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 12,
-          opacity: phase >= 4 || preferSkip ? 1 : 0,
-          transition: 'opacity 0.35s ease',
-        }}
-      >
-        <div style={{ display: 'flex', gap: 6 }}>
+      <div className={`splash-footer${show(4) ? ' is-visible' : ''}`}>
+        <div className="splash-dots">
           {[0, 1, 2].map(i => (
-            <div
-              key={i}
-              style={{
-                width: 6,
-                height: 6,
-                borderRadius: '50%',
-                background: 'var(--kora-gold)',
-                animation: `turnPulse 1.1s ease-in-out ${i * 0.18}s infinite`,
-              }}
-            />
+            <div key={i} className="splash-dot" style={{ animationDelay: `${i * 0.18}s` }} />
           ))}
         </div>
-        {isLoading && (
-          <span style={{ color: 'var(--kora-muted-2)', fontSize: 11, fontFamily: 'Plus Jakarta Sans' }}>Connexion…</span>
-        )}
+        {isLoading && <span className="splash-loading-text">Connexion…</span>}
       </div>
     </div>
   )
