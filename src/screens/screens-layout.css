@@ -440,8 +440,17 @@
 
 /* —— Leaderboard desktop —— */
 
+.lb-layout {
+  display: flex;
+  flex-direction: column;
+}
+
 .lb-podium {
   display: none;
+}
+
+.lb-you-card {
+  margin: 12px 20px 0;
 }
 
 @media (min-width: 900px) {
@@ -455,6 +464,13 @@
     padding: 28px 32px 0;
     max-width: 720px;
     margin: 0 auto;
+  }
+
+  .lb-you-card {
+    margin: 16px 32px 0;
+    max-width: 720px;
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .lb-online-list {
@@ -471,9 +487,49 @@
 }
 
 @media (min-width: 1100px) {
-  .lb-pad,
-  .lb-body {
-    max-width: 880px;
+  .lb-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, 400px) 1fr;
+    gap: 0 28px;
+    align-items: start;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 28px 24px;
+  }
+
+  .lb-layout .lb-main {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: sticky;
+    top: 12px;
+  }
+
+  .lb-layout .page-header {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .lb-layout .lb-pad {
+    padding: 0;
+    max-width: none;
+    margin: 0;
+  }
+
+  .lb-layout .lb-you-card {
+    margin: 0;
+    max-width: none;
+  }
+
+  .lb-layout .lb-side {
+    min-width: 0;
+    padding-top: 16px;
+  }
+
+  .lb-layout .lb-body {
+    padding: 0;
+    max-width: none;
+    margin: 0;
   }
 
   .lb-podium {
@@ -481,7 +537,7 @@
     grid-template-columns: 1fr 1.15fr 1fr;
     gap: 12px;
     align-items: end;
-    margin-bottom: 20px;
+    margin: 4px 0 0;
   }
 
   .lb-podium-card {
@@ -561,6 +617,11 @@
 
 /* —— Stats desktop —— */
 
+.stats-layout {
+  display: flex;
+  flex-direction: column;
+}
+
 @media (min-width: 900px) {
   .stats-header {
     max-width: 880px;
@@ -579,13 +640,78 @@
   .stats-perf-grid {
     grid-template-columns: repeat(4, 1fr);
   }
+
+  .stats-kpi,
+  .stats-kpi-net {
+    max-width: 880px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .stats-main .stats-kpi {
+    margin: 16px 32px 0;
+  }
+
+  .stats-main .stats-kpi-net {
+    margin: 12px 32px 0;
+  }
 }
 
 @media (min-width: 1100px) {
-  .stats-body .stats-win-card {
-    max-width: 420px;
-    margin-left: auto;
-    margin-right: auto;
+  .stats-layout {
+    display: grid;
+    grid-template-columns: minmax(320px, 380px) 1fr;
+    gap: 0 28px;
+    align-items: start;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 28px 24px;
+  }
+
+  .stats-layout .stats-main {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    position: sticky;
+    top: 12px;
+  }
+
+  .stats-layout .stats-header {
+    max-width: none;
+    margin: 0;
+    padding: 16px 0 0;
+  }
+
+  .stats-layout .stats-header .page-header {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .stats-layout .stats-main .stats-kpi,
+  .stats-layout .stats-main .stats-kpi-net {
+    margin: 0;
+    max-width: none;
+  }
+
+  .stats-layout .stats-side {
+    min-width: 0;
+    padding-top: 16px;
+  }
+
+  .stats-layout .stats-body {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .stats-layout .stats-perf-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .stats-layout .stats-finance-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
   }
 }
 

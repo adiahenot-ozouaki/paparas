@@ -89,32 +89,28 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
       : top3.map((e, i) => ({ e, rank: i }))
 
   return (
-    <ScreenShell>
-      <PageHeader title="Classement" subtitle="Local = votre score solo · En ligne = comptes réels" />
+    <ScreenShell className="lb-screen">
+      <div className="lb-layout">
+        <div className="lb-main">
+          <PageHeader title="Classement" subtitle="Local = votre score solo · En ligne = comptes réels" />
 
-      <div className="lb-pad">
-        <div className="segmented">
-          {TABS.map((tab, i) => (
-            <button
-              key={tab}
-              type="button"
-              className={`segmented-btn${activeTab === i ? ' is-active' : ''}`}
-              onClick={() => setActiveTab(i)}
-            >
-              {tab}
-            </button>
-          ))}
-        </div>
-      </div>
+          <div className="lb-pad">
+            <div className="segmented">
+              {TABS.map((tab, i) => (
+                <button
+                  key={tab}
+                  type="button"
+                  className={`segmented-btn${activeTab === i ? ' is-active' : ''}`}
+                  onClick={() => setActiveTab(i)}
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+          </div>
 
-      <div className="anim-fade-in-up lb-body">
-        {activeTab === 0 && (
-          <>
-            <p className="lb-hint">
-              Une seule ligne ici : le classement local ne compare que vous-même (appareil).
-            </p>
-
-            <SectionCard variant="green" className="lb-row" style={{ marginBottom: 12 }}>
+          {activeTab === 0 && (
+            <SectionCard variant="green" className="lb-row lb-you-card">
               <div className="lb-medal">🥇</div>
               <div className="lb-avatar">{youAvatar}</div>
               <div className="lb-meta">
@@ -134,80 +130,91 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                 <p className="lb-score-label">gains nets</p>
               </div>
             </SectionCard>
+          )}
 
-            {lifetimeStats.gamesPlayed === 0 ? (
-              <EmptyState
-                title="Pas encore de parties solo"
-                description="Terminez une partie pour faire progresser ce score."
-              />
-            ) : (
-              <p className="lb-hint lb-hint--center">
-                Pour vous comparer aux autres → onglet <strong style={{ color: '#A9B0B7' }}>En ligne</strong>
-              </p>
-            )}
-          </>
-        )}
+          {activeTab === 1 && user && top3.length >= 3 && (
+            <div className="lb-podium" aria-label="Podium">
+              {podiumOrder.map(({ e, rank }) => {
+                const isYou = Boolean(user && e.userId === user.id)
+                const medal = rank === 0 ? '🥇' : rank === 1 ? '🥈' : '🥉'
+                return (
+                  <SectionCard
+                    key={e.userId}
+                    variant={isYou || rank === 0 ? 'green' : 'default'}
+                    className={`lb-podium-card${rank === 0 ? ' is-first' : ''}`}
+                  >
+                    <span className="lb-podium-rank">{medal}</span>
+                    <div className="lb-podium-avatar">{e.avatar}</div>
+                    <p className="font-display lb-podium-name">
+                      {e.username}
+                      {isYou ? ' (vous)' : ''}
+                    </p>
+                    <p className="font-display lb-podium-score">
+                      {e.netGainTotal.toLocaleString('fr-FR')}
+                    </p>
+                    <p className="lb-podium-sub">
+                      {e.totalRoundsWon} round{e.totalRoundsWon > 1 ? 's' : ''}
+                    </p>
+                  </SectionCard>
+                )
+              })}
+            </div>
+          )}
+        </div>
 
-        {activeTab === 1 && (
-          <>
-            {!user ? (
-              <EmptyState
-                title="Connexion requise"
-                description="Le classement en ligne utilise les stats réelles des comptes."
-                dashed={false}
-                action={<UiButton onClick={() => onNavigate('auth')}>Se connecter</UiButton>}
-              />
-            ) : loadingOnline ? (
-              <p className="lb-loading">Chargement…</p>
-            ) : onlineError ? (
-              <AlertBanner tone="error">{onlineError}</AlertBanner>
-            ) : online.length === 0 ? (
-              <EmptyState
-                title="Classement vide"
-                description="Aucune statistique serveur pour l’instant. Jouez connecté pour apparaître ici."
-              />
-            ) : (
+        <aside className="lb-side">
+          <div className="anim-fade-in-up lb-body">
+            {activeTab === 0 && (
               <>
-                {top3.length >= 3 && (
-                  <div className="lb-podium" aria-label="Podium">
-                    {podiumOrder.map(({ e, rank }) => {
+                <p className="lb-hint">
+                  Une seule ligne ici : le classement local ne compare que vous-même (appareil).
+                </p>
+
+                {lifetimeStats.gamesPlayed === 0 ? (
+                  <EmptyState
+                    title="Pas encore de parties solo"
+                    description="Terminez une partie pour faire progresser ce score."
+                  />
+                ) : (
+                  <p className="lb-hint lb-hint--center">
+                    Pour vous comparer aux autres → onglet{' '}
+                    <strong style={{ color: '#A9B0B7' }}>En ligne</strong>
+                  </p>
+                )}
+              </>
+            )}
+
+            {activeTab === 1 && (
+              <>
+                {!user ? (
+                  <EmptyState
+                    title="Connexion requise"
+                    description="Le classement en ligne utilise les stats réelles des comptes."
+                    dashed={false}
+                    action={<UiButton onClick={() => onNavigate('auth')}>Se connecter</UiButton>}
+                  />
+                ) : loadingOnline ? (
+                  <p className="lb-loading">Chargement…</p>
+                ) : onlineError ? (
+                  <AlertBanner tone="error">{onlineError}</AlertBanner>
+                ) : online.length === 0 ? (
+                  <EmptyState
+                    title="Classement vide"
+                    description="Aucune statistique serveur pour l’instant. Jouez connecté pour apparaître ici."
+                  />
+                ) : (
+                  <div className="lb-online-list">
+                    {(top3.length >= 3 ? rest : online).map((e, i) => {
+                      const rank = top3.length >= 3 ? i + 3 : i
                       const isYou = Boolean(user && e.userId === user.id)
-                      const medal = rank === 0 ? '🥇' : rank === 1 ? '🥈' : '🥉'
-                      return (
-                        <SectionCard
-                          key={e.userId}
-                          variant={isYou || rank === 0 ? 'green' : 'default'}
-                          className={`lb-podium-card${rank === 0 ? ' is-first' : ''}`}
-                        >
-                          <span className="lb-podium-rank">{medal}</span>
-                          <div className="lb-podium-avatar">{e.avatar}</div>
-                          <p className="font-display lb-podium-name">
-                            {e.username}
-                            {isYou ? ' (vous)' : ''}
-                          </p>
-                          <p className="font-display lb-podium-score">
-                            {e.netGainTotal.toLocaleString('fr-FR')}
-                          </p>
-                          <p className="lb-podium-sub">
-                            {e.totalRoundsWon} round{e.totalRoundsWon > 1 ? 's' : ''}
-                          </p>
-                        </SectionCard>
-                      )
+                      return <OnlineRow key={e.userId} e={e} rank={rank} isYou={isYou} />
                     })}
                   </div>
                 )}
-
-                <div className="lb-online-list">
-                  {(top3.length >= 3 ? rest : online).map((e, i) => {
-                    const rank = top3.length >= 3 ? i + 3 : i
-                    const isYou = Boolean(user && e.userId === user.id)
-                    return <OnlineRow key={e.userId} e={e} rank={rank} isYou={isYou} />
-                  })}
-                </div>
               </>
             )}
-          </>
-        )}
+          </div>
+        </aside>
       </div>
     </ScreenShell>
   )
