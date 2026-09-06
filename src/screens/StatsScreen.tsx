@@ -4,42 +4,27 @@ import { useGame } from '../game/GameContext'
 import { useAuth } from '../auth/AuthContext'
 import { COMBO_LABEL, COMBO_MULTIPLIER } from '../game/combo'
 import { loadGameHistory } from '../lib/persistence/gameHistory'
-
-// ==========================================================================
-// StatsScreen — lifetimeStats (fusion local ↔ cloud) + vue Solo récente
-// dérivée de gameHistory (sans 2e table SQL pour l’instant).
-// ==========================================================================
+import { EmptyState, PageHeader, ScreenShell, SectionCard } from '../components/ui'
 
 const COMBO_ORDER: ComboType[] = ['kmt', 'trinity', '33', 'kora', 'simple']
 const COMBO_COLOR: Record<ComboType, string> = {
   kmt: '#C94B4B',
   trinity: '#9B59B6',
-  '33': '#D6A84F',
-  kora: '#4CAF76',
-  simple: '#A9B0B7',
+  '33': 'var(--kora-gold)',
+  kora: 'var(--kora-success)',
+  simple: 'var(--kora-muted)',
 }
 
 const SPECIAL_ORDER: SpecialRuleType[] = ['flush', '21', 't7']
 const SPECIAL_LABEL: Record<SpecialRuleType, string> = { flush: 'Flush', '21': '21', t7: 'T7' }
-const SPECIAL_COLOR: Record<SpecialRuleType, string> = { flush: '#D6A84F', '21': '#4CAF76', t7: '#9B59B6' }
+const SPECIAL_COLOR: Record<SpecialRuleType, string> = {
+  flush: 'var(--kora-gold)',
+  '21': 'var(--kora-success)',
+  t7: '#9B59B6',
+}
 
 type Scope = 'global' | 'solo'
 type Section = 'perf' | 'finance' | 'combos'
-
-type DisplayStats = {
-  gamesPlayed: number
-  gamesWon: number
-  totalRoundsWon: number
-  totalTricksWon: number
-  netGainTotal: number
-  totalGains: number
-  totalLosses: number
-  maxCapitalEver: number
-  minCapitalEver: number
-  comboCounts: Record<ComboType, number>
-  specialRuleCounts: Record<SpecialRuleType, number>
-  sourceNote: string
-}
 
 export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (s: Screen) => void }) {
   const [section, setSection] = useState<Section>('perf')
@@ -47,7 +32,7 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
   const { lifetimeStats } = useGame()
   const { user } = useAuth()
 
-  const display: DisplayStats = useMemo(() => {
+  const display = useMemo(() => {
     if (scope === 'global') {
       return {
         gamesPlayed: lifetimeStats.gamesPlayed,
@@ -62,12 +47,11 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
         comboCounts: lifetimeStats.comboCounts,
         specialRuleCounts: lifetimeStats.specialRuleCounts,
         sourceNote: user
-          ? 'Global = stats locales fusionnées avec le compte (kora_lifetime_stats).'
-          : 'Global = stats locales (connectez-vous pour synchroniser le cloud).',
+          ? 'Global = stats locales fusionnées avec le compte.'
+          : 'Global = stats locales (connectez-vous pour synchroniser).',
       }
     }
 
-    // Solo récent : agrégat de l’historique local (30 dernières parties solo)
     const hist = loadGameHistory().filter(h => h.mode === 'solo')
     const gamesPlayed = hist.length
     const gamesWon = hist.filter(h => h.won).length
@@ -96,16 +80,15 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
       gamesPlayed,
       gamesWon,
       totalRoundsWon,
-      totalTricksWon: 0, // non journalisé dans history
+      totalTricksWon: 0,
       netGainTotal,
       totalGains,
       totalLosses,
       maxCapitalEver,
       minCapitalEver,
       comboCounts,
-      specialRuleCounts: { flush: 0, '21': 0, t7: 0 },
-      sourceNote:
-        'Solo récent = 30 dernières parties solo (historique local). Combos = meilleur combo de la partie. Plis / règles spéciales non détaillés ici.',
+      specialRuleCounts: { flush: 0, '21': 0, t7: 0 } as Record<SpecialRuleType, number>,
+      sourceNote: 'Solo récent = 30 dernières parties solo (historique local).',
     }
   }, [scope, lifetimeStats, user])
 
@@ -114,35 +97,11 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
   const hasAnyGame = display.gamesPlayed > 0
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background: '#0B0D10',
-        overflowY: 'auto',
-        paddingBottom: 80,
-      }}
-    >
-      <div className="pattern-african" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
+    <ScreenShell>
+      <div style={{ padding: '20px 20px 0' }}>
+        <PageHeader title="Statistiques" subtitle="Performance et combos" />
 
-      <div style={{ padding: '20px 20px 0', position: 'relative' }}>
-        <h1 className="font-display" style={{ fontSize: 28, fontWeight: 800, margin: '0 0 4px' }}>
-          Statistiques
-        </h1>
-        <p style={{ color: '#A9B0B7', fontSize: 14, margin: '0 0 14px' }}>Performance et combos</p>
-
-        {/* Scope Global / Solo */}
-        <div
-          style={{
-            display: 'flex',
-            gap: 6,
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 14,
-            padding: 4,
-            marginBottom: 12,
-          }}
-        >
+        <div className="segmented" style={{ marginBottom: 12 }}>
           {(
             [
               { id: 'global' as const, label: 'Global' },
@@ -152,26 +111,17 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
             <button
               key={t.id}
               type="button"
+              className={`segmented-btn${scope === t.id ? ' is-active' : ''}`}
               onClick={() => setScope(t.id)}
-              style={{
-                flex: 1,
-                padding: '10px 12px',
-                borderRadius: 10,
-                border: 'none',
-                background: scope === t.id ? 'rgba(214,168,79,0.18)' : 'transparent',
-                color: scope === t.id ? '#D6A84F' : '#A9B0B7',
-                fontFamily: 'Plus Jakarta Sans',
-                fontWeight: 700,
-                fontSize: 13,
-                cursor: 'pointer',
-              }}
             >
               {t.label}
             </button>
           ))}
         </div>
 
-        <p style={{ color: '#5b636b', fontSize: 11, margin: '0 0 14px', lineHeight: 1.4 }}>{display.sourceNote}</p>
+        <p style={{ color: 'var(--kora-muted-2)', fontSize: 11, margin: '0 0 14px', lineHeight: 1.4 }}>
+          {display.sourceNote}
+        </p>
 
         <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
           {(
@@ -188,9 +138,10 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
               style={{
                 padding: '8px 16px',
                 borderRadius: 12,
-                border: section === t.id ? '1.5px solid rgba(214,168,79,0.5)' : '1px solid rgba(255,255,255,0.1)',
-                background: section === t.id ? 'rgba(214,168,79,0.12)' : 'rgba(255,255,255,0.04)',
-                color: section === t.id ? '#D6A84F' : '#A9B0B7',
+                border:
+                  section === t.id ? '1.5px solid var(--kora-border-gold)' : '1px solid var(--kora-card-border)',
+                background: section === t.id ? 'rgba(214,168,79,0.12)' : 'var(--kora-card-bg)',
+                color: section === t.id ? 'var(--kora-gold)' : 'var(--kora-muted)',
                 fontFamily: 'Plus Jakarta Sans',
                 fontWeight: 600,
                 fontSize: 13,
@@ -207,54 +158,38 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
 
       <div style={{ padding: '20px' }}>
         {!hasAnyGame && (
-          <div
-            style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              borderRadius: 16,
-              padding: '16px',
-              marginBottom: 16,
-              textAlign: 'center',
-            }}
-          >
-            <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>
-              {scope === 'solo'
-                ? 'Aucune partie solo récente — terminez une partie pour alimenter cet historique.'
-                : 'Aucune partie jouée pour l’instant — jouez pour voir vos statistiques ici.'}
-            </p>
+          <div style={{ marginBottom: 16 }}>
+            <EmptyState
+              title={scope === 'solo' ? 'Aucune partie solo récente' : 'Aucune partie jouée'}
+              description={
+                scope === 'solo'
+                  ? 'Terminez une partie pour alimenter cet historique.'
+                  : 'Jouez pour voir vos statistiques ici.'
+              }
+            />
           </div>
         )}
 
         {section === 'perf' && (
           <>
-            <div
-              className="anim-scale-bounce"
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 20,
-                padding: '24px',
-                textAlign: 'center',
-                marginBottom: 16,
-              }}
-            >
+            <SectionCard className="anim-scale-bounce" style={{ textAlign: 'center', marginBottom: 16, borderRadius: 20, padding: 24 }}>
               <div style={{ position: 'relative', width: 120, height: 120, margin: '0 auto 16px' }}>
                 <svg width="120" height="120" style={{ transform: 'rotate(-90deg)' }}>
-                  <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="10" />
+                  <circle cx="60" cy="60" r="50" fill="none" stroke="var(--kora-card-border)" strokeWidth="10" />
                   <circle
                     cx="60"
                     cy="60"
                     r="50"
                     fill="none"
-                    stroke="url(#grad)"
+                    stroke="url(#gradStats)"
                     strokeWidth="10"
                     strokeDasharray={`${(winRatio / 100) * 2 * Math.PI * 50} ${2 * Math.PI * 50}`}
                     strokeLinecap="round"
                   />
                   <defs>
-                    <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="#176B50" />
-                      <stop offset="100%" stopColor="#D6A84F" />
+                    <linearGradient id="gradStats" x1="0%" y1="0%" x2="100%" y2="0%">
+                      <stop offset="0%" stopColor="var(--kora-green)" />
+                      <stop offset="100%" stopColor="var(--kora-gold)" />
                     </linearGradient>
                   </defs>
                 </svg>
@@ -271,42 +206,34 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
                   <span className="text-gold font-display" style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>
                     {winRatio.toFixed(1)}
                   </span>
-                  <span style={{ color: '#A9B0B7', fontSize: 12 }}>%</span>
+                  <span style={{ color: 'var(--kora-muted)', fontSize: 12 }}>%</span>
                 </div>
               </div>
-              <p className="font-display" style={{ color: '#fff', fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>
+              <p className="font-display" style={{ color: 'var(--kora-text)', fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>
                 Taux de victoire
               </p>
-              <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>
+              <p style={{ color: 'var(--kora-muted)', fontSize: 13, margin: 0 }}>
                 {display.gamesWon} victoires sur {display.gamesPlayed} parties
               </p>
-            </div>
+            </SectionCard>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {[
-                { label: 'Parties jouées', value: String(display.gamesPlayed), color: '#fff' },
-                { label: 'Parties gagnées', value: String(display.gamesWon), color: '#4CAF76' },
-                { label: 'Rounds gagnés', value: String(display.totalRoundsWon), color: '#D6A84F' },
+                { label: 'Parties jouées', value: String(display.gamesPlayed), color: 'var(--kora-text)' },
+                { label: 'Parties gagnées', value: String(display.gamesWon), color: 'var(--kora-success)' },
+                { label: 'Rounds gagnés', value: String(display.totalRoundsWon), color: 'var(--kora-gold)' },
                 {
                   label: 'Plis gagnés',
                   value: scope === 'solo' ? '—' : display.totalTricksWon.toLocaleString('fr-FR'),
                   color: '#9B59B6',
                 },
               ].map((s, i) => (
-                <div
-                  key={i}
-                  style={{
-                    background: 'rgba(255,255,255,0.04)',
-                    border: '1px solid rgba(255,255,255,0.07)',
-                    borderRadius: 14,
-                    padding: '14px',
-                  }}
-                >
+                <SectionCard key={i} style={{ borderRadius: 14, padding: 14 }}>
                   <p className="font-display" style={{ color: s.color, fontSize: 22, fontWeight: 800, margin: '0 0 4px' }}>
                     {s.value}
                   </p>
-                  <p style={{ color: '#A9B0B7', fontSize: 12, margin: 0 }}>{s.label}</p>
-                </div>
+                  <p style={{ color: 'var(--kora-muted)', fontSize: 12, margin: 0 }}>{s.label}</p>
+                </SectionCard>
               ))}
             </div>
           </>
@@ -314,18 +241,10 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
 
         {section === 'finance' && (
           <>
-            <div
-              style={{
-                background: 'linear-gradient(135deg, rgba(18,60,50,0.5), rgba(16,21,26,0.8))',
-                border: '1px solid rgba(214,168,79,0.2)',
-                borderRadius: 20,
-                padding: '20px',
-                marginBottom: 16,
-              }}
-            >
+            <SectionCard variant="green" style={{ borderRadius: 20, padding: 20, marginBottom: 16 }}>
               <p
                 style={{
-                  color: '#A9B0B7',
+                  color: 'var(--kora-muted)',
                   fontSize: 11,
                   fontFamily: 'Plus Jakarta Sans',
                   letterSpacing: '0.1em',
@@ -338,32 +257,22 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
                 {display.netGainTotal >= 0 ? '+' : ''}
                 {display.netGainTotal.toLocaleString('fr-FR')} FCFA
               </div>
-            </div>
+            </SectionCard>
 
             {[
-              { label: 'Gains totaux', value: `+${display.totalGains.toLocaleString('fr-FR')}`, color: '#4CAF76' },
-              { label: 'Pertes totales', value: `-${display.totalLosses.toLocaleString('fr-FR')}`, color: '#C94B4B' },
+              { label: 'Gains totaux', value: `+${display.totalGains.toLocaleString('fr-FR')}`, color: 'var(--kora-success)' },
+              { label: 'Pertes totales', value: `-${display.totalLosses.toLocaleString('fr-FR')}`, color: 'var(--kora-danger)' },
               {
                 label: 'Gain net',
                 value: `${display.netGainTotal >= 0 ? '+' : ''}${display.netGainTotal.toLocaleString('fr-FR')}`,
-                color: '#D6A84F',
+                color: 'var(--kora-gold)',
               },
-              {
-                label: 'Capital maximum',
-                value: display.maxCapitalEver.toLocaleString('fr-FR'),
-                color: '#fff',
-              },
-              {
-                label: 'Capital minimum',
-                value: display.minCapitalEver.toLocaleString('fr-FR'),
-                color: '#fff',
-              },
+              { label: 'Capital maximum', value: display.maxCapitalEver.toLocaleString('fr-FR'), color: 'var(--kora-text)' },
+              { label: 'Capital minimum', value: display.minCapitalEver.toLocaleString('fr-FR'), color: 'var(--kora-text)' },
             ].map((s, i) => (
-              <div
+              <SectionCard
                 key={i}
                 style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.07)',
                   borderRadius: 14,
                   padding: '14px 16px',
                   marginBottom: 8,
@@ -372,27 +281,19 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
                   alignItems: 'center',
                 }}
               >
-                <span style={{ color: '#A9B0B7', fontSize: 14 }}>{s.label}</span>
+                <span style={{ color: 'var(--kora-muted)', fontSize: 14 }}>{s.label}</span>
                 <span className="font-display" style={{ color: s.color, fontSize: 16, fontWeight: 700 }}>
                   {s.value} FCFA
                 </span>
-              </div>
+              </SectionCard>
             ))}
           </>
         )}
 
         {section === 'combos' && (
           <>
-            <div
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 20,
-                padding: '20px',
-                marginBottom: 16,
-              }}
-            >
-              <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: '0 0 16px', color: '#fff' }}>
+            <SectionCard style={{ borderRadius: 20, padding: 20, marginBottom: 16 }}>
+              <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: '0 0 16px', color: 'var(--kora-text)' }}>
                 {scope === 'solo' ? 'Meilleurs combos (parties solo)' : 'Combos réalisés'}
               </h3>
               {COMBO_ORDER.map((c, i) => {
@@ -405,13 +306,13 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
                         <span className="font-display" style={{ color, fontSize: 15, fontWeight: 800 }}>
                           {COMBO_LABEL[c]}
                         </span>
-                        <span style={{ color: '#A9B0B7', fontSize: 12 }}>×{COMBO_MULTIPLIER[c]}</span>
+                        <span style={{ color: 'var(--kora-muted)', fontSize: 12 }}>×{COMBO_MULTIPLIER[c]}</span>
                       </div>
-                      <span className="font-display" style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>
+                      <span className="font-display" style={{ color: 'var(--kora-text)', fontSize: 14, fontWeight: 700 }}>
                         ×{count}
                       </span>
                     </div>
-                    <div style={{ height: 8, background: 'rgba(255,255,255,0.06)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div style={{ height: 8, background: 'var(--kora-card-bg)', borderRadius: 99, overflow: 'hidden' }}>
                       <div
                         style={{
                           width: `${(count / maxComboCount) * 100}%`,
@@ -425,18 +326,11 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
                   </div>
                 )
               })}
-            </div>
+            </SectionCard>
 
             {scope === 'global' && (
-              <div
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: 20,
-                  padding: '20px',
-                }}
-              >
-                <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: '0 0 16px', color: '#fff' }}>
+              <SectionCard style={{ borderRadius: 20, padding: 20 }}>
+                <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: '0 0 16px', color: 'var(--kora-text)' }}>
                   Règles spéciales
                 </h3>
                 <div style={{ display: 'flex', gap: 10 }}>
@@ -445,11 +339,12 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
                       key={rule}
                       style={{
                         flex: 1,
-                        background: `${SPECIAL_COLOR[rule]}10`,
-                        border: `1.5px solid ${SPECIAL_COLOR[rule]}40`,
+                        background: 'var(--kora-card-bg)',
+                        border: `1.5px solid ${SPECIAL_COLOR[rule]}`,
                         borderRadius: 16,
                         padding: '16px 8px',
                         textAlign: 'center',
+                        opacity: 0.95,
                       }}
                     >
                       <p
@@ -458,23 +353,23 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
                       >
                         {display.specialRuleCounts[rule]}
                       </p>
-                      <p className="font-display" style={{ color: '#fff', fontSize: 14, fontWeight: 700, margin: 0 }}>
+                      <p className="font-display" style={{ color: 'var(--kora-text)', fontSize: 14, fontWeight: 700, margin: 0 }}>
                         {SPECIAL_LABEL[rule]}
                       </p>
                     </div>
                   ))}
                 </div>
-              </div>
+              </SectionCard>
             )}
 
             {scope === 'solo' && (
-              <p style={{ color: '#5b636b', fontSize: 11, margin: 0, lineHeight: 1.4 }}>
-                Les règles spéciales et le détail des plis restent dans la vue Global (compteurs lifetime complets).
+              <p style={{ color: 'var(--kora-muted-2)', fontSize: 11, margin: 0, lineHeight: 1.4 }}>
+                Les règles spéciales et le détail des plis restent dans la vue Global.
               </p>
             )}
           </>
         )}
       </div>
-    </div>
+    </ScreenShell>
   )
 }
