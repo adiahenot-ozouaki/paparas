@@ -10,6 +10,7 @@ import './screens/screens-lms.css'
 import './screens/screens-rules.css'
 import './screens/screens-game.css'
 import './screens/screens-game-table.css'
+import './screens/screens-misc.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
