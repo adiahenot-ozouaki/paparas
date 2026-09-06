@@ -1,0 +1,82 @@
+/* ==========================================================================
+   Thème dynamique — data-theme="dark" | "light" sur <html>
+   ========================================================================== */
+
+:root,
+[data-theme='dark'] {
+  color-scheme: dark;
+
+  --kora-void: #0b0d10;
+  --kora-surface: #10151a;
+  --kora-felt: #0d2318;
+  --kora-green-deep: #123c32;
+  --kora-green: #176b50;
+  --kora-gold: #d6a84f;
+  --kora-gold-light: #f0d58a;
+  --kora-gold-dark: #c08030;
+  --kora-ivory: #f5f1e8;
+  --kora-muted: #a9b0b7;
+  --kora-muted-2: #5b636b;
+  --kora-danger: #c94b4b;
+  --kora-danger-soft: #e8a0a0;
+  --kora-success: #4caf76;
+  --kora-success-soft: #8fd4a8;
+  --kora-text: #ffffff;
+  --kora-text-inverse: #0b0d10;
+
+  --kora-card-bg: rgba(255, 255, 255, 0.04);
+  --kora-card-border: rgba(255, 255, 255, 0.07);
+  --kora-card-border-strong: rgba(255, 255, 255, 0.12);
+  --kora-surface-gold: linear-gradient(135deg, rgba(214, 168, 79, 0.12), rgba(16, 21, 26, 0.8));
+  --kora-surface-green: linear-gradient(135deg, rgba(18, 60, 50, 0.55), rgba(16, 21, 26, 0.85));
+  --kora-surface-danger: rgba(201, 75, 75, 0.12);
+  --kora-surface-success: rgba(76, 175, 118, 0.12);
+  --kora-border-gold: rgba(214, 168, 79, 0.35);
+  --kora-border-gold-soft: rgba(214, 168, 79, 0.25);
+  --kora-border-danger: rgba(201, 75, 75, 0.35);
+  --kora-border-success: rgba(76, 175, 118, 0.35);
+  --kora-nav-bg: #181e26;
+  --kora-root-bg: #070a0d;
+  --kora-pattern-opacity: 0.5;
+  --kora-field-bg: rgba(255, 255, 255, 0.05);
+  --kora-field-border: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme='light'] {
+  color-scheme: light;
+
+  --kora-void: #f3efe6;
+  --kora-surface: #ffffff;
+  --kora-felt: #e8f0eb;
+  --kora-green-deep: #1a4a3c;
+  --kora-green: #176b50;
+  --kora-gold: #b8862d;
+  --kora-gold-light: #d4a84a;
+  --kora-gold-dark: #8f6a1f;
+  --kora-ivory: #1a1c1e;
+  --kora-muted: #5c656d;
+  --kora-muted-2: #8a939c;
+  --kora-danger: #b33a3a;
+  --kora-danger-soft: #9a3030;
+  --kora-success: #2e8b57;
+  --kora-success-soft: #247a4a;
+  --kora-text: #14181c;
+  --kora-text-inverse: #ffffff;
+
+  --kora-card-bg: rgba(0, 0, 0, 0.04);
+  --kora-card-border: rgba(0, 0, 0, 0.08);
+  --kora-card-border-strong: rgba(0, 0, 0, 0.14);
+  --kora-surface-gold: linear-gradient(135deg, rgba(184, 134, 45, 0.12), rgba(255, 255, 255, 0.9));
+  --kora-surface-green: linear-gradient(135deg, rgba(23, 107, 80, 0.12), rgba(255, 255, 255, 0.92));
+  --kora-surface-danger: rgba(179, 58, 58, 0.1);
+  --kora-surface-success: rgba(46, 139, 87, 0.1);
+  --kora-border-gold: rgba(184, 134, 45, 0.4);
+  --kora-border-gold-soft: rgba(184, 134, 45, 0.28);
+  --kora-border-danger: rgba(179, 58, 58, 0.35);
+  --kora-border-success: rgba(46, 139, 87, 0.35);
+  --kora-nav-bg: #ffffff;
+  --kora-root-bg: #e8e4da;
+  --kora-pattern-opacity: 0.35;
+  --kora-field-bg: rgba(0, 0, 0, 0.04);
+  --kora-field-border: rgba(0, 0, 0, 0.12);
+}
