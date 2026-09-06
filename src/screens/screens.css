@@ -1,0 +1,396 @@
+/* ==========================================================================
+   Screen layouts — Auth + Home (références migration UI kit)
+   ========================================================================== */
+
+.text-success { color: #4caf76; }
+.text-danger { color: #c94b4b; }
+
+/* —— Auth —— */
+
+.auth-screen--center .screen-shell-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 24px;
+}
+
+.auth-screen--session .screen-shell-inner {
+  gap: 16px;
+}
+
+.auth-muted {
+  color: #a9b0b7;
+  font-size: 13px;
+  margin: 0;
+}
+
+.auth-avatar {
+  font-size: 40px;
+  line-height: 1;
+}
+
+.auth-username {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.auth-email {
+  font-size: 12px;
+}
+
+.auth-title {
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0 0 8px;
+  letter-spacing: 0.06em;
+  text-align: center;
+}
+
+.auth-subtitle {
+  margin: 0 0 24px;
+  text-align: center;
+  max-width: 320px;
+}
+
+.auth-form {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.auth-submit {
+  margin-top: 8px;
+  letter-spacing: 0.06em;
+}
+
+.auth-continue {
+  margin-top: 8px;
+}
+
+.auth-footer {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.auth-link {
+  background: none;
+  border: none;
+  color: #a9b0b7;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  padding: 0;
+}
+
+/* —— Home —— */
+
+.home-glow {
+  position: fixed;
+  top: -80px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 280px;
+  height: 280px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(23, 107, 80, 0.14) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.home-header {
+  padding: max(16px, env(safe-area-inset-top, 0px)) 20px 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  position: relative;
+}
+
+.home-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #176b50, #123c32);
+  border: 2px solid rgba(214, 168, 79, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.home-header-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.home-header-status {
+  color: #a9b0b7;
+  font-size: 11px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.home-header-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.home-header-name {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-level-pill {
+  background: linear-gradient(135deg, #d6a84f, #c08030);
+  color: #0b0d10;
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  flex-shrink: 0;
+}
+
+.home-money-stack {
+  margin: 14px 20px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.home-resume {
+  border: 1.5px solid rgba(76, 175, 118, 0.35) !important;
+}
+
+.home-resume-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-resume-title {
+  color: #8fd4a8;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 4px;
+}
+
+.home-resume-meta {
+  color: #a9b0b7;
+  font-size: 12px;
+  margin: 0;
+}
+
+.home-resume-arrow {
+  color: #4caf76;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.home-hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 28px 20px 16px;
+  position: relative;
+}
+
+.home-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 22px;
+}
+
+.home-brand-ornament {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+
+.home-brand-line {
+  width: 28px;
+  height: 1.5px;
+}
+
+.home-brand-line--left {
+  background: linear-gradient(90deg, transparent, rgba(214, 168, 79, 0.6));
+}
+
+.home-brand-line--right {
+  background: linear-gradient(90deg, rgba(214, 168, 79, 0.6), transparent);
+}
+
+.home-brand-suit {
+  color: rgba(214, 168, 79, 0.5);
+  font-size: 16px;
+}
+
+.home-brand-title {
+  font-size: 44px;
+  font-weight: 800;
+  letter-spacing: 0.15em;
+  margin: 0;
+  line-height: 1;
+}
+
+.home-brand-sub {
+  color: #a9b0b7;
+  font-size: 12px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: 0.32em;
+  margin: 4px 0 0;
+}
+
+.home-play-btn {
+  max-width: 320px;
+  padding: 18px 0 !important;
+  font-size: 18px !important;
+  border-radius: 18px !important;
+  letter-spacing: 0.12em;
+  margin-bottom: 12px;
+}
+
+.home-quick-links {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+  max-width: 320px;
+}
+
+.home-quick-link {
+  flex: 1;
+  padding: 10px 4px;
+  font-size: 11px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  border-radius: 14px;
+}
+
+.home-quick-icon {
+  font-size: 18px;
+}
+
+.home-stats-row {
+  display: flex;
+  gap: 10px;
+  padding: 0 20px;
+}
+
+.home-activity {
+  padding: 20px 20px 8px;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 220px;
+}
+
+.home-activity-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.home-activity-title {
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.home-first-play {
+  padding: 10px 20px !important;
+  font-size: 12px !important;
+  border-radius: 12px !important;
+}
+
+.home-activity-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.home-win-card {
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.home-win-row {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.home-win-label {
+  color: #a9b0b7;
+  font-size: 12px;
+}
+
+.home-win-gain {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.home-win-bar {
+  height: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.home-win-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #176b50, #d6a84f);
+  border-radius: 99px;
+}
+
+.home-activity-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.home-combo-card {
+  border-radius: 14px;
+  padding: 12px;
+}
+
+.home-combo-label {
+  color: #a9b0b7;
+  font-size: 11px;
+  margin: 0 0 4px;
+}
+
+.home-combo-value {
+  color: #d6a84f;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.home-combo-count {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+}

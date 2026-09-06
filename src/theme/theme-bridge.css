@@ -167,6 +167,70 @@ body {
   border-color: var(--kora-border-gold-soft);
 }
 
+/* Auth / Home screen bridges */
+
+.auth-muted,
+.auth-link {
+  color: var(--kora-muted);
+}
+
+.auth-username,
+.home-header-name,
+.home-activity-title,
+.home-combo-count {
+  color: var(--kora-text);
+}
+
+.home-header-status,
+.home-brand-sub,
+.home-resume-meta,
+.home-win-label,
+.home-combo-label {
+  color: var(--kora-muted);
+}
+
+.home-avatar {
+  background: linear-gradient(135deg, var(--kora-green), var(--kora-green-deep));
+  border-color: var(--kora-border-gold);
+}
+
+.home-level-pill {
+  background: linear-gradient(135deg, var(--kora-gold), var(--kora-gold-dark));
+  color: var(--kora-text-inverse);
+}
+
+.home-resume {
+  border-color: var(--kora-border-success) !important;
+}
+
+.home-resume-title {
+  color: var(--kora-success-soft);
+}
+
+.home-resume-arrow {
+  color: var(--kora-success);
+}
+
+.home-win-bar {
+  background: var(--kora-card-bg);
+}
+
+.home-win-bar-fill {
+  background: linear-gradient(90deg, var(--kora-green), var(--kora-gold));
+}
+
+.home-combo-value {
+  color: var(--kora-gold);
+}
+
+.text-success {
+  color: var(--kora-success);
+}
+
+.text-danger {
+  color: var(--kora-danger);
+}
+
 .theme-toggle {
   margin: 16px 20px 0;
   padding: 16px;

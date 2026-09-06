@@ -4,6 +4,7 @@ import App from './App'
 import './theme/theme.css'
 import './index.css'
 import './theme/theme-bridge.css'
+import './screens/screens.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
