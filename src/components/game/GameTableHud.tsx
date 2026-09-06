@@ -1,11 +1,10 @@
 import { SEAT_NAMES } from '../../game/GameContext'
+import { IconButton } from '../ui'
 
 interface GameTableHudProps {
   roundNumber: number
   tricksWonThisRound: number[]
-  /** Message live (tour, couleur, pli gagné…). Si null → scores de plis. */
   statusMessage: string | null
-  /** Teinte optionnelle du status (or / vert / neutre). */
   statusTone?: 'gold' | 'green' | 'muted'
   compactMode: boolean
   canBank: boolean
@@ -15,28 +14,6 @@ interface GameTableHudProps {
   onOpenRules: () => void
   onRequestBank: () => void
 }
-
-const iconButtonStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.08)',
-  border: '1px solid rgba(255,255,255,0.1)',
-  borderRadius: 10,
-  width: 30,
-  height: 30,
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  color: '#A9B0B7',
-  fontSize: 13,
-  cursor: 'pointer',
-  flexShrink: 0,
-  padding: 0,
-}
-
-const TONE_COLOR = {
-  gold: '#F0D58A',
-  green: '#4CAF76',
-  muted: '#A9B0B7',
-} as const
 
 export function GameTableHud({
   roundNumber,
@@ -52,95 +29,37 @@ export function GameTableHud({
   onRequestBank,
 }: GameTableHudProps) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        padding: '12px 16px',
-        background: 'rgba(11,13,16,0.7)',
-        backdropFilter: 'blur(8px)',
-        borderBottom: '1px solid rgba(255,255,255,0.05)',
-        position: 'relative',
-        zIndex: 10,
-        flexShrink: 0,
-        gap: 6,
-      }}
-    >
-      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-        <button onClick={onPause} title="Pause" aria-label="Mettre la partie en pause" style={iconButtonStyle}>
+    <header className="table-hud">
+      <div className="table-hud-left">
+        <IconButton size="sm" aria-label="Mettre la partie en pause" title="Pause" onClick={onPause}>
           ⏸
-        </button>
-        <button onClick={onOpenRules} title="Règles du jeu" aria-label="Consulter les règles du jeu" style={iconButtonStyle}>
+        </IconButton>
+        <IconButton size="sm" aria-label="Consulter les règles du jeu" title="Règles du jeu" onClick={onOpenRules}>
           ?
-        </button>
+        </IconButton>
         {canBank && (
-          <button
-            onClick={onRequestBank}
-            title="Aller en banque (abandonner le round)"
+          <IconButton
+            size="sm"
+            className="table-hud-bank"
             aria-label="Aller en banque — abandonner le round en cours"
-            style={{
-              ...iconButtonStyle,
-              background: 'rgba(201,75,75,0.12)',
-              border: '1px solid rgba(201,75,75,0.3)',
-              color: '#C94B4B',
-            }}
+            title="Aller en banque (abandonner le round)"
+            onClick={onRequestBank}
           >
             🏦
-          </button>
+          </IconButton>
         )}
       </div>
 
-      {/* Centre : ROUND + status OU scores de plis */}
-      <div style={{ textAlign: 'center', flex: 1, minWidth: 0 }} role="status" aria-live="polite">
-        <p
-          className="text-gold font-display"
-          style={{
-            fontSize: 13,
-            fontWeight: 700,
-            margin: 0,
-            letterSpacing: '0.1em',
-          }}
-        >
-          ROUND {roundNumber}
-        </p>
-
+      <div className="table-hud-center" role="status" aria-live="polite">
+        <p className="text-gold font-display table-hud-round">ROUND {roundNumber}</p>
         {statusMessage ? (
-          <p
-            key={statusMessage}
-            className="anim-fade-in"
-            style={{
-              color: TONE_COLOR[statusTone],
-              fontSize: 12,
-              fontWeight: 600,
-              margin: '3px 0 0',
-              letterSpacing: '0.04em',
-              fontFamily: 'Plus Jakarta Sans',
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-            }}
-          >
+          <p key={statusMessage} className={`anim-fade-in table-hud-status table-hud-status--${statusTone}`}>
             {statusMessage}
           </p>
         ) : (
-          <div
-            style={{
-              display: 'flex',
-              gap: 4,
-              justifyContent: 'center',
-              marginTop: 2,
-              flexWrap: 'wrap',
-            }}
-          >
+          <div className="table-hud-tricks">
             {SEAT_NAMES.map((name, index) => (
-              <span
-                key={name}
-                style={{
-                  color: '#A9B0B7',
-                  fontSize: 10,
-                }}
-              >
+              <span key={name} className="table-hud-trick">
                 {name}: {tricksWonThisRound[index]}
               </span>
             ))}
@@ -148,40 +67,21 @@ export function GameTableHud({
         )}
       </div>
 
-      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-        <button
-          onClick={onToggleCompact}
-          title={compactMode ? 'Afficher les noms et gains' : 'Masquer les noms et gains (agrandit les cartes)'}
+      <div className="table-hud-right">
+        <IconButton
+          size="sm"
+          className={compactMode ? 'table-hud-compact is-on' : 'table-hud-compact'}
           aria-label={compactMode ? 'Afficher les noms et gains' : 'Masquer les noms et gains'}
           aria-pressed={compactMode}
-          style={{
-            ...iconButtonStyle,
-            background: compactMode ? 'rgba(214,168,79,0.15)' : 'rgba(255,255,255,0.08)',
-            border: compactMode ? '1px solid rgba(214,168,79,0.4)' : '1px solid rgba(255,255,255,0.1)',
-            color: compactMode ? '#D6A84F' : '#A9B0B7',
-          }}
+          title={compactMode ? 'Afficher les noms et gains' : 'Masquer les noms et gains (agrandit les cartes)'}
+          onClick={onToggleCompact}
         >
           {compactMode ? '🙈' : '👁️'}
-        </button>
-
-        <button
-          onClick={onQuit}
-          style={{
-            background: 'rgba(201,75,75,0.15)',
-            border: '1px solid rgba(201,75,75,0.3)',
-            borderRadius: 10,
-            padding: '0 10px',
-            height: 30,
-            color: '#C94B4B',
-            fontSize: 12,
-            cursor: 'pointer',
-            fontFamily: 'Plus Jakarta Sans',
-            flexShrink: 0,
-          }}
-        >
+        </IconButton>
+        <button type="button" className="table-hud-quit" onClick={onQuit}>
           Quitter
         </button>
       </div>
-    </div>
+    </header>
   )
 }

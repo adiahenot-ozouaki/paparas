@@ -76,7 +76,6 @@ export default function GameTableScreen({
       c => c.suit === card.suit && c.value === card.value,
     )
 
-  // Status centralisé dans le HUD
   let statusMessage: string | null = null
   let statusTone: 'gold' | 'green' | 'muted' = 'muted'
 
@@ -116,7 +115,6 @@ export default function GameTableScreen({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  // Tour IA : claim > banque > choix de carte
   useEffect(() => {
     if (roundState.phase !== 'playing') return
     if (currentPlayerIndex === null || currentPlayerIndex === HUMAN_INDEX) return
@@ -128,12 +126,10 @@ export default function GameTableScreen({
         const index = getCurrentPlayerIndex(prev)
         if (index === null || index === HUMAN_INDEX) return prev
 
-        // 1. Réclamation de victoire dès que légale
         if (canClaimVictory(prev, index)) {
           return claimVictory(prev, index, stakeConfig)
         }
 
-        // 2. Banque IA (uniquement en début de tour de pli, avant d'avoir joué)
         const trick = prev.currentTrick
         if (
           trick &&
@@ -157,7 +153,6 @@ export default function GameTableScreen({
           }
         }
 
-        // 3. Choix de carte selon personnalité
         const hand = prev.hands[index]
         const tricksWonByMe = prev.trickWinners.filter(w => w === index).length
         const card = chooseAiCard({
@@ -198,7 +193,6 @@ export default function GameTableScreen({
     if (!canBank && confirmingBank) setConfirmingBank(false)
   }, [canBank, confirmingBank])
 
-  /** Après révélation + gains : partie suivante ou écran victory/defeat. */
   function handleRoundEndContinue() {
     const result = checkGameOverNow()
     if (result.isOver && result.winnerIndex !== undefined) {
@@ -248,26 +242,8 @@ export default function GameTableScreen({
   )
 
   return (
-    <div
-      className="felt-bg"
-      style={{
-        position: 'absolute',
-        inset: 0,
-        overflow: 'hidden',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          pointerEvents: 'none',
-          backgroundImage:
-            'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'32\' height=\'32\'%3E%3Cpolygon points=\'16,0 32,16 16,32 0,16\' fill=\'none\' stroke=\'rgba(214,168,79,0.04)\' stroke-width=\'0.8\'/%3E%3C/svg%3E")',
-          opacity: 0.8,
-        }}
-      />
+    <div className="felt-bg table-screen">
+      <div className="table-screen-pattern" aria-hidden />
 
       {roundState.phase === 'specialWin' &&
         roundState.outcome?.kind === 'specialWin' && (
@@ -317,14 +293,7 @@ export default function GameTableScreen({
         onRequestBank={() => setConfirmingBank(true)}
       />
 
-      <div
-        style={{
-          flex: 1,
-          position: 'relative',
-          display: 'flex',
-          flexDirection: 'column',
-        }}
-      >
+      <div className="table-screen-body">
         <GameTableArea
           players={players}
           roundState={roundState}
