@@ -3,8 +3,8 @@ import type { Screen, DeckVariant } from '../types'
 import { useGame } from '../game/GameContext'
 import type { GameEndMode } from '../game/payout'
 
-const STAKE_PRESETS = [500, 1000, 2000, 5000]
-const CAPITAL_PRESETS = [5000, 10000, 20000, 50000]
+const STAKE_PRESETS = [100, 500, 1000, 2000, 5000]
+const CAPITAL_PRESETS = [2000, 5000, 10000, 20000, 50000]
 const MAX_ROUNDS_PRESETS = [5, 8, 10, 15]
 const TARGET_MULT_PRESETS = [2, 3, 4, 5]
 
@@ -30,6 +30,76 @@ const END_MODE_OPTIONS: { id: GameEndMode; label: string; hint: string }[] = [
     id: 'raceToCapital',
     label: 'Course',
     hint: 'Premier à atteindre l’objectif de capital',
+  },
+]
+
+/** Aligné sur GameModeScreen — 1 tap → lobby. */
+type QuickPreset = {
+  id: string
+  title: string
+  icon: string
+  blurb: string
+  baseStake: number
+  startingCapital: number
+  deckVariant: DeckVariant
+  endMode: GameEndMode
+  maxRounds: number
+  targetCapital: number
+  accent: string
+}
+
+const QUICK_PRESETS: QuickPreset[] = [
+  {
+    id: 'rapide',
+    title: 'Rapide',
+    icon: '⚡',
+    blurb: 'As · 500 · 8 rounds',
+    baseStake: 500,
+    startingCapital: 5000,
+    deckVariant: 'as',
+    endMode: 'fixedRounds',
+    maxRounds: 8,
+    targetCapital: 15_000,
+    accent: '#D6A84F',
+  },
+  {
+    id: 'entrainement',
+    title: 'Entraînement',
+    icon: '🤖',
+    blurb: 'Var. 8 · 100 · 5 rounds',
+    baseStake: 100,
+    startingCapital: 2000,
+    deckVariant: '8',
+    endMode: 'fixedRounds',
+    maxRounds: 5,
+    targetCapital: 6000,
+    accent: '#4CAF76',
+  },
+  {
+    id: 'classique',
+    title: 'Classique',
+    icon: '♠',
+    blurb: 'As · 1 000 · 10 rounds',
+    baseStake: 1000,
+    startingCapital: 10000,
+    deckVariant: 'as',
+    endMode: 'fixedRounds',
+    maxRounds: 10,
+    targetCapital: 30_000,
+    accent: '#F0D58A',
+  },
+  {
+    id: 'haute',
+    title: 'Haute mise',
+    icon: '🔥',
+    blurb: 'As · 5 000 · élimination',
+    baseStake: 5000,
+    startingCapital: 20000,
+    deckVariant: 'as',
+    endMode: 'elimination',
+    maxRounds: 15,
+    targetCapital: 60_000,
+    accent: '#C94B4B',
   },
 ]
 
@@ -60,8 +130,20 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
 
   const targetCapital = startingCapital * targetMult
 
+  function applyAndGo(cfg: {
+    baseStake: number
+    startingCapital: number
+    deckVariant: DeckVariant
+    endMode: GameEndMode
+    maxRounds: number
+    targetCapital: number
+  }) {
+    configureGame(cfg)
+    onNavigate('lobby')
+  }
+
   function handleContinue() {
-    configureGame({
+    applyAndGo({
       baseStake,
       startingCapital,
       deckVariant: variant,
@@ -69,7 +151,27 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
       maxRounds,
       targetCapital,
     })
-    onNavigate('lobby')
+  }
+
+  function handleQuick(p: QuickPreset) {
+    applyAndGo({
+      baseStake: p.baseStake,
+      startingCapital: p.startingCapital,
+      deckVariant: p.deckVariant,
+      endMode: p.endMode,
+      maxRounds: p.maxRounds,
+      targetCapital: p.targetCapital,
+    })
+  }
+
+  function loadPresetIntoForm(p: QuickPreset) {
+    setBaseStake(p.baseStake)
+    setStartingCapital(p.startingCapital)
+    setVariant(p.deckVariant)
+    setEndMode(p.endMode)
+    setMaxRounds(p.maxRounds)
+    const mult = Math.round(p.targetCapital / Math.max(1, p.startingCapital))
+    setTargetMult(TARGET_MULT_PRESETS.includes(mult) ? mult : 3)
   }
 
   return (
@@ -85,8 +187,9 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
     >
       <div className="pattern-african" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
 
-      <div style={{ padding: '20px 20px 0', position: 'relative' }}>
+      <div style={{ padding: 'max(20px, env(safe-area-inset-top, 0px)) 20px 0', position: 'relative' }}>
         <button
+          type="button"
           onClick={() => onNavigate('gameMode')}
           aria-label="Retour"
           style={{
@@ -110,16 +213,16 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
           Configurer la table
         </h1>
         <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>
-          Mise, capital, variante et condition de fin.
+          Presets 1-tap ou réglages détaillés.
         </p>
       </div>
 
       <div
         style={{
-          padding: '28px 20px',
+          padding: '20px 20px 28px',
           display: 'flex',
           flexDirection: 'column',
-          gap: 18,
+          gap: 14,
           flex: 1,
           maxWidth: 440,
           width: '100%',
@@ -127,6 +230,68 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
           boxSizing: 'border-box',
         }}
       >
+        {/* 1-tap presets */}
+        <p
+          style={{
+            color: '#5b636b',
+            fontSize: 11,
+            fontFamily: 'Plus Jakarta Sans',
+            letterSpacing: '0.1em',
+            fontWeight: 700,
+            margin: '0 0 2px',
+          }}
+        >
+          LANCER DIRECTEMENT
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+          {QUICK_PRESETS.map(p => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => handleQuick(p)}
+              onContextMenu={e => {
+                e.preventDefault()
+                loadPresetIntoForm(p)
+              }}
+              style={{
+                textAlign: 'left',
+                background: 'rgba(255,255,255,0.04)',
+                border: `1px solid ${p.accent}40`,
+                borderRadius: 16,
+                padding: '14px 12px',
+                cursor: 'pointer',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+                <span style={{ fontSize: 16 }}>{p.icon}</span>
+                <span className="font-display" style={{ color: p.accent, fontSize: 14, fontWeight: 800 }}>
+                  {p.title}
+                </span>
+              </div>
+              <p style={{ color: '#A9B0B7', fontSize: 11, margin: 0, lineHeight: 1.35 }}>{p.blurb}</p>
+              <p style={{ color: p.accent, fontSize: 10, fontWeight: 700, margin: '8px 0 0', letterSpacing: '0.06em' }}>
+                JOUER →
+              </p>
+            </button>
+          ))}
+        </div>
+        <p style={{ color: '#5b636b', fontSize: 11, margin: '0 0 8px' }}>
+          Appui long sur un preset pour le charger dans les réglages ci-dessous sans lancer.
+        </p>
+
+        <p
+          style={{
+            color: '#5b636b',
+            fontSize: 11,
+            fontFamily: 'Plus Jakarta Sans',
+            letterSpacing: '0.1em',
+            fontWeight: 700,
+            margin: '8px 0 0',
+          }}
+        >
+          RÉGLAGES FINS
+        </p>
+
         <StepperRow
           label="Mise"
           value={`${baseStake.toLocaleString('fr-FR')} FCFA`}
@@ -194,8 +359,17 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
         </p>
       </div>
 
-      <div style={{ padding: 20, maxWidth: 440, width: '100%', margin: '0 auto', boxSizing: 'border-box' }}>
+      <div
+        style={{
+          padding: '12px 20px max(20px, env(safe-area-inset-bottom, 0px))',
+          maxWidth: 440,
+          width: '100%',
+          margin: '0 auto',
+          boxSizing: 'border-box',
+        }}
+      >
         <button
+          type="button"
           className="btn-primary glow-gold"
           onClick={handleContinue}
           style={{ width: '100%', padding: '16px', fontSize: 15, borderRadius: 16, letterSpacing: '0.08em' }}
