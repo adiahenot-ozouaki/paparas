@@ -5,6 +5,12 @@ import { useAuth, validateUsername } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { ACHIEVEMENTS, getUnlockedAchievements } from '../game/achievements'
 import { fetchWallet } from '../lib/persistence/cloud'
+import {
+  type GameHistoryEntry,
+  clearGameHistory,
+  formatHistoryDate,
+  loadGameHistory,
+} from '../lib/persistence/gameHistory'
 
 const WINS_PER_LEVEL = 5
 
@@ -21,6 +27,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
   const [editError, setEditError] = useState<string | null>(null)
   const [savedOk, setSavedOk] = useState(false)
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
+  const [history, setHistory] = useState<GameHistoryEntry[]>(() => loadGameHistory())
 
   useEffect(() => {
     if (profile) {
@@ -43,6 +50,11 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
       cancelled = true
     }
   }, [user])
+
+  // Recharger l’historique à chaque affichage du profil
+  useEffect(() => {
+    setHistory(loadGameHistory())
+  }, [lifetimeStats.gamesPlayed])
 
   const capital = players[HUMAN_INDEX].capital
   const winRatio =
@@ -97,6 +109,11 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
     setEditError(null)
     setSavedOk(false)
     setEditing(true)
+  }
+
+  function handleClearHistory() {
+    clearGameHistory()
+    setHistory([])
   }
 
   return (
@@ -314,33 +331,39 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
         </div>
       </div>
 
-      <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* Wallet + capital solo côte à côte */}
+      <div
+        style={{
+          padding: '16px 20px 0',
+          display: 'grid',
+          gridTemplateColumns: user && walletBalance !== null ? '1fr 1fr' : '1fr',
+          gap: 10,
+        }}
+      >
         {user && walletBalance !== null && (
           <div
             style={{
               background: 'linear-gradient(135deg, rgba(214,168,79,0.12), rgba(16,21,26,0.8))',
               border: '1px solid rgba(214,168,79,0.35)',
               borderRadius: 18,
-              padding: '18px 20px',
+              padding: '16px',
             }}
           >
             <p
               style={{
                 color: '#A9B0B7',
-                fontSize: 11,
+                fontSize: 10,
                 fontFamily: 'Plus Jakarta Sans',
                 letterSpacing: '0.1em',
                 margin: '0 0 4px',
               }}
             >
-              WALLET (compte)
+              WALLET
             </p>
-            <div className="text-gold font-display" style={{ fontSize: 28, fontWeight: 800 }}>
-              {walletBalance.toLocaleString('fr-FR')} FCFA
+            <div className="text-gold font-display" style={{ fontSize: 20, fontWeight: 800 }}>
+              {walletBalance.toLocaleString('fr-FR')}
             </div>
-            <p style={{ color: '#A9B0B7', fontSize: 11, margin: '6px 0 0' }}>
-              Buy-in online débité ici · cash-out recrédit à la sortie de table
-            </p>
+            <p style={{ color: '#5b636b', fontSize: 10, margin: '4px 0 0' }}>FCFA · online</p>
           </div>
         )}
 
@@ -349,28 +372,24 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
             background: 'linear-gradient(135deg, rgba(18,60,50,0.6), rgba(16,21,26,0.8))',
             border: '1px solid rgba(214,168,79,0.25)',
             borderRadius: 18,
-            padding: '18px 20px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
+            padding: '16px',
           }}
         >
-          <div>
-            <p
-              style={{
-                color: '#A9B0B7',
-                fontSize: 11,
-                fontFamily: 'Plus Jakarta Sans',
-                letterSpacing: '0.1em',
-                margin: '0 0 4px',
-              }}
-            >
-              CAPITAL PARTIE SOLO
-            </p>
-            <div className="text-gold font-display" style={{ fontSize: 26, fontWeight: 800 }}>
-              {capital.toLocaleString('fr-FR')} FCFA
-            </div>
+          <p
+            style={{
+              color: '#A9B0B7',
+              fontSize: 10,
+              fontFamily: 'Plus Jakarta Sans',
+              letterSpacing: '0.1em',
+              margin: '0 0 4px',
+            }}
+          >
+            SOLO
+          </p>
+          <div className="text-gold font-display" style={{ fontSize: 20, fontWeight: 800 }}>
+            {capital.toLocaleString('fr-FR')}
           </div>
+          <p style={{ color: '#5b636b', fontSize: 10, margin: '4px 0 0' }}>FCFA · partie en cours</p>
         </div>
       </div>
 
@@ -399,8 +418,115 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
         </div>
       </div>
 
+      {/* Historique des parties */}
+      <div style={{ padding: '20px 20px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: 0, color: '#fff' }}>
+            Historique
+          </h3>
+          {history.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearHistory}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#5b636b',
+                fontSize: 11,
+                cursor: 'pointer',
+                padding: 0,
+              }}
+            >
+              Effacer
+            </button>
+          )}
+        </div>
+
+        {history.length === 0 ? (
+          <div
+            style={{
+              background: 'rgba(255,255,255,0.03)',
+              border: '1px dashed rgba(255,255,255,0.1)',
+              borderRadius: 14,
+              padding: '18px 16px',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 4px' }}>Aucune partie enregistrée</p>
+            <p style={{ color: '#5b636b', fontSize: 11, margin: 0 }}>
+              Les parties solo terminées apparaîtront ici (30 max).
+            </p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {history.slice(0, 15).map(h => (
+              <div
+                key={h.id}
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: 14,
+                  padding: '12px 14px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 12,
+                }}
+              >
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: h.won ? 'rgba(76,175,118,0.15)' : 'rgba(201,75,75,0.12)',
+                    border: `1px solid ${h.won ? 'rgba(76,175,118,0.35)' : 'rgba(201,75,75,0.3)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 16,
+                    flexShrink: 0,
+                  }}
+                >
+                  {h.won ? '🏆' : '💀'}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span className="font-display" style={{ color: '#fff', fontSize: 13, fontWeight: 700 }}>
+                      {h.won ? 'Victoire' : 'Défaite'}
+                    </span>
+                    <span style={{ color: '#5b636b', fontSize: 10 }}>{h.mode === 'solo' ? 'Solo' : 'Online'}</span>
+                  </div>
+                  <p style={{ color: '#A9B0B7', fontSize: 11, margin: '2px 0 0' }}>
+                    {formatHistoryDate(h.at)}
+                    {h.bestCombo ? ` · ${COMBO_LABEL[h.bestCombo as keyof typeof COMBO_LABEL] ?? h.bestCombo}` : ''}
+                    {` · ${h.roundsWon} rounds`}
+                  </p>
+                </div>
+                <span
+                  className="font-display"
+                  style={{
+                    color: h.netGain >= 0 ? '#4CAF76' : '#C94B4B',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}
+                >
+                  {h.netGain >= 0 ? '+' : ''}
+                  {h.netGain.toLocaleString('fr-FR')}
+                </span>
+              </div>
+            ))}
+            {history.length > 15 && (
+              <p style={{ color: '#5b636b', fontSize: 11, textAlign: 'center', margin: '4px 0 0' }}>
+                +{history.length - 15} plus anciennes
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
       <div style={{ padding: '20px 20px 0' }}>
         <button
+          type="button"
           onClick={() => onNavigate('achievements')}
           style={{
             width: '100%',
