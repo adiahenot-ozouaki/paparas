@@ -397,7 +397,7 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
             JOUEUR ÉLIMINÉ
           </p>
           <div className="font-display" style={{ color: '#C94B4B', fontSize: 32, fontWeight: 800, margin: '0 0 4px' }}>
-            < mise de base
+            mise de base
           </div>
           <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>
             Capital insuffisant pour continuer (500 FCFA par défaut)
