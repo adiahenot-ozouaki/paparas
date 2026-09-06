@@ -354,6 +354,187 @@ body {
   font-weight: 700;
 }
 
+/* ==========================================================================
+   UI kit — BackButton / IconButton / StatTile / MoneyCard
+   ========================================================================== */
+
+.back-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  color: #fff;
+  font-size: 18px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.back-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.back-btn:active {
+  transform: scale(0.96);
+}
+
+.back-btn--absolute {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  z-index: 2;
+}
+
+.icon-btn {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  color: #fff;
+  transition: background 0.15s, border-color 0.15s;
+  flex-shrink: 0;
+}
+
+.icon-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.14);
+}
+
+.icon-btn:active {
+  transform: scale(0.96);
+}
+
+.icon-btn--sm {
+  width: 36px;
+  height: 36px;
+  border-radius: 12px;
+  font-size: 16px;
+}
+
+.icon-btn--md {
+  width: 42px;
+  height: 42px;
+  font-size: 18px;
+}
+
+.icon-btn--lg {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  font-size: 20px;
+}
+
+.stat-tile {
+  flex: 1;
+  border-radius: 14px;
+  padding: 12px 8px;
+  text-align: center;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.stat-tile--clickable {
+  cursor: pointer;
+  width: 100%;
+}
+
+.stat-tile-icon {
+  font-size: 18px;
+  display: block;
+  line-height: 1;
+}
+
+.stat-tile-value {
+  color: #fff;
+  font-weight: 700;
+  font-size: 17px;
+  margin: 4px 0 2px;
+}
+
+.stat-tile-label {
+  color: #A9B0B7;
+  font-size: 11px;
+  margin: 0;
+}
+
+.money-card {
+  border-radius: 18px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.money-card--clickable {
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
+.money-card-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.money-card-label {
+  color: #A9B0B7;
+  font-size: 10px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: 0.1em;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+}
+
+.money-card-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.money-card-amount {
+  font-size: 26px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.money-card-unit {
+  color: #A9B0B7;
+  font-size: 12px;
+}
+
+.money-card-subtitle {
+  color: #5b636b;
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+.money-card-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: rgba(214, 168, 79, 0.12);
+  border: 1px solid rgba(214, 168, 79, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
 /* African diamond pattern */
 .pattern-african {
   background-image:
