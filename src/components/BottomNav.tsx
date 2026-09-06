@@ -37,7 +37,6 @@ export default function BottomNav({ active, onNavigate }: BottomNavProps) {
   }, [active])
 
   function handlePlayClick() {
-    // Table online mémorisée → reprendre (lobby route vers table si déjà playing)
     if (hasOnlineTable) {
       onNavigate('onlineLobby')
       return
@@ -110,8 +109,8 @@ export default function BottomNav({ active, onNavigate }: BottomNavProps) {
                     width: 10,
                     height: 10,
                     borderRadius: '50%',
-                    background: '#4CAF76',
-                    border: '2px solid #0B0D10',
+                    background: 'var(--kora-success)',
+                    border: '2px solid var(--kora-void)',
                     boxShadow: '0 0 8px rgba(76,175,118,0.9)',
                   }}
                 />
@@ -157,7 +156,7 @@ export default function BottomNav({ active, onNavigate }: BottomNavProps) {
                 fontSize: 10,
                 fontFamily: 'Plus Jakarta Sans',
                 fontWeight: isActive ? 700 : 500,
-                color: isActive ? '#D6A84F' : '#A9B0B7',
+                color: isActive ? 'var(--kora-gold)' : 'var(--kora-muted)',
                 letterSpacing: '0.03em',
               }}
             >
@@ -171,7 +170,7 @@ export default function BottomNav({ active, onNavigate }: BottomNavProps) {
                   width: 4,
                   height: 4,
                   borderRadius: '50%',
-                  background: '#D6A84F',
+                  background: 'var(--kora-gold)',
                   boxShadow: '0 0 6px rgba(214,168,79,0.8)',
                 }}
               />
