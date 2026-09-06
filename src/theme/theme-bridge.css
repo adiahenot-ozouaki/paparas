@@ -231,6 +231,126 @@ body {
   color: var(--kora-danger);
 }
 
+/* Profile */
+
+.profile-hero {
+  background: linear-gradient(135deg, var(--kora-green-deep) 0%, var(--kora-surface) 100%);
+  border-bottom-color: var(--kora-border-gold-soft);
+}
+
+.profile-avatar {
+  background: linear-gradient(135deg, var(--kora-green-deep), #0d2a1f);
+  border-color: var(--kora-gold);
+}
+
+.profile-level-badge {
+  background: linear-gradient(135deg, var(--kora-gold), var(--kora-gold-dark));
+  border-color: var(--kora-void);
+}
+
+.profile-level-num {
+  color: var(--kora-text-inverse);
+}
+
+.profile-name,
+.profile-section-title,
+.profile-history-result,
+.profile-achievements-label {
+  color: var(--kora-text);
+}
+
+.profile-sub,
+.profile-section-label,
+.profile-xp-level,
+.profile-history-meta {
+  color: var(--kora-muted);
+}
+
+.profile-xp-pct,
+.profile-achievements-count,
+.profile-achievements-arrow {
+  color: var(--kora-gold);
+}
+
+.profile-xp-bar {
+  background: var(--kora-card-bg);
+}
+
+.profile-xp-fill {
+  background: linear-gradient(90deg, var(--kora-green), var(--kora-gold));
+}
+
+.profile-avatar-choice {
+  border-color: var(--kora-card-border);
+  background: var(--kora-card-bg);
+}
+
+.profile-avatar-choice.is-selected {
+  border-color: var(--kora-gold);
+}
+
+.profile-msg--error {
+  color: var(--kora-danger);
+}
+
+.profile-msg--ok {
+  color: var(--kora-success);
+}
+
+.profile-clear {
+  color: var(--kora-muted-2) !important;
+}
+
+.profile-history-icon.is-win {
+  background: var(--kora-surface-success);
+  border-color: var(--kora-border-success);
+}
+
+.profile-history-icon.is-loss {
+  background: var(--kora-surface-danger);
+  border-color: var(--kora-border-danger);
+}
+
+.profile-history-mode,
+.profile-history-more {
+  color: var(--kora-muted-2);
+}
+
+/* Stake */
+
+.stake-title {
+  color: var(--kora-text);
+}
+
+.stake-subtitle,
+.stepper-label {
+  color: var(--kora-muted);
+}
+
+.stake-group-label,
+.stake-hint {
+  color: var(--kora-muted-2);
+}
+
+.stake-preset {
+  background: var(--kora-card-bg);
+}
+
+.stake-preset-blurb {
+  color: var(--kora-muted);
+}
+
+.stepper-row {
+  background: var(--kora-card-bg);
+  border-color: var(--kora-card-border);
+}
+
+.stepper-btn {
+  border-color: var(--kora-border-gold);
+  background: rgba(214, 168, 79, 0.1);
+  color: var(--kora-gold-light);
+}
+
 .theme-toggle {
   margin: 16px 20px 0;
   padding: 16px;
