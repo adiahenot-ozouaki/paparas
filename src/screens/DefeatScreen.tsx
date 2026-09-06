@@ -1,20 +1,35 @@
 import type { Screen } from '../types'
 import { useGame, SEAT_NAMES, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
+import { useAuth } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { gameOverReasonLabel } from '../game/payout'
+import { NewlyUnlockedAchievements, ShareScoreButton } from '../components/EndGameExtras'
 
 export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  const { players, roundsWon, bestCombo, gameStartedAt, stakeConfig, lastGameOver, startNewGame } = useGame()
+  const {
+    players,
+    roundsWon,
+    bestCombo,
+    gameStartedAt,
+    stakeConfig,
+    lastGameOver,
+    lifetimeStats,
+    startNewGame,
+  } = useGame()
+  const { profile } = useAuth()
 
   const ranking = players
     .map((p, i) => ({ ...p, seatIndex: i }))
     .sort((a, b) => b.capital - a.capital)
 
   const humanBestCombo = bestCombo[HUMAN_INDEX]
+  const bestComboLabel = humanBestCombo ? COMBO_LABEL[humanBestCombo] : undefined
   const elapsedMinutes = Math.max(1, Math.round((Date.now() - gameStartedAt) / 60000))
   const reasonText = gameOverReasonLabel(lastGameOver?.reason, stakeConfig)
   const winnerName =
     lastGameOver?.winnerIndex !== undefined ? SEAT_NAMES[lastGameOver.winnerIndex] : null
+  const finalCapital = players[HUMAN_INDEX].capital
+  const netGain = finalCapital - stakeConfig.startingCapital
 
   function handleReplay() {
     startNewGame()
@@ -69,8 +84,12 @@ export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) =
           </p>
         )}
         <p style={{ color: '#5b636b', fontSize: 12, margin: '8px 0 0' }}>
-          Votre capital : {players[HUMAN_INDEX].capital.toLocaleString('fr-FR')} FCFA
+          Votre capital : {finalCapital.toLocaleString('fr-FR')} FCFA
         </p>
+      </div>
+
+      <div className="anim-fade-in-up" style={{ width: '100%', animationDelay: '0.3s' }}>
+        <NewlyUnlockedAchievements stats={lifetimeStats} />
       </div>
 
       <div
@@ -131,7 +150,7 @@ export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) =
       >
         {[
           { label: 'Rounds gagnés', value: String(roundsWon[HUMAN_INDEX]) },
-          { label: 'Meilleur combo', value: humanBestCombo ? COMBO_LABEL[humanBestCombo] : '—' },
+          { label: 'Meilleur combo', value: bestComboLabel ?? '—' },
           { label: 'Temps de partie', value: `${elapsedMinutes} min` },
         ].map((s, i) => (
           <div
@@ -154,13 +173,28 @@ export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) =
 
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <button
+          type="button"
           className="btn-primary glow-gold anim-fade-in-up"
           onClick={handleReplay}
           style={{ padding: '18px', fontSize: 15, borderRadius: 18, letterSpacing: '0.1em', animationDelay: '0.55s' }}
         >
           REJOUER
         </button>
+        <ShareScoreButton
+          className="btn-secondary anim-fade-in-up"
+          style={{ padding: '14px', fontSize: 14, borderRadius: 14, animationDelay: '0.6s' }}
+          payload={{
+            won: false,
+            netGain,
+            finalCapital,
+            roundsWon: roundsWon[HUMAN_INDEX],
+            bestComboLabel,
+            reason: reasonText,
+            username: profile?.username,
+          }}
+        />
         <button
+          type="button"
           className="btn-secondary anim-fade-in-up"
           onClick={() => onNavigate('home')}
           style={{ padding: '14px', fontSize: 14, borderRadius: 14, animationDelay: '0.65s' }}
