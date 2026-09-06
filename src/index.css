@@ -21,7 +21,6 @@
 
 html {
   height: 100%;
-  /* Empêche le rebond élastique iOS qui décale le layout fixed/absolute */
   overscroll-behavior: none;
 }
 
@@ -43,9 +42,8 @@ body {
   min-height: 100dvh;
 }
 
-/* Scrollbars — visibles, discrètes, thème sombre / or */
 * {
-  scrollbar-width: thin; /* Firefox */
+  scrollbar-width: thin;
   scrollbar-color: rgba(214, 168, 79, 0.45) rgba(255, 255, 255, 0.06);
 }
 
@@ -75,7 +73,6 @@ body {
   background: transparent;
 }
 
-/* Zones sans barre (table de jeu, overlays, etc.) */
 .no-scrollbar {
   scrollbar-width: none;
 }
@@ -109,11 +106,6 @@ body {
   opacity: 0.9;
 }
 
-/*
-  Shell : occupe tout l'espace disponible.
-  - Mobile / tablette : 100% × 100svh (edge-to-edge)
-  - Desktop large : largeur max confortable centrée, hauteur plein viewport
-*/
 .app-shell {
   width: 100%;
   height: 100svh;
@@ -122,7 +114,6 @@ body {
   position: relative;
   overflow: hidden;
   background: #0B0D10;
-  /* Encoches / home indicator iOS & Android */
   padding-top: env(safe-area-inset-top, 0px);
   padding-right: env(safe-area-inset-right, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
@@ -132,12 +123,6 @@ body {
 .app-screen {
   width: 100%;
   height: 100%;
-}
-
-@media (min-width: 640px) {
-  .app-shell {
-    max-width: 100%;
-  }
 }
 
 @media (min-width: 1100px) {
@@ -178,18 +163,207 @@ body {
   }
 }
 
+/* ==========================================================================
+   UI kit — ScreenShell / cards / alerts / empty
+   ========================================================================== */
+
+.screen-shell {
+  position: absolute;
+  inset: 0;
+  background: #0B0D10;
+  overflow-y: auto;
+}
+
+.screen-shell-pattern {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.screen-shell-inner {
+  position: relative;
+}
+
+.page-header {
+  padding: 20px 20px 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.page-header-title {
+  font-size: 28px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+
+.page-header-subtitle {
+  color: #A9B0B7;
+  font-size: 14px;
+  margin: 0 0 16px;
+}
+
+.section-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.section-card--gold {
+  background: linear-gradient(135deg, rgba(214, 168, 79, 0.12), rgba(16, 21, 26, 0.8));
+  border-color: rgba(214, 168, 79, 0.35);
+}
+
+.section-card--green {
+  background: linear-gradient(135deg, rgba(18, 60, 50, 0.55), rgba(16, 21, 26, 0.85));
+  border-color: rgba(214, 168, 79, 0.28);
+}
+
+.section-card--danger {
+  background: rgba(201, 75, 75, 0.12);
+  border-color: rgba(201, 75, 75, 0.35);
+}
+
+.section-card--success {
+  background: rgba(76, 175, 118, 0.12);
+  border-color: rgba(76, 175, 118, 0.35);
+}
+
+.section-card--dashed {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+}
+
+.alert-banner {
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.alert-banner--error {
+  background: rgba(201, 75, 75, 0.12);
+  border: 1px solid rgba(201, 75, 75, 0.35);
+  color: #E8A0A0;
+}
+
+.alert-banner--success {
+  background: rgba(76, 175, 118, 0.12);
+  border: 1px solid rgba(76, 175, 118, 0.35);
+  color: #8FD4A8;
+}
+
+.alert-banner--info {
+  background: rgba(214, 168, 79, 0.1);
+  border: 1px solid rgba(214, 168, 79, 0.28);
+  color: #F0D58A;
+}
+
+.empty-state {
+  border-radius: 14px;
+  padding: 20px 16px;
+  text-align: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.empty-state--dashed {
+  border-style: dashed;
+  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.empty-state-title {
+  color: #A9B0B7;
+  font-size: 13px;
+  margin: 0 0 6px;
+}
+
+.empty-state-desc {
+  color: #5b636b;
+  font-size: 12px;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.empty-state-action {
+  margin-top: 14px;
+}
+
+.ui-btn--ghost {
+  background: none;
+  border: none;
+  color: #D6A84F;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.ui-field {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 12px 14px;
+  color: #fff;
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ui-field::placeholder {
+  color: #5b636b;
+}
+
+.ui-field:focus {
+  outline: none;
+  border-color: rgba(214, 168, 79, 0.45);
+}
+
+.segmented {
+  display: flex;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 14px;
+  padding: 4px;
+}
+
+.segmented-btn {
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: #A9B0B7;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.segmented-btn.is-active {
+  background: #D6A84F;
+  color: #0B0D10;
+  font-weight: 700;
+}
+
 /* African diamond pattern */
 .pattern-african {
   background-image:
     url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cpolygon points='12,1 23,12 12,23 1,12' fill='none' stroke='rgba(214,168,79,0.07)' stroke-width='0.8'/%3E%3Ccircle cx='12' cy='12' r='1.5' fill='rgba(214,168,79,0.05)'/%3E%3C/svg%3E");
 }
 
-/* Felt texture */
 .felt-bg {
   background: radial-gradient(ellipse 80% 60% at 50% 50%, #1a4a38 0%, #0F2820 50%, #0a1c14 100%);
 }
 
-/* Glass panel */
 .glass {
   background: rgba(16, 21, 26, 0.65);
   backdrop-filter: blur(14px);
@@ -202,7 +376,6 @@ body {
   -webkit-backdrop-filter: blur(12px);
 }
 
-/* Gold text gradient */
 .text-gold {
   background: linear-gradient(135deg, #D6A84F 0%, #F0D58A 50%, #C8963A 100%);
   -webkit-background-clip: text;
@@ -210,7 +383,6 @@ body {
   background-clip: text;
 }
 
-/* Shimmer text */
 .text-shimmer {
   background: linear-gradient(90deg, #D6A84F, #F0D58A, #fff8e1, #F0D58A, #D6A84F);
   background-size: 300% auto;
@@ -220,11 +392,9 @@ body {
   animation: shimmer 4s linear infinite;
 }
 
-/* Gold border */
 .border-gold { border: 1px solid rgba(214, 168, 79, 0.5); }
 .border-gold-strong { border: 1.5px solid #D6A84F; }
 
-/* Glow effects */
 .glow-gold {
   box-shadow: 0 0 24px rgba(214,168,79,0.35), 0 0 48px rgba(214,168,79,0.12);
 }
@@ -238,7 +408,6 @@ body {
   box-shadow: 0 0 20px rgba(201,75,75,0.4);
 }
 
-/* Active player ring */
 .ring-active {
   box-shadow: 0 0 0 2.5px #D6A84F, 0 0 16px rgba(214,168,79,0.6), 0 0 32px rgba(214,168,79,0.2);
   animation: pulseActive 2s ease-in-out infinite;
@@ -248,7 +417,6 @@ body {
   box-shadow: 0 0 0 2.5px #4CAF76, 0 0 14px rgba(76,175,118,0.5);
 }
 
-/* Card base */
 .card-base {
   background: #F5F1E8;
   border-radius: 10px;
@@ -291,7 +459,6 @@ body {
   animation: winnerGlow 1s ease-in-out 3;
 }
 
-/* Button base */
 .btn-primary {
   background: linear-gradient(135deg, #D6A84F, #C08030);
   color: #0B0D10;
@@ -321,7 +488,6 @@ body {
 .btn-secondary:hover { background: rgba(255,255,255,0.1); border-color: rgba(255,255,255,0.2); }
 .btn-secondary:active { transform: scale(0.98); }
 
-/* Player badge */
 .player-badge {
   background: rgba(16, 21, 26, 0.85);
   backdrop-filter: blur(8px);
@@ -329,14 +495,12 @@ body {
   border-radius: 16px;
 }
 
-/* Bottom nav pill */
 .nav-pill {
   background: #181E26;
   border-top: 1px solid rgba(255,255,255,0.06);
   padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
 }
 
-/* Stats bar */
 .stat-bar-fill {
   background: linear-gradient(90deg, #176B50, #D6A84F);
   border-radius: 99px;
@@ -344,10 +508,8 @@ body {
   transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-/* Achievement badge */
 .badge-locked { filter: saturate(0) brightness(0.5); }
 
-/* Table oval */
 .table-oval {
   background: radial-gradient(ellipse 70% 60% at 50% 45%, #1e5c46 0%, #143d2e 40%, #0e2a20 100%);
   border: 2px solid rgba(214,168,79,0.2);
