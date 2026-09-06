@@ -3,11 +3,6 @@ import type { RoundState } from '../../game/round'
 import { OpponentPanel } from '../OpponentPanel'
 import { PlayedCardsStack } from './PlayedCardsStack'
 
-// ==========================================================================
-// GameTableArea — grille CSS. Pseudos / avatars viennent de `players`
-// (solo IA ou online). Les cartes jouées restent dans les piles de siège.
-// ==========================================================================
-
 interface GameTableAreaProps {
   players: Player[]
   roundState: RoundState
@@ -42,20 +37,12 @@ export function GameTableArea({
 
   return (
     <div
+      className={`table-area${compactMode ? ' is-compact' : ''}`}
       style={{
-        position: 'absolute',
-        inset: 0,
-        display: 'grid',
-        gridTemplateAreas: `"north north north" "west center east" "south south south"`,
         gridTemplateColumns: `${sideColumnWidth}px 1fr ${sideColumnWidth}px`,
-        gridTemplateRows: 'auto 1fr auto',
-        paddingTop: 8,
-        paddingBottom: compactMode ? 185 : 210,
-        paddingLeft: 4,
-        paddingRight: 4,
       }}
     >
-      <div style={{ gridArea: 'north', justifySelf: 'center', alignSelf: 'start' }}>
+      <div className="table-area-north">
         <OpponentPanel
           position="top"
           name={north.name}
@@ -73,7 +60,7 @@ export function GameTableArea({
         />
       </div>
 
-      <div style={{ gridArea: 'west', alignSelf: 'center', justifySelf: 'center' }}>
+      <div className="table-area-west">
         <OpponentPanel
           position="left"
           name={west.name}
@@ -91,7 +78,7 @@ export function GameTableArea({
         />
       </div>
 
-      <div style={{ gridArea: 'east', alignSelf: 'center', justifySelf: 'center' }}>
+      <div className="table-area-east">
         <OpponentPanel
           position="right"
           name={east.name}
@@ -109,19 +96,11 @@ export function GameTableArea({
         />
       </div>
 
-      <div style={{ gridArea: 'center', position: 'relative', minWidth: 0, minHeight: 0 }}>
-        <div
-          className="table-oval"
-          style={{
-            position: 'absolute',
-            inset: '6% 2%',
-            borderRadius: '50%',
-            zIndex: 0,
-          }}
-        />
+      <div className="table-area-center">
+        <div className="table-oval table-area-oval" />
       </div>
 
-      <div style={{ gridArea: 'south', justifySelf: 'center', alignSelf: 'end', marginTop: 6 }}>
+      <div className="table-area-south">
         <PlayedCardsStack
           cards={roundState.playLog[0] ?? []}
           orientation="horizontal"
