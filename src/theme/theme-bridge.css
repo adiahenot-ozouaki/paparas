@@ -128,6 +128,45 @@ body {
   background: var(--kora-card-bg);
 }
 
+/* BackButton / IconButton / StatTile / MoneyCard */
+
+.back-btn {
+  background: var(--kora-card-bg);
+  border-color: var(--kora-card-border);
+  color: var(--kora-text);
+}
+
+.icon-btn {
+  background: var(--kora-card-bg);
+  border-color: var(--kora-card-border);
+  color: var(--kora-text);
+}
+
+.stat-tile-value {
+  color: var(--kora-text);
+}
+
+.stat-tile-label {
+  color: var(--kora-muted);
+}
+
+.money-card-label {
+  color: var(--kora-muted);
+}
+
+.money-card-unit {
+  color: var(--kora-muted);
+}
+
+.money-card-subtitle {
+  color: var(--kora-muted-2);
+}
+
+.money-card-icon {
+  background: rgba(214, 168, 79, 0.12);
+  border-color: var(--kora-border-gold-soft);
+}
+
 .theme-toggle {
   margin: 16px 20px 0;
   padding: 16px;
