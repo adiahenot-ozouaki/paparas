@@ -11,6 +11,7 @@ import './screens/screens-rules.css'
 import './screens/screens-game.css'
 import './screens/screens-game-table.css'
 import './screens/screens-misc.css'
+import './screens/screens-layout.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
