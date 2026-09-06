@@ -1,5 +1,5 @@
 /* ==========================================================================
-   Screen layouts — Auth + Home (références migration UI kit)
+   Screen layouts — Auth + Home + Profile + StakeConfig
    ========================================================================== */
 
 .text-success { color: #4caf76; }
@@ -393,4 +393,541 @@
   font-size: 14px;
   font-weight: 700;
   margin: 0;
+}
+
+/* —— Profile —— */
+
+.profile-hero {
+  background: linear-gradient(135deg, #123c32 0%, #10151a 100%);
+  border-bottom: 1px solid rgba(214, 168, 79, 0.25);
+  padding: 24px 20px 28px;
+  position: relative;
+  overflow: hidden;
+}
+
+.profile-hero-row {
+  position: relative;
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+
+.profile-avatar-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #123c32, #0d2a1f);
+  border: 2.5px solid #d6a84f;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  box-shadow: 0 0 24px rgba(214, 168, 79, 0.25);
+}
+
+.profile-level-badge {
+  position: absolute;
+  bottom: -6px;
+  right: -6px;
+  background: linear-gradient(135deg, #d6a84f, #c08030);
+  border-radius: 10px;
+  padding: 2px 8px;
+  border: 2px solid #0b0d10;
+}
+
+.profile-level-num {
+  color: #0b0d10;
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.profile-hero-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-username-input {
+  font-size: 18px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.profile-name {
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 4px;
+}
+
+.profile-sub {
+  color: #a9b0b7;
+  font-size: 13px;
+  margin: 0 0 8px;
+}
+
+.profile-xp-labels {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 4px;
+}
+
+.profile-xp-level {
+  color: #a9b0b7;
+  font-size: 11px;
+}
+
+.profile-xp-pct {
+  color: #d6a84f;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.profile-xp-bar {
+  height: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 99px;
+  overflow: hidden;
+}
+
+.profile-xp-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #176b50, #d6a84f);
+  border-radius: 99px;
+}
+
+.profile-avatar-picker {
+  position: relative;
+  margin-top: 16px;
+}
+
+.profile-section-label {
+  color: #a9b0b7;
+  font-size: 11px;
+  margin: 0 0 8px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.profile-avatar-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-avatar-choice {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  font-size: 20px;
+  cursor: pointer;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: rgba(255, 255, 255, 0.04);
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile-avatar-choice.is-selected {
+  border: 2px solid #d6a84f;
+  background: rgba(214, 168, 79, 0.15);
+}
+
+.profile-msg {
+  position: relative;
+  font-size: 12px;
+  margin: 12px 0 0;
+}
+
+.profile-msg--error {
+  color: #c94b4b;
+}
+
+.profile-msg--ok {
+  color: #4caf76;
+}
+
+.profile-actions {
+  position: relative;
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.profile-btn {
+  padding: 10px 16px !important;
+  font-size: 12px !important;
+  border-radius: 12px !important;
+}
+
+.profile-money-grid {
+  padding: 16px 20px 0;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.profile-money-grid--2 {
+  grid-template-columns: 1fr 1fr;
+}
+
+.profile-section {
+  padding: 16px 20px 0;
+}
+
+.profile-section-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin: 0 0 12px;
+  color: #fff;
+}
+
+.profile-section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.profile-section-head .profile-section-title {
+  margin: 0;
+}
+
+.profile-clear {
+  font-size: 11px !important;
+  color: #5b636b !important;
+}
+
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.profile-stat {
+  border-radius: 14px;
+  padding: 14px;
+  text-align: left;
+}
+
+.profile-stat .stat-tile-icon {
+  font-size: 20px;
+}
+
+.profile-stat .stat-tile-value {
+  font-size: 18px;
+  margin: 6px 0 2px;
+}
+
+.profile-history-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.profile-history-item {
+  border-radius: 14px;
+  padding: 12px 14px;
+}
+
+.profile-history-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.profile-history-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.profile-history-icon.is-win {
+  background: rgba(76, 175, 118, 0.12);
+  border: 1px solid rgba(76, 175, 118, 0.35);
+}
+
+.profile-history-icon.is-loss {
+  background: rgba(201, 75, 75, 0.12);
+  border: 1px solid rgba(201, 75, 75, 0.35);
+}
+
+.profile-history-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.profile-history-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.profile-history-result {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.profile-history-mode {
+  color: #5b636b;
+  font-size: 10px;
+}
+
+.profile-history-meta {
+  color: #a9b0b7;
+  font-size: 11px;
+  margin: 2px 0 0;
+}
+
+.profile-history-gain {
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.profile-history-more {
+  color: #5b636b;
+  font-size: 11px;
+  text-align: center;
+  margin: 4px 0 0;
+}
+
+.profile-achievements {
+  border-radius: 16px;
+  padding: 14px 16px;
+}
+
+.profile-achievements-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.profile-achievements-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.profile-achievements-emoji {
+  font-size: 20px;
+}
+
+.profile-achievements-label {
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.profile-achievements-count {
+  background: rgba(214, 168, 79, 0.15);
+  color: #d6a84f;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 99px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+}
+
+.profile-achievements-arrow {
+  color: #d6a84f;
+  font-size: 13px;
+}
+
+/* —— Stake config —— */
+
+.stake-screen .screen-shell-inner {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.stake-header {
+  padding: max(20px, env(safe-area-inset-top, 0px)) 20px 0;
+  position: relative;
+}
+
+.stake-header .back-btn {
+  margin-bottom: 16px;
+}
+
+.stake-title {
+  font-size: 26px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  letter-spacing: 0.02em;
+  color: #fff;
+}
+
+.stake-subtitle {
+  color: #a9b0b7;
+  font-size: 13px;
+  margin: 0;
+}
+
+.stake-body {
+  padding: 20px 20px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  flex: 1;
+  max-width: 440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.stake-group-label {
+  color: #5b636b;
+  font-size: 11px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  margin: 0 0 2px;
+  text-transform: uppercase;
+}
+
+.stake-group-label--spaced {
+  margin-top: 8px;
+}
+
+.stake-preset-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.stake-preset {
+  text-align: left;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 14px 12px;
+  cursor: pointer;
+  color: inherit;
+  font: inherit;
+}
+
+.stake-preset-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.stake-preset-icon {
+  font-size: 16px;
+}
+
+.stake-preset-title {
+  color: var(--preset-accent, #d6a84f);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.stake-preset-blurb {
+  color: #a9b0b7;
+  font-size: 11px;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.stake-preset-cta {
+  color: var(--preset-accent, #d6a84f);
+  font-size: 10px;
+  font-weight: 700;
+  margin: 8px 0 0;
+  letter-spacing: 0.06em;
+}
+
+.stake-hint {
+  color: #5b636b;
+  font-size: 11px;
+  margin: 0 0 8px;
+  line-height: 1.45;
+}
+
+.stake-hint--end {
+  margin: 4px 0 0;
+}
+
+.stepper-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 12px 14px;
+}
+
+.stepper-label {
+  color: #a9b0b7;
+  font-size: 13px;
+  font-weight: 600;
+  width: 72px;
+  flex-shrink: 0;
+}
+
+.stepper-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  border: 1px solid rgba(214, 168, 79, 0.35);
+  background: rgba(214, 168, 79, 0.1);
+  color: #f0d58a;
+  font-size: 22px;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  line-height: 1;
+  padding: 0;
+}
+
+.stepper-value-wrap {
+  flex: 1;
+  text-align: center;
+  min-width: 0;
+}
+
+.stepper-value {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stake-footer {
+  padding: 12px 20px max(20px, env(safe-area-inset-bottom, 0px));
+  max-width: 440px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.stake-continue {
+  padding: 16px !important;
+  font-size: 15px !important;
+  border-radius: 16px !important;
+  letter-spacing: 0.08em;
 }
