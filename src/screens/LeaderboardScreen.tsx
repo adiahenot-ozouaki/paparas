@@ -5,8 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { fetchOnlineLeaderboard, type LeaderboardEntry } from '../lib/online/api'
 
 // ==========================================================================
-// LeaderboardScreen — Local (lifetimeStats) + En ligne (kora_lifetime_stats).
-// Plus d’onglets vides Global / Amis / Hebdo ni lignes DEMO.
+// LeaderboardScreen — Local (vous seul, normal) + En ligne (kora_lifetime_stats).
 // ==========================================================================
 
 const TABS = ['Local', 'En ligne'] as const
@@ -63,7 +62,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
           Classement
         </h1>
         <p style={{ color: '#A9B0B7', fontSize: 14, margin: '0 0 16px' }}>
-          Local (solo) · En ligne (stats serveur)
+          Local = votre score solo · En ligne = comptes réels
         </p>
 
         <div
@@ -78,6 +77,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
           {TABS.map((tab, i) => (
             <button
               key={tab}
+              type="button"
               onClick={() => setActiveTab(i)}
               style={{
                 flex: 1,
@@ -102,6 +102,10 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
       <div className="anim-fade-in-up" style={{ padding: '24px 20px 0' }}>
         {activeTab === 0 && (
           <>
+            <p style={{ color: '#5b636b', fontSize: 12, margin: '0 0 12px', lineHeight: 1.4 }}>
+              Une seule ligne ici : le classement local ne compare que vous-même (appareil).
+            </p>
+
             <div
               style={{
                 background: 'rgba(18,60,50,0.35)',
@@ -165,31 +169,37 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                   </span>
                 </div>
                 <p style={{ color: '#A9B0B7', fontSize: 12, margin: '2px 0 0' }}>
-                  Niv. {youLevel} · {lifetimeStats.gamesWon} victoire{lifetimeStats.gamesWon > 1 ? 's' : ''} solo
+                  Niv. {youLevel} · {lifetimeStats.gamesWon} victoire{lifetimeStats.gamesWon > 1 ? 's' : ''} ·{' '}
+                  {lifetimeStats.gamesPlayed} partie{lifetimeStats.gamesPlayed > 1 ? 's' : ''}
                 </p>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <p className="font-display" style={{ color: '#D6A84F', fontSize: 16, fontWeight: 700, margin: '0 0 2px' }}>
-                  {Math.max(0, lifetimeStats.netGainTotal).toLocaleString('fr-FR')}
+                  {lifetimeStats.netGainTotal.toLocaleString('fr-FR')}
                 </p>
-                <p style={{ color: '#A9B0B7', fontSize: 10, margin: 0 }}>pts (gains nets)</p>
+                <p style={{ color: '#A9B0B7', fontSize: 10, margin: 0 }}>gains nets</p>
               </div>
             </div>
 
-            {lifetimeStats.gamesPlayed === 0 && (
+            {lifetimeStats.gamesPlayed === 0 ? (
               <div
                 style={{
                   background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.07)',
+                  border: '1px dashed rgba(255,255,255,0.1)',
                   borderRadius: 14,
-                  padding: '14px 16px',
+                  padding: '16px',
                   textAlign: 'center',
                 }}
               >
-                <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>
-                  Jouez une partie solo pour faire progresser ce score local.
+                <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 6px' }}>Pas encore de parties solo</p>
+                <p style={{ color: '#5b636b', fontSize: 12, margin: 0 }}>
+                  Terminez une partie pour faire progresser ce score.
                 </p>
               </div>
+            ) : (
+              <p style={{ color: '#5b636b', fontSize: 11, margin: 0, textAlign: 'center' }}>
+                Pour vous comparer aux autres → onglet <strong style={{ color: '#A9B0B7' }}>En ligne</strong>
+              </p>
             )}
           </>
         )}
@@ -213,6 +223,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                   Le classement en ligne utilise les stats réelles des comptes.
                 </p>
                 <button
+                  type="button"
                   className="btn-primary glow-gold"
                   onClick={() => onNavigate('auth')}
                   style={{ padding: '12px 24px', borderRadius: 14, fontSize: 13 }}
@@ -223,11 +234,32 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
             ) : loadingOnline ? (
               <p style={{ color: '#A9B0B7', textAlign: 'center', fontSize: 13 }}>Chargement…</p>
             ) : onlineError ? (
-              <p style={{ color: '#C94B4B', textAlign: 'center', fontSize: 13 }}>{onlineError}</p>
+              <div
+                style={{
+                  background: 'rgba(201,75,75,0.1)',
+                  border: '1px solid rgba(201,75,75,0.3)',
+                  borderRadius: 14,
+                  padding: '14px',
+                  textAlign: 'center',
+                }}
+              >
+                <p style={{ color: '#E8A0A0', fontSize: 13, margin: 0 }}>{onlineError}</p>
+              </div>
             ) : online.length === 0 ? (
-              <p style={{ color: '#A9B0B7', textAlign: 'center', fontSize: 13 }}>
-                Aucune statistique en ligne pour l’instant.
-              </p>
+              <div
+                style={{
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px dashed rgba(255,255,255,0.1)',
+                  borderRadius: 14,
+                  padding: '20px 16px',
+                  textAlign: 'center',
+                }}
+              >
+                <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 6px' }}>Classement vide</p>
+                <p style={{ color: '#5b636b', fontSize: 12, margin: 0 }}>
+                  Aucune statistique serveur pour l’instant. Jouez connecté pour apparaître ici.
+                </p>
+              </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {online.map((e, i) => {
@@ -264,12 +296,16 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                         {e.avatar}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p className="font-display" style={{ color: isYou ? '#D6A84F' : '#fff', fontSize: 14, fontWeight: 700, margin: 0 }}>
+                        <p
+                          className="font-display"
+                          style={{ color: isYou ? '#D6A84F' : '#fff', fontSize: 14, fontWeight: 700, margin: 0 }}
+                        >
                           {e.username}
                           {isYou ? ' (vous)' : ''}
                         </p>
                         <p style={{ color: '#A9B0B7', fontSize: 11, margin: '2px 0 0' }}>
-                          {e.totalRoundsWon} round{e.totalRoundsWon > 1 ? 's' : ''} gagné{e.totalRoundsWon > 1 ? 's' : ''}
+                          {e.totalRoundsWon} round{e.totalRoundsWon > 1 ? 's' : ''} gagné
+                          {e.totalRoundsWon > 1 ? 's' : ''}
                         </p>
                       </div>
                       <div style={{ textAlign: 'right' }}>
