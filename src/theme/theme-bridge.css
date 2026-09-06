@@ -1,0 +1,531 @@
+/* Relie le layout existant aux variables --kora-* */
+
+body {
+  background: var(--kora-void);
+  color: var(--kora-text);
+}
+
+.app-root {
+  background: var(--kora-root-bg);
+}
+
+.app-shell {
+  background: var(--kora-void);
+}
+
+.screen-shell {
+  background: var(--kora-void);
+}
+
+.screen-shell-pattern {
+  opacity: var(--kora-pattern-opacity);
+}
+
+.page-header-title {
+  color: var(--kora-text);
+}
+
+.page-header-subtitle {
+  color: var(--kora-muted);
+}
+
+.section-card {
+  background: var(--kora-card-bg);
+  border-color: var(--kora-card-border);
+}
+
+.section-card--gold {
+  background: var(--kora-surface-gold);
+  border-color: var(--kora-border-gold);
+}
+
+.section-card--green {
+  background: var(--kora-surface-green);
+  border-color: var(--kora-border-gold-soft);
+}
+
+.section-card--danger {
+  background: var(--kora-surface-danger);
+  border-color: var(--kora-border-danger);
+}
+
+.section-card--success {
+  background: var(--kora-surface-success);
+  border-color: var(--kora-border-success);
+}
+
+.section-card--dashed {
+  background: var(--kora-card-bg);
+  border-color: var(--kora-card-border-strong);
+}
+
+.section-card--clickable {
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+}
+
+.section-card--pad-sm { padding: 12px; }
+.section-card--pad-md { padding: 16px; }
+.section-card--pad-lg { padding: 20px; }
+
+.alert-banner--error {
+  background: var(--kora-surface-danger);
+  border-color: var(--kora-border-danger);
+  color: var(--kora-danger-soft);
+}
+
+.alert-banner--success {
+  background: var(--kora-surface-success);
+  border-color: var(--kora-border-success);
+  color: var(--kora-success-soft);
+}
+
+.alert-banner--info {
+  background: var(--kora-surface-gold);
+  border-color: var(--kora-border-gold);
+  color: var(--kora-gold-light);
+}
+
+.empty-state {
+  background: var(--kora-card-bg);
+  border-color: var(--kora-card-border);
+}
+
+.empty-state-title {
+  color: var(--kora-muted);
+}
+
+.empty-state-desc {
+  color: var(--kora-muted-2);
+}
+
+.ui-btn {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  transition: opacity 0.15s, transform 0.1s, background 0.15s, border-color 0.15s;
+  padding: 12px 20px;
+  font-size: 13px;
+  border-radius: 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  line-height: 1.2;
+}
+
+.ui-btn:disabled,
+.ui-btn.is-disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.ui-btn--full {
+  width: 100%;
+}
+
+.ui-btn--sm {
+  padding: 8px 14px;
+  font-size: 12px;
+  border-radius: 12px;
+}
+
+.ui-btn--lg {
+  padding: 14px 24px;
+  font-size: 14px;
+  border-radius: 16px;
+}
+
+.ui-field {
+  background: var(--kora-field-bg);
+  border-color: var(--kora-field-border);
+  color: var(--kora-text);
+}
+
+.ui-field::placeholder {
+  color: var(--kora-muted-2);
+}
+
+.ui-btn--ghost {
+  color: var(--kora-gold);
+  background: none;
+  border: none;
+  padding: 4px 0;
+  border-radius: 0;
+  font-size: 12px;
+}
+
+.segmented {
+  background: var(--kora-card-bg);
+}
+
+.segmented-btn {
+  color: var(--kora-muted);
+}
+
+.segmented-btn.is-active {
+  background: var(--kora-gold);
+  color: var(--kora-text-inverse);
+}
+
+.nav-pill {
+  background: var(--kora-nav-bg);
+  border-top-color: var(--kora-card-border);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--kora-gold), var(--kora-gold-dark));
+  color: var(--kora-text-inverse);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--kora-gold) 35%, transparent);
+}
+
+.btn-secondary {
+  color: var(--kora-text);
+  border-color: var(--kora-card-border-strong);
+  background: var(--kora-card-bg);
+}
+
+/* BackButton / IconButton / StatTile / MoneyCard */
+
+.back-btn {
+  background: var(--kora-card-bg);
+  border-color: var(--kora-card-border);
+  color: var(--kora-text);
+}
+
+.icon-btn {
+  background: var(--kora-card-bg);
+  border-color: var(--kora-card-border);
+  color: var(--kora-text);
+}
+
+.stat-tile-value {
+  color: var(--kora-text);
+}
+
+.stat-tile-label {
+  color: var(--kora-muted);
+}
+
+.money-card-label {
+  color: var(--kora-muted);
+}
+
+.money-card-unit {
+  color: var(--kora-muted);
+}
+
+.money-card-subtitle {
+  color: var(--kora-muted-2);
+}
+
+.money-card-icon {
+  background: color-mix(in srgb, var(--kora-gold) 12%, transparent);
+  border-color: var(--kora-border-gold-soft);
+}
+
+/* Auth / Home screen bridges */
+
+.auth-muted,
+.auth-link {
+  color: var(--kora-muted);
+}
+
+.auth-username,
+.home-header-name,
+.home-activity-title,
+.home-combo-count {
+  color: var(--kora-text);
+}
+
+.home-header-status,
+.home-brand-sub,
+.home-resume-meta,
+.home-win-label,
+.home-combo-label {
+  color: var(--kora-muted);
+}
+
+.home-avatar {
+  background: linear-gradient(135deg, var(--kora-green), var(--kora-green-deep));
+  border-color: var(--kora-border-gold);
+}
+
+.home-level-pill {
+  background: linear-gradient(135deg, var(--kora-gold), var(--kora-gold-dark));
+  color: var(--kora-text-inverse);
+}
+
+.home-resume {
+  border-color: var(--kora-border-success) !important;
+}
+
+.home-resume-title {
+  color: var(--kora-success-soft);
+}
+
+.home-resume-arrow {
+  color: var(--kora-success);
+}
+
+.home-win-bar {
+  background: var(--kora-card-bg);
+}
+
+.home-win-bar-fill {
+  background: linear-gradient(90deg, var(--kora-green), var(--kora-gold));
+}
+
+.home-combo-value {
+  color: var(--kora-gold);
+}
+
+.text-success {
+  color: var(--kora-success);
+}
+
+.text-danger {
+  color: var(--kora-danger);
+}
+
+/* Profile */
+
+.profile-hero {
+  background: linear-gradient(135deg, var(--kora-green-deep) 0%, var(--kora-surface) 100%);
+  border-bottom-color: var(--kora-border-gold-soft);
+}
+
+.profile-avatar {
+  background: linear-gradient(135deg, var(--kora-green-deep), var(--kora-felt));
+  border-color: var(--kora-gold);
+}
+
+.profile-level-badge {
+  background: linear-gradient(135deg, var(--kora-gold), var(--kora-gold-dark));
+  border-color: var(--kora-void);
+}
+
+.profile-level-num {
+  color: var(--kora-text-inverse);
+}
+
+.profile-name,
+.profile-section-title,
+.profile-history-result,
+.profile-achievements-label {
+  color: var(--kora-text);
+}
+
+.profile-sub,
+.profile-section-label,
+.profile-xp-level,
+.profile-history-meta {
+  color: var(--kora-muted);
+}
+
+.profile-xp-pct,
+.profile-achievements-count,
+.profile-achievements-arrow {
+  color: var(--kora-gold);
+}
+
+.profile-xp-bar {
+  background: var(--kora-card-bg);
+}
+
+.profile-xp-fill {
+  background: linear-gradient(90deg, var(--kora-green), var(--kora-gold));
+}
+
+.profile-avatar-choice {
+  border-color: var(--kora-card-border);
+  background: var(--kora-card-bg);
+}
+
+.profile-avatar-choice.is-selected {
+  border-color: var(--kora-gold);
+}
+
+.profile-msg--error {
+  color: var(--kora-danger);
+}
+
+.profile-msg--ok {
+  color: var(--kora-success);
+}
+
+.profile-clear {
+  color: var(--kora-muted-2) !important;
+}
+
+.profile-history-icon.is-win {
+  background: var(--kora-surface-success);
+  border-color: var(--kora-border-success);
+}
+
+.profile-history-icon.is-loss {
+  background: var(--kora-surface-danger);
+  border-color: var(--kora-border-danger);
+}
+
+.profile-history-mode,
+.profile-history-more {
+  color: var(--kora-muted-2);
+}
+
+/* Stake */
+
+.stake-title {
+  color: var(--kora-text);
+}
+
+.stake-subtitle,
+.stepper-label {
+  color: var(--kora-muted);
+}
+
+.stake-group-label,
+.stake-hint {
+  color: var(--kora-muted-2);
+}
+
+.stake-preset {
+  background: var(--kora-card-bg);
+}
+
+.stake-preset-blurb {
+  color: var(--kora-muted);
+}
+
+.stepper-row {
+  background: var(--kora-card-bg);
+  border-color: var(--kora-card-border);
+}
+
+.stepper-btn {
+  border-color: var(--kora-border-gold);
+  background: color-mix(in srgb, var(--kora-gold) 10%, transparent);
+  color: var(--kora-gold-light);
+}
+
+.theme-toggle {
+  margin: 16px 20px 0;
+  padding: 16px;
+  border-radius: 16px;
+  background: var(--kora-card-bg);
+  border: 1px solid var(--kora-card-border);
+}
+
+.theme-toggle-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  gap: 8px;
+}
+
+.theme-toggle-title {
+  color: var(--kora-text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.theme-toggle-hint {
+  color: var(--kora-muted-2);
+  font-size: 11px;
+}
+
+[data-theme='light'] .text-gold {
+  background: linear-gradient(135deg, #b8862d 0%, #d4a84a 50%, #8f6a1f 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* —— Light theme bridges for nav / layout chrome —— */
+
+[data-theme='light'] .side-nav {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(243, 239, 230, 0.98) 100%);
+  border-right-color: var(--kora-card-border);
+}
+
+[data-theme='light'] .side-nav-brand-title,
+[data-theme='light'] .side-nav-item:hover {
+  color: var(--kora-text);
+}
+
+[data-theme='light'] .side-nav-item {
+  color: var(--kora-muted);
+}
+
+[data-theme='light'] .side-nav-item.is-active {
+  background: color-mix(in srgb, var(--kora-gold) 14%, transparent);
+  border-color: var(--kora-border-gold);
+  color: var(--kora-gold-dark);
+}
+
+[data-theme='light'] .side-nav-item--play {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--kora-gold) 18%, transparent), color-mix(in srgb, var(--kora-gold-dark) 10%, transparent));
+  border-color: var(--kora-border-gold);
+  color: var(--kora-gold-dark);
+}
+
+[data-theme='light'] .side-nav-item--play.has-table {
+  border-color: var(--kora-border-success);
+  background: linear-gradient(135deg, color-mix(in srgb, var(--kora-success) 16%, transparent), color-mix(in srgb, var(--kora-green) 12%, transparent));
+  color: var(--kora-success-soft);
+}
+
+[data-theme='light'] .bottom-nav-item-label {
+  color: var(--kora-muted);
+}
+
+[data-theme='light'] .bottom-nav-item.is-active .bottom-nav-item-label {
+  color: var(--kora-gold-dark);
+}
+
+[data-theme='light'] .app-shell {
+  box-shadow:
+    0 0 0 1px var(--kora-card-border),
+    0 24px 80px rgba(0, 0, 0, 0.12);
+}
+
+[data-theme='light'] .player-badge {
+  background: color-mix(in srgb, var(--kora-surface) 90%, transparent);
+  border-color: var(--kora-card-border);
+}
+
+[data-theme='light'] .glass {
+  background: color-mix(in srgb, var(--kora-surface) 75%, transparent);
+}
+
+[data-theme='light'] .glass-green {
+  background: color-mix(in srgb, var(--kora-green-deep) 18%, var(--kora-surface));
+}
+
+[data-theme='light'] .lb-podium-avatar {
+  background: var(--kora-card-bg);
+}
+
+[data-theme='light'] .lb-podium-card.is-first .lb-podium-avatar {
+  background: linear-gradient(135deg, var(--kora-green-deep), var(--kora-felt));
+  border-color: var(--kora-border-gold);
+}
+
+[data-theme='light'] .lb-podium-name {
+  color: var(--kora-text);
+}
+
+[data-theme='light'] .lb-podium-card.is-first .lb-podium-name,
+[data-theme='light'] .lb-podium-score {
+  color: var(--kora-gold-dark);
+}
+
+[data-theme='light'] .text-shimmer {
+  background: linear-gradient(90deg, var(--kora-gold), var(--kora-gold-light), #8f6a1f, var(--kora-gold-light), var(--kora-gold));
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
