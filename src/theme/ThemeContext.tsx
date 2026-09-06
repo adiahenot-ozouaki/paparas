@@ -8,11 +8,6 @@ import {
   type ReactNode,
 } from 'react'
 
-// ==========================================================================
-// ThemeContext — thème dynamique (data-theme + CSS variables).
-// Préférence persistée : kora:theme:v1
-// ==========================================================================
-
 export type ThemeMode = 'dark' | 'light' | 'system'
 export type ResolvedTheme = 'dark' | 'light'
 
@@ -40,8 +35,11 @@ function resolveTheme(mode: ThemeMode): ResolvedTheme {
 function applyDomTheme(resolved: ResolvedTheme) {
   const root = document.documentElement
   root.setAttribute('data-theme', resolved)
-  // Aide les contrôles natifs (scrollbars, form controls)
   root.style.colorScheme = resolved
+  const meta = document.getElementById('meta-theme-color')
+  if (meta) {
+    meta.setAttribute('content', resolved === 'light' ? '#F3EFE6' : '#0B0D10')
+  }
 }
 
 interface ThemeContextValue {
@@ -73,7 +71,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setMode(mode === 'dark' ? 'light' : mode === 'light' ? 'system' : 'dark')
   }, [mode, setMode])
 
-  // Appliquer au montage + écouter system
   useEffect(() => {
     const r = resolveTheme(mode)
     setResolved(r)
