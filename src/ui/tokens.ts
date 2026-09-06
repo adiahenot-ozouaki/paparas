@@ -1,8 +1,33 @@
 // ==========================================================================
-// Design tokens — source unique pour styles inline restants.
-// Préférer les classes CSS (index.css) quand c’est possible.
+// Design tokens — préférer var(--kora-*) pour suivre le thème dynamique.
+// Les hex restent en fallback pour le code legacy encore en inline.
 // ==========================================================================
 
+/** Références CSS (thème-aware). */
+export const cssVar = {
+  void: 'var(--kora-void)',
+  surface: 'var(--kora-surface)',
+  felt: 'var(--kora-felt)',
+  greenDeep: 'var(--kora-green-deep)',
+  green: 'var(--kora-green)',
+  gold: 'var(--kora-gold)',
+  goldLight: 'var(--kora-gold-light)',
+  goldDark: 'var(--kora-gold-dark)',
+  ivory: 'var(--kora-ivory)',
+  muted: 'var(--kora-muted)',
+  muted2: 'var(--kora-muted-2)',
+  danger: 'var(--kora-danger)',
+  dangerSoft: 'var(--kora-danger-soft)',
+  success: 'var(--kora-success)',
+  successSoft: 'var(--kora-success-soft)',
+  text: 'var(--kora-text)',
+  textInverse: 'var(--kora-text-inverse)',
+  cardBg: 'var(--kora-card-bg)',
+  cardBorder: 'var(--kora-card-border)',
+  navBg: 'var(--kora-nav-bg)',
+} as const
+
+/** Fallbacks hex (thème sombre — défaut produit). */
 export const color = {
   void: '#0B0D10',
   surface: '#10151A',
@@ -48,34 +73,34 @@ export const font = {
   body: "'Inter', sans-serif",
 } as const
 
-/** Surfaces récurrentes (inline style) */
+/** Surfaces — utilisent les variables CSS quand possible. */
 export const surface = {
   card: {
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.07)',
+    background: 'var(--kora-card-bg)',
+    border: '1px solid var(--kora-card-border)',
   },
   cardStrong: {
-    background: 'rgba(255,255,255,0.04)',
-    border: '1px solid rgba(255,255,255,0.08)',
+    background: 'var(--kora-card-bg)',
+    border: '1px solid var(--kora-card-border-strong)',
   },
   gold: {
-    background: 'linear-gradient(135deg, rgba(214,168,79,0.12), rgba(16,21,26,0.8))',
-    border: '1px solid rgba(214,168,79,0.35)',
+    background: 'var(--kora-surface-gold)',
+    border: '1px solid var(--kora-border-gold)',
   },
   green: {
-    background: 'linear-gradient(135deg, rgba(18,60,50,0.6), rgba(16,21,26,0.8))',
-    border: '1px solid rgba(214,168,79,0.25)',
+    background: 'var(--kora-surface-green)',
+    border: '1px solid var(--kora-border-gold-soft)',
   },
   danger: {
-    background: 'rgba(201,75,75,0.12)',
-    border: '1px solid rgba(201,75,75,0.35)',
+    background: 'var(--kora-surface-danger)',
+    border: '1px solid var(--kora-border-danger)',
   },
   success: {
-    background: 'rgba(76,175,118,0.12)',
-    border: '1px solid rgba(76,175,118,0.35)',
+    background: 'var(--kora-surface-success)',
+    border: '1px solid var(--kora-border-success)',
   },
   dashed: {
-    background: 'rgba(255,255,255,0.03)',
-    border: '1px dashed rgba(255,255,255,0.1)',
+    background: 'var(--kora-card-bg)',
+    border: '1px dashed var(--kora-card-border-strong)',
   },
 } as const
