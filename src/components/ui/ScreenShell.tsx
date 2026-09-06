@@ -6,7 +6,7 @@ import type { CSSProperties, ReactNode } from 'react'
 
 type ScreenShellProps = {
   children: ReactNode
-  /** padding-bottom pour BottomNav (défaut 80) */
+  /** padding-bottom mobile pour BottomNav (défaut 80). Ignoré ≥900px avec sidebar. */
   bottomPad?: number
   className?: string
   style?: CSSProperties
@@ -28,7 +28,7 @@ export default function ScreenShell({
     <div
       className={`screen-shell ${className}`.trim()}
       style={{
-        paddingBottom: bottomPad,
+        ['--shell-bottom-pad' as string]: `${bottomPad}px`,
         ...style,
       }}
     >
