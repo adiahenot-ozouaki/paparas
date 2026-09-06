@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import type { Screen } from '../types'
 import { useAuth } from '../auth/AuthContext'
+import { AlertBanner, ScreenShell, UiButton } from '../components/ui'
 
 // ==========================================================================
 // AuthScreen — connexion / inscription / reset MDP pour le mode online.
-// Solo IA reste accessible sans compte.
 // ==========================================================================
 
 type Mode = 'signIn' | 'signUp' | 'reset'
@@ -68,66 +68,40 @@ export default function AuthScreen({
     }
 
     if (mode === 'signUp') {
-      // Selon config Supabase : session immédiate ou confirmation email
       setInfo('Compte créé. Si la confirmation email est activée, ouvrez le lien reçu avant de vous connecter.')
-      // Si session déjà active, onNavigate se fera via l’état user au prochain render
     }
     onNavigate(returnTo)
   }
 
   if (isLoading) {
     return (
-      <div style={{ position: 'absolute', inset: 0, background: '#0B0D10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ScreenShell bottomPad={0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ color: '#A9B0B7', fontSize: 13 }}>Chargement…</span>
-      </div>
+      </ScreenShell>
     )
   }
 
   if (user) {
     return (
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: '#0B0D10',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 16,
-          padding: 24,
-        }}
+      <ScreenShell
+        bottomPad={0}
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}
       >
-        <div className="pattern-african" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
         <div style={{ fontSize: 40 }}>{profile?.avatar ?? '🦅'}</div>
         <p className="font-display" style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>
           {profile?.username ?? 'Profil…'}
         </p>
         <p style={{ color: '#A9B0B7', fontSize: 12, margin: 0 }}>{user.email}</p>
-        <button
-          type="button"
-          className="btn-primary glow-gold"
-          onClick={() => onNavigate(returnTo)}
-          style={{ padding: '12px 28px', fontSize: 14, borderRadius: 14, marginTop: 8 }}
-        >
+        <UiButton onClick={() => onNavigate(returnTo)} style={{ marginTop: 8 }}>
           Continuer →
-        </button>
-        <button
-          type="button"
-          className="btn-secondary"
-          onClick={() => void signOut()}
-          style={{ padding: '10px 24px', fontSize: 13, borderRadius: 12 }}
-        >
+        </UiButton>
+        <UiButton variant="secondary" onClick={() => void signOut()}>
           Se déconnecter
-        </button>
-        <button
-          type="button"
-          onClick={() => onNavigate('home')}
-          style={{ background: 'none', border: 'none', color: '#A9B0B7', fontSize: 12, cursor: 'pointer', marginTop: 8 }}
-        >
+        </UiButton>
+        <UiButton variant="ghost" onClick={() => onNavigate('home')}>
           Accueil
-        </button>
-      </div>
+        </UiButton>
+      </ScreenShell>
     )
   }
 
@@ -138,20 +112,10 @@ export default function AuthScreen({
       : 'Requis pour jouer en ligne · le solo IA reste libre'
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background: '#0B0D10',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-      }}
+    <ScreenShell
+      bottomPad={0}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}
     >
-      <div className="pattern-african" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
-
       <button
         type="button"
         onClick={() => onNavigate('home')}
@@ -168,6 +132,7 @@ export default function AuthScreen({
           color: '#fff',
           fontSize: 18,
           cursor: 'pointer',
+          zIndex: 2,
         }}
       >
         ←
@@ -182,16 +147,17 @@ export default function AuthScreen({
 
       <form onSubmit={e => void handleSubmit(e)} style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <input
+          className="ui-field"
           type="email"
           required
           placeholder="Email"
           value={email}
           onChange={e => setEmail(e.target.value)}
           autoComplete="email"
-          style={inputStyle}
         />
         {mode !== 'reset' && (
           <input
+            className="ui-field"
             type="password"
             required
             minLength={6}
@@ -199,51 +165,13 @@ export default function AuthScreen({
             value={password}
             onChange={e => setPassword(e.target.value)}
             autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
-            style={inputStyle}
           />
         )}
 
-        {error && (
-          <div
-            role="alert"
-            style={{
-              background: 'rgba(201,75,75,0.12)',
-              border: '1px solid rgba(201,75,75,0.35)',
-              borderRadius: 12,
-              padding: '10px 12px',
-            }}
-          >
-            <p style={{ color: '#E8A0A0', fontSize: 12, margin: 0, lineHeight: 1.45 }}>{error}</p>
-          </div>
-        )}
+        {error && <AlertBanner tone="error">{error}</AlertBanner>}
+        {info && <AlertBanner tone="success">{info}</AlertBanner>}
 
-        {info && (
-          <div
-            role="status"
-            style={{
-              background: 'rgba(76,175,118,0.12)',
-              border: '1px solid rgba(76,175,118,0.35)',
-              borderRadius: 12,
-              padding: '10px 12px',
-            }}
-          >
-            <p style={{ color: '#8FD4A8', fontSize: 12, margin: 0, lineHeight: 1.45 }}>{info}</p>
-          </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={submitting}
-          className="btn-primary glow-gold"
-          style={{
-            padding: '14px',
-            fontSize: 14,
-            borderRadius: 14,
-            letterSpacing: '0.06em',
-            marginTop: 8,
-            opacity: submitting ? 0.6 : 1,
-          }}
-        >
+        <UiButton type="submit" disabled={submitting} fullWidth style={{ marginTop: 8, letterSpacing: '0.06em' }}>
           {submitting
             ? 'Un instant…'
             : mode === 'signUp'
@@ -251,7 +179,7 @@ export default function AuthScreen({
               : mode === 'reset'
                 ? 'Envoyer le lien'
                 : 'Se connecter'}
-        </button>
+        </UiButton>
       </form>
 
       <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
@@ -275,38 +203,15 @@ export default function AuthScreen({
         )}
 
         {mode === 'reset' ? (
-          <button type="button" onClick={() => switchMode('signIn')} style={linkStyle}>
+          <UiButton variant="ghost" onClick={() => switchMode('signIn')}>
             ← Retour à la connexion
-          </button>
+          </UiButton>
         ) : (
-          <button
-            type="button"
-            onClick={() => switchMode(mode === 'signUp' ? 'signIn' : 'signUp')}
-            style={linkStyle}
-          >
+          <UiButton variant="ghost" onClick={() => switchMode(mode === 'signUp' ? 'signIn' : 'signUp')}>
             {mode === 'signUp' ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
-          </button>
+          </UiButton>
         )}
       </div>
-    </div>
+    </ScreenShell>
   )
-}
-
-const inputStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.12)',
-  borderRadius: 12,
-  padding: '12px 14px',
-  color: '#fff',
-  fontSize: 14,
-  fontFamily: 'Inter, sans-serif',
-}
-
-const linkStyle: React.CSSProperties = {
-  background: 'none',
-  border: 'none',
-  color: '#D6A84F',
-  fontSize: 12,
-  cursor: 'pointer',
-  fontFamily: 'Plus Jakarta Sans',
 }
