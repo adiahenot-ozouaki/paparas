@@ -4,6 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { gameOverReasonLabel } from '../game/payout'
 import { NewlyUnlockedAchievements, ShareScoreButton } from '../components/EndGameExtras'
+import { UiButton } from '../components/ui'
 
 export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const {
@@ -37,152 +38,67 @@ export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) =
   }
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'radial-gradient(ellipse at 50% 0%, rgba(201,75,75,0.15) 0%, #0B0D10 55%)',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        padding: '40px 24px 32px',
-        overflowY: 'auto',
-      }}
-    >
-      <div className="pattern-african" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
+    <div className="end-screen end-screen--defeat">
+      <div className="pattern-african end-screen-pattern" aria-hidden />
 
-      <div
-        className="anim-scale-bounce"
-        style={{
-          width: 90,
-          height: 90,
-          borderRadius: 28,
-          background: 'linear-gradient(135deg, #2a1414, #1a0d0d)',
-          border: '2.5px solid #C94B4B',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontSize: 44,
-          marginBottom: 20,
-          boxShadow: '0 0 40px rgba(201,75,75,0.3)',
-        }}
-      >
-        💀
+      <div className="anim-scale-bounce end-hero-badge end-hero-badge--danger">💀</div>
+
+      <div className="anim-fade-in-up end-headline" style={{ animationDelay: '0.15s' }}>
+        <h1 className="font-display end-title">PARTIE TERMINÉE</h1>
       </div>
 
-      <div className="anim-fade-in-up" style={{ textAlign: 'center', marginBottom: 8, animationDelay: '0.15s' }}>
-        <h1 className="font-display" style={{ fontSize: 34, fontWeight: 800, letterSpacing: '0.06em', margin: 0, color: '#fff' }}>
-          PARTIE TERMINÉE
-        </h1>
+      <div className="anim-fade-in-up end-player-block" style={{ animationDelay: '0.25s' }}>
+        <p className="end-muted">{reasonText}</p>
+        {winnerName && <p className="end-winner-line">Vainqueur : {winnerName}</p>}
+        <p className="end-dim">Votre capital : {finalCapital.toLocaleString('fr-FR')} FCFA</p>
       </div>
 
-      <div className="anim-fade-in-up" style={{ textAlign: 'center', marginBottom: 24, animationDelay: '0.25s' }}>
-        <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 6px' }}>{reasonText}</p>
-        {winnerName && (
-          <p style={{ color: '#D6A84F', fontSize: 13, margin: 0, fontWeight: 600 }}>
-            Vainqueur : {winnerName}
-          </p>
-        )}
-        <p style={{ color: '#5b636b', fontSize: 12, margin: '8px 0 0' }}>
-          Votre capital : {finalCapital.toLocaleString('fr-FR')} FCFA
-        </p>
-      </div>
-
-      <div className="anim-fade-in-up" style={{ width: '100%', animationDelay: '0.3s' }}>
+      <div className="anim-fade-in-up end-full" style={{ animationDelay: '0.3s' }}>
         <NewlyUnlockedAchievements stats={lifetimeStats} />
       </div>
 
-      <div
-        className="anim-fade-in-up"
-        style={{
-          width: '100%',
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 20,
-          overflow: 'hidden',
-          marginBottom: 20,
-          animationDelay: '0.35s',
-        }}
-      >
-        <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <span style={{ color: '#A9B0B7', fontSize: 12, fontFamily: 'Plus Jakarta Sans', letterSpacing: '0.08em' }}>
-            CLASSEMENT FINAL
-          </span>
+      <div className="anim-fade-in-up end-stat-list" style={{ animationDelay: '0.35s' }}>
+        <div className="end-list-head">
+          <span className="end-list-head-label">CLASSEMENT FINAL</span>
         </div>
         {ranking.map((p, rank) => (
           <div
             key={p.id}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              padding: '12px 16px',
-              borderBottom: rank < ranking.length - 1 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-              background: p.seatIndex === HUMAN_INDEX ? 'rgba(255,255,255,0.02)' : 'transparent',
-              opacity: p.isEliminated ? 0.5 : 1,
-            }}
+            className={`end-rank-row${rank < ranking.length - 1 ? ' has-border' : ''}${p.seatIndex === HUMAN_INDEX ? ' is-you' : ''}${p.isEliminated ? ' is-out' : ''}`}
           >
-            <span className="font-display" style={{ color: '#A9B0B7', fontSize: 12, width: 20 }}>
-              #{rank + 1}
-            </span>
-            <span style={{ fontSize: 18, marginRight: 10 }}>{SEAT_AVATARS[p.seatIndex]}</span>
-            <span className="font-display" style={{ flex: 1, color: '#fff', fontSize: 14, fontWeight: 600 }}>
+            <span className="font-display end-rank-num">#{rank + 1}</span>
+            <span className="end-rank-avatar">{SEAT_AVATARS[p.seatIndex]}</span>
+            <span className="font-display end-rank-name">
               {SEAT_NAMES[p.seatIndex]}
               {p.isEliminated ? ' (éliminé)' : ''}
             </span>
-            <span className="font-display" style={{ color: rank === 0 ? '#D6A84F' : '#A9B0B7', fontSize: 14, fontWeight: 700 }}>
+            <span className={`font-display end-rank-cap${rank === 0 ? ' is-gold' : ''}`}>
               {p.capital.toLocaleString('fr-FR')} FCFA
             </span>
           </div>
         ))}
       </div>
 
-      <div
-        className="anim-fade-in-up"
-        style={{
-          width: '100%',
-          background: 'rgba(255,255,255,0.04)',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 20,
-          overflow: 'hidden',
-          marginBottom: 24,
-          animationDelay: '0.45s',
-        }}
-      >
+      <div className="anim-fade-in-up end-stat-list" style={{ animationDelay: '0.45s' }}>
         {[
           { label: 'Rounds gagnés', value: String(roundsWon[HUMAN_INDEX]) },
           { label: 'Meilleur combo', value: bestComboLabel ?? '—' },
           { label: 'Temps de partie', value: `${elapsedMinutes} min` },
         ].map((s, i) => (
-          <div
-            key={s.label}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '14px 18px',
-              borderBottom: i < 2 ? '1px solid rgba(255,255,255,0.05)' : 'none',
-            }}
-          >
-            <span style={{ color: '#A9B0B7', fontSize: 14 }}>{s.label}</span>
-            <span className="font-display" style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>
-              {s.value}
-            </span>
+          <div key={s.label} className={`end-stat-row${i < 2 ? ' has-border' : ''}`}>
+            <span className="end-stat-label">{s.label}</span>
+            <span className="font-display end-stat-value">{s.value}</span>
           </div>
         ))}
       </div>
 
-      <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <button
-          type="button"
-          className="btn-primary glow-gold anim-fade-in-up"
-          onClick={handleReplay}
-          style={{ padding: '18px', fontSize: 15, borderRadius: 18, letterSpacing: '0.1em', animationDelay: '0.55s' }}
-        >
+      <div className="end-actions">
+        <UiButton fullWidth onClick={handleReplay} className="anim-fade-in-up end-cta-primary" style={{ animationDelay: '0.55s' }}>
           REJOUER
-        </button>
+        </UiButton>
         <ShareScoreButton
-          className="btn-secondary anim-fade-in-up"
-          style={{ padding: '14px', fontSize: 14, borderRadius: 14, animationDelay: '0.6s' }}
+          className="btn-secondary anim-fade-in-up end-cta-secondary"
+          style={{ animationDelay: '0.6s' }}
           payload={{
             won: false,
             netGain,
@@ -193,14 +109,15 @@ export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) =
             username: profile?.username,
           }}
         />
-        <button
-          type="button"
-          className="btn-secondary anim-fade-in-up"
+        <UiButton
+          variant="secondary"
+          fullWidth
           onClick={() => onNavigate('home')}
-          style={{ padding: '14px', fontSize: 14, borderRadius: 14, animationDelay: '0.65s' }}
+          className="anim-fade-in-up end-cta-secondary"
+          style={{ animationDelay: '0.65s' }}
         >
           Accueil
-        </button>
+        </UiButton>
       </div>
     </div>
   )
