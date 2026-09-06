@@ -2,6 +2,7 @@ import { useState } from 'react'
 import type { Screen, DeckVariant } from '../types'
 import { useGame } from '../game/GameContext'
 import type { GameEndMode } from '../game/payout'
+import { BackButton, ScreenShell, UiButton } from '../components/ui'
 
 const STAKE_PRESETS = [100, 500, 1000, 2000, 5000]
 const CAPITAL_PRESETS = [2000, 5000, 10000, 20000, 50000]
@@ -33,7 +34,6 @@ const END_MODE_OPTIONS: { id: GameEndMode; label: string; hint: string }[] = [
   },
 ]
 
-/** Aligné sur GameModeScreen — 1 tap → lobby. */
 type QuickPreset = {
   id: string
   title: string
@@ -175,75 +175,16 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
   }
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background: '#0B0D10',
-        overflowY: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-      }}
-    >
-      <div className="pattern-african" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
-
-      <div style={{ padding: 'max(20px, env(safe-area-inset-top, 0px)) 20px 0', position: 'relative' }}>
-        <button
-          type="button"
-          onClick={() => onNavigate('gameMode')}
-          aria-label="Retour"
-          style={{
-            background: 'rgba(255,255,255,0.06)',
-            border: '1px solid rgba(255,255,255,0.1)',
-            borderRadius: 12,
-            width: 40,
-            height: 40,
-            color: '#fff',
-            fontSize: 18,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 16,
-          }}
-        >
-          ←
-        </button>
-        <h1 className="font-display" style={{ fontSize: 26, fontWeight: 800, margin: '0 0 4px', letterSpacing: '0.02em' }}>
-          Configurer la table
-        </h1>
-        <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>
-          Presets 1-tap ou réglages détaillés.
-        </p>
+    <ScreenShell bottomPad={0} className="stake-screen">
+      <div className="stake-header">
+        <BackButton absolute={false} onClick={() => onNavigate('gameMode')} />
+        <h1 className="font-display stake-title">Configurer la table</h1>
+        <p className="stake-subtitle">Presets 1-tap ou réglages détaillés.</p>
       </div>
 
-      <div
-        style={{
-          padding: '20px 20px 28px',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: 14,
-          flex: 1,
-          maxWidth: 440,
-          width: '100%',
-          margin: '0 auto',
-          boxSizing: 'border-box',
-        }}
-      >
-        {/* 1-tap presets */}
-        <p
-          style={{
-            color: '#5b636b',
-            fontSize: 11,
-            fontFamily: 'Plus Jakarta Sans',
-            letterSpacing: '0.1em',
-            fontWeight: 700,
-            margin: '0 0 2px',
-          }}
-        >
-          LANCER DIRECTEMENT
-        </p>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+      <div className="stake-body">
+        <p className="stake-group-label">Lancer directement</p>
+        <div className="stake-preset-grid">
           {QUICK_PRESETS.map(p => (
             <button
               key={p.id}
@@ -253,44 +194,21 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
                 e.preventDefault()
                 loadPresetIntoForm(p)
               }}
-              style={{
-                textAlign: 'left',
-                background: 'rgba(255,255,255,0.04)',
-                border: `1px solid ${p.accent}40`,
-                borderRadius: 16,
-                padding: '14px 12px',
-                cursor: 'pointer',
-              }}
+              className="stake-preset"
+              style={{ borderColor: `${p.accent}40`, ['--preset-accent' as string]: p.accent }}
             >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-                <span style={{ fontSize: 16 }}>{p.icon}</span>
-                <span className="font-display" style={{ color: p.accent, fontSize: 14, fontWeight: 800 }}>
-                  {p.title}
-                </span>
+              <div className="stake-preset-head">
+                <span className="stake-preset-icon">{p.icon}</span>
+                <span className="font-display stake-preset-title">{p.title}</span>
               </div>
-              <p style={{ color: '#A9B0B7', fontSize: 11, margin: 0, lineHeight: 1.35 }}>{p.blurb}</p>
-              <p style={{ color: p.accent, fontSize: 10, fontWeight: 700, margin: '8px 0 0', letterSpacing: '0.06em' }}>
-                JOUER →
-              </p>
+              <p className="stake-preset-blurb">{p.blurb}</p>
+              <p className="stake-preset-cta">JOUER →</p>
             </button>
           ))}
         </div>
-        <p style={{ color: '#5b636b', fontSize: 11, margin: '0 0 8px' }}>
-          Appui long sur un preset pour le charger dans les réglages ci-dessous sans lancer.
-        </p>
+        <p className="stake-hint">Appui long sur un preset pour le charger dans les réglages ci-dessous sans lancer.</p>
 
-        <p
-          style={{
-            color: '#5b636b',
-            fontSize: 11,
-            fontFamily: 'Plus Jakarta Sans',
-            letterSpacing: '0.1em',
-            fontWeight: 700,
-            margin: '8px 0 0',
-          }}
-        >
-          RÉGLAGES FINS
-        </p>
+        <p className="stake-group-label stake-group-label--spaced">Réglages fins</p>
 
         <StepperRow
           label="Mise"
@@ -354,30 +272,17 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
           />
         )}
 
-        <p style={{ color: '#5b636b', fontSize: 11, margin: '4px 0 0', lineHeight: 1.45 }}>
+        <p className="stake-hint stake-hint--end">
           {END_MODE_OPTIONS[endModeIndex].hint}. Un capital sous la mise élimine le joueur.
         </p>
       </div>
 
-      <div
-        style={{
-          padding: '12px 20px max(20px, env(safe-area-inset-bottom, 0px))',
-          maxWidth: 440,
-          width: '100%',
-          margin: '0 auto',
-          boxSizing: 'border-box',
-        }}
-      >
-        <button
-          type="button"
-          className="btn-primary glow-gold"
-          onClick={handleContinue}
-          style={{ width: '100%', padding: '16px', fontSize: 15, borderRadius: 16, letterSpacing: '0.08em' }}
-        >
+      <div className="stake-footer">
+        <UiButton fullWidth onClick={handleContinue} className="stake-continue glow-gold">
           CONTINUER →
-        </button>
+        </UiButton>
       </div>
-    </div>
+    </ScreenShell>
   )
 }
 
@@ -393,72 +298,17 @@ function StepperRow({
   onNext: () => void
 }) {
   return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        background: 'rgba(255,255,255,0.04)',
-        border: '1px solid rgba(255,255,255,0.08)',
-        borderRadius: 16,
-        padding: '12px 14px',
-      }}
-    >
-      <span
-        className="font-display"
-        style={{
-          color: '#A9B0B7',
-          fontSize: 13,
-          fontWeight: 600,
-          width: 72,
-          flexShrink: 0,
-        }}
-      >
-        {label}
-      </span>
-
-      <button type="button" onClick={onPrev} aria-label={`${label} précédente`} style={stepperBtnStyle}>
+    <div className="stepper-row">
+      <span className="font-display stepper-label">{label}</span>
+      <button type="button" onClick={onPrev} aria-label={`${label} précédente`} className="stepper-btn">
         ‹
       </button>
-
-      <div style={{ flex: 1, textAlign: 'center', minWidth: 0 }}>
-        <span
-          className="font-display text-gold"
-          style={{
-            fontSize: 15,
-            fontWeight: 700,
-            letterSpacing: '0.02em',
-            display: 'block',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-          }}
-        >
-          {value}
-        </span>
+      <div className="stepper-value-wrap">
+        <span className="font-display text-gold stepper-value">{value}</span>
       </div>
-
-      <button type="button" onClick={onNext} aria-label={`${label} suivante`} style={stepperBtnStyle}>
+      <button type="button" onClick={onNext} aria-label={`${label} suivante`} className="stepper-btn">
         ›
       </button>
     </div>
   )
-}
-
-const stepperBtnStyle: React.CSSProperties = {
-  width: 40,
-  height: 40,
-  borderRadius: 12,
-  border: '1px solid rgba(214,168,79,0.35)',
-  background: 'rgba(214,168,79,0.1)',
-  color: '#F0D58A',
-  fontSize: 22,
-  fontWeight: 700,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  flexShrink: 0,
-  lineHeight: 1,
-  padding: 0,
 }

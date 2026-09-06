@@ -11,7 +11,15 @@ import {
   formatHistoryDate,
   loadGameHistory,
 } from '../lib/persistence/gameHistory'
-import { ThemeToggle } from '../components/ui'
+import {
+  EmptyState,
+  MoneyCard,
+  ScreenShell,
+  SectionCard,
+  StatTile,
+  ThemeToggle,
+  UiButton,
+} from '../components/ui'
 
 const WINS_PER_LEVEL = 5
 
@@ -117,76 +125,29 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
   }
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background: 'var(--kora-void)',
-        overflowY: 'auto',
-        paddingBottom: 80,
-      }}
-    >
-      <div className="pattern-african" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
-
-      <div
-        style={{
-          background: 'linear-gradient(135deg, var(--kora-green-deep) 0%, var(--kora-surface) 100%)',
-          borderBottom: '1px solid var(--kora-border-gold-soft)',
-          padding: '24px 20px 28px',
-          position: 'relative',
-          overflow: 'hidden',
-        }}
-      >
-        <div style={{ position: 'relative', display: 'flex', gap: 16, alignItems: 'center' }}>
-          <div style={{ position: 'relative' }}>
-            <div
-              style={{
-                width: 80,
-                height: 80,
-                borderRadius: 24,
-                background: 'linear-gradient(135deg, var(--kora-green-deep), #0d2a1f)',
-                border: '2.5px solid var(--kora-gold)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: 40,
-                boxShadow: '0 0 24px rgba(214,168,79,0.25)',
-              }}
-            >
-              {editing ? avatarDraft : displayAvatar}
-            </div>
-            <div
-              style={{
-                position: 'absolute',
-                bottom: -6,
-                right: -6,
-                background: 'linear-gradient(135deg, var(--kora-gold), var(--kora-gold-dark))',
-                borderRadius: 10,
-                padding: '2px 8px',
-                border: '2px solid var(--kora-void)',
-              }}
-            >
-              <span className="font-display" style={{ color: 'var(--kora-text-inverse)', fontSize: 10, fontWeight: 800 }}>
-                {level}
-              </span>
+    <ScreenShell className="profile-screen">
+      <div className="profile-hero">
+        <div className="profile-hero-row">
+          <div className="profile-avatar-wrap">
+            <div className="profile-avatar">{editing ? avatarDraft : displayAvatar}</div>
+            <div className="profile-level-badge">
+              <span className="font-display profile-level-num">{level}</span>
             </div>
           </div>
-          <div style={{ flex: 1, minWidth: 0 }}>
+
+          <div className="profile-hero-meta">
             {editing ? (
               <input
-                className="ui-field"
+                className="ui-field profile-username-input"
                 value={usernameDraft}
                 onChange={e => setUsernameDraft(e.target.value)}
                 maxLength={20}
                 placeholder="Votre pseudo"
-                style={{ fontSize: 18, fontFamily: 'Cinzel, serif', fontWeight: 700, marginBottom: 6 }}
               />
             ) : (
-              <h2 className="font-display" style={{ color: 'var(--kora-text)', fontSize: 22, fontWeight: 800, margin: '0 0 4px' }}>
-                {displayName}
-              </h2>
+              <h2 className="font-display profile-name">{displayName}</h2>
             )}
-            <p style={{ color: 'var(--kora-muted)', fontSize: 13, margin: '0 0 8px' }}>
+            <p className="profile-sub">
               {user
                 ? user.email
                 : lifetimeStats.gamesPlayed > 0
@@ -194,45 +155,28 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
                   : 'Compte local — connectez-vous pour le online'}
               {statsSyncing ? ' · sync…' : ''}
             </p>
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ color: 'var(--kora-muted)', fontSize: 11 }}>Niv. {level}</span>
-                <span className="font-display" style={{ color: 'var(--kora-gold)', fontSize: 11, fontWeight: 600 }}>
-                  {xpPercent}%
-                </span>
+            <div className="profile-xp">
+              <div className="profile-xp-labels">
+                <span className="profile-xp-level">Niv. {level}</span>
+                <span className="font-display profile-xp-pct">{xpPercent}%</span>
               </div>
-              <div style={{ height: 6, background: 'var(--kora-card-bg)', borderRadius: 99, overflow: 'hidden' }}>
-                <div
-                  style={{
-                    width: `${xpPercent}%`,
-                    background: 'linear-gradient(90deg, var(--kora-green), var(--kora-gold))',
-                    height: '100%',
-                    borderRadius: 99,
-                  }}
-                />
+              <div className="profile-xp-bar">
+                <div className="profile-xp-fill" style={{ width: `${xpPercent}%` }} />
               </div>
             </div>
           </div>
         </div>
 
         {user && editing && (
-          <div style={{ position: 'relative', marginTop: 16 }}>
-            <p style={{ color: 'var(--kora-muted)', fontSize: 11, margin: '0 0 8px', letterSpacing: '0.08em' }}>AVATAR</p>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+          <div className="profile-avatar-picker">
+            <p className="profile-section-label">Avatar</p>
+            <div className="profile-avatar-grid">
               {AVATAR_CHOICES.map(a => (
                 <button
                   key={a}
                   type="button"
                   onClick={() => setAvatarDraft(a)}
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 12,
-                    fontSize: 20,
-                    cursor: 'pointer',
-                    border: a === avatarDraft ? '2px solid var(--kora-gold)' : '1px solid var(--kora-card-border)',
-                    background: a === avatarDraft ? 'rgba(214,168,79,0.15)' : 'var(--kora-card-bg)',
-                  }}
+                  className={`profile-avatar-choice${a === avatarDraft ? ' is-selected' : ''}`}
                 >
                   {a}
                 </button>
@@ -242,227 +186,130 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
         )}
 
         {editError && (
-          <p role="alert" style={{ position: 'relative', color: 'var(--kora-danger)', fontSize: 12, margin: '12px 0 0' }}>
+          <p role="alert" className="profile-msg profile-msg--error">
             {editError}
           </p>
         )}
-        {savedOk && !editing && (
-          <p style={{ position: 'relative', color: 'var(--kora-success)', fontSize: 12, margin: '12px 0 0' }}>Profil enregistré.</p>
-        )}
+        {savedOk && !editing && <p className="profile-msg profile-msg--ok">Profil enregistré.</p>}
 
-        <div style={{ position: 'relative', marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        <div className="profile-actions">
           {user ? (
             <>
               {editing ? (
                 <>
-                  <button
-                    className="btn-primary glow-gold"
-                    disabled={saving}
-                    onClick={() => void handleSaveProfile()}
-                    style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12, opacity: saving ? 0.6 : 1 }}
-                  >
+                  <UiButton disabled={saving} onClick={() => void handleSaveProfile()} className="profile-btn">
                     {saving ? 'Enregistrement…' : 'Enregistrer'}
-                  </button>
-                  <button
-                    className="btn-secondary"
+                  </UiButton>
+                  <UiButton
+                    variant="secondary"
                     disabled={saving}
                     onClick={() => {
                       setEditing(false)
                       setEditError(null)
                     }}
-                    style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}
+                    className="profile-btn"
                   >
                     Annuler
-                  </button>
+                  </UiButton>
                 </>
               ) : (
-                <button className="btn-primary glow-gold" onClick={startEditing} style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}>
+                <UiButton onClick={startEditing} className="profile-btn">
                   Modifier le profil
-                </button>
+                </UiButton>
               )}
-              <button className="btn-secondary" onClick={() => void refreshCloudStats()} style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}>
+              <UiButton variant="secondary" onClick={() => void refreshCloudStats()} className="profile-btn">
                 {statsSyncing ? 'Sync…' : 'Sync stats'}
-              </button>
-              <button className="btn-secondary" onClick={() => void signOut()} style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}>
+              </UiButton>
+              <UiButton variant="secondary" onClick={() => void signOut()} className="profile-btn">
                 Se déconnecter
-              </button>
+              </UiButton>
             </>
           ) : (
-            <button className="btn-primary glow-gold" onClick={() => onNavigate('auth')} style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}>
+            <UiButton onClick={() => onNavigate('auth')} className="profile-btn">
               Connexion / Inscription
-            </button>
+            </UiButton>
           )}
         </div>
       </div>
 
       <ThemeToggle />
 
-      <div
-        style={{
-          padding: '16px 20px 0',
-          display: 'grid',
-          gridTemplateColumns: user && walletBalance !== null ? '1fr 1fr' : '1fr',
-          gap: 10,
-        }}
-      >
+      <div className={`profile-money-grid${user && walletBalance !== null ? ' profile-money-grid--2' : ''}`}>
         {user && walletBalance !== null && (
-          <div className="section-card section-card--gold" style={{ borderRadius: 18, padding: 16 }}>
-            <p style={{ color: 'var(--kora-muted)', fontSize: 10, fontFamily: 'Plus Jakarta Sans', letterSpacing: '0.1em', margin: '0 0 4px' }}>
-              WALLET
-            </p>
-            <div className="text-gold font-display" style={{ fontSize: 20, fontWeight: 800 }}>
-              {walletBalance.toLocaleString('fr-FR')}
-            </div>
-            <p style={{ color: 'var(--kora-muted-2)', fontSize: 10, margin: '4px 0 0' }}>FCFA · online</p>
-          </div>
+          <MoneyCard variant="gold" label="Wallet" amount={walletBalance} icon="💰" subtitle="FCFA · online" />
         )}
-
-        <div className="section-card section-card--green" style={{ borderRadius: 18, padding: 16 }}>
-          <p style={{ color: 'var(--kora-muted)', fontSize: 10, fontFamily: 'Plus Jakarta Sans', letterSpacing: '0.1em', margin: '0 0 4px' }}>
-            SOLO
-          </p>
-          <div className="text-gold font-display" style={{ fontSize: 20, fontWeight: 800 }}>
-            {capital.toLocaleString('fr-FR')}
-          </div>
-          <p style={{ color: 'var(--kora-muted-2)', fontSize: 10, margin: '4px 0 0' }}>FCFA · partie en cours</p>
-        </div>
+        <MoneyCard variant="green" label="Solo" amount={capital} icon="🃏" subtitle="FCFA · partie en cours" />
       </div>
 
-      <div style={{ padding: '16px 20px 0' }}>
-        <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px', color: 'var(--kora-text)' }}>
-          Statistiques
-        </h3>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-          {STATS.map((s, i) => (
-            <div key={i} className="section-card" style={{ borderRadius: 14, padding: 14 }}>
-              <span style={{ fontSize: 20 }}>{s.icon}</span>
-              <p className="font-display" style={{ color: 'var(--kora-text)', fontSize: 18, fontWeight: 700, margin: '6px 0 2px' }}>
-                {s.value}
-              </p>
-              <p style={{ color: 'var(--kora-muted)', fontSize: 11 }}>{s.label}</p>
-            </div>
+      <section className="profile-section">
+        <h3 className="font-display profile-section-title">Statistiques</h3>
+        <div className="profile-stats-grid">
+          {STATS.map(s => (
+            <StatTile key={s.label} icon={s.icon} value={s.value} label={s.label} className="profile-stat" />
           ))}
         </div>
-      </div>
+      </section>
 
-      <div style={{ padding: '20px 20px 0' }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-          <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: 0, color: 'var(--kora-text)' }}>
-            Historique
-          </h3>
+      <section className="profile-section">
+        <div className="profile-section-head">
+          <h3 className="font-display profile-section-title">Historique</h3>
           {history.length > 0 && (
-            <button
-              type="button"
-              onClick={handleClearHistory}
-              style={{ background: 'transparent', border: 'none', color: 'var(--kora-muted-2)', fontSize: 11, cursor: 'pointer', padding: 0 }}
-            >
+            <UiButton variant="ghost" onClick={handleClearHistory} className="profile-clear">
               Effacer
-            </button>
+            </UiButton>
           )}
         </div>
 
         {history.length === 0 ? (
-          <div className="empty-state empty-state--dashed">
-            <p className="empty-state-title">Aucune partie enregistrée</p>
-            <p className="empty-state-desc">Les parties solo terminées apparaîtront ici (30 max).</p>
-          </div>
+          <EmptyState
+            title="Aucune partie enregistrée"
+            description="Les parties solo terminées apparaîtront ici (30 max)."
+          />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="profile-history-list">
             {history.slice(0, 15).map(h => (
-              <div
-                key={h.id}
-                className="section-card"
-                style={{ borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}
-              >
-                <div
-                  style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 10,
-                    background: h.won ? 'var(--kora-surface-success)' : 'var(--kora-surface-danger)',
-                    border: `1px solid ${h.won ? 'var(--kora-border-success)' : 'var(--kora-border-danger)'}`,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 16,
-                    flexShrink: 0,
-                  }}
-                >
-                  {h.won ? '🏆' : '💀'}
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                    <span className="font-display" style={{ color: 'var(--kora-text)', fontSize: 13, fontWeight: 700 }}>
-                      {h.won ? 'Victoire' : 'Défaite'}
-                    </span>
-                    <span style={{ color: 'var(--kora-muted-2)', fontSize: 10 }}>{h.mode === 'solo' ? 'Solo' : 'Online'}</span>
+              <SectionCard key={h.id} className="profile-history-item">
+                <div className="profile-history-row">
+                  <div className={`profile-history-icon${h.won ? ' is-win' : ' is-loss'}`}>{h.won ? '🏆' : '💀'}</div>
+                  <div className="profile-history-body">
+                    <div className="profile-history-title-row">
+                      <span className="font-display profile-history-result">{h.won ? 'Victoire' : 'Défaite'}</span>
+                      <span className="profile-history-mode">{h.mode === 'solo' ? 'Solo' : 'Online'}</span>
+                    </div>
+                    <p className="profile-history-meta">
+                      {formatHistoryDate(h.at)}
+                      {h.bestCombo ? ` · ${COMBO_LABEL[h.bestCombo as keyof typeof COMBO_LABEL] ?? h.bestCombo}` : ''}
+                      {` · ${h.roundsWon} rounds`}
+                    </p>
                   </div>
-                  <p style={{ color: 'var(--kora-muted)', fontSize: 11, margin: '2px 0 0' }}>
-                    {formatHistoryDate(h.at)}
-                    {h.bestCombo ? ` · ${COMBO_LABEL[h.bestCombo as keyof typeof COMBO_LABEL] ?? h.bestCombo}` : ''}
-                    {` · ${h.roundsWon} rounds`}
-                  </p>
+                  <span className={`font-display profile-history-gain ${h.netGain >= 0 ? 'text-success' : 'text-danger'}`}>
+                    {h.netGain >= 0 ? '+' : ''}
+                    {h.netGain.toLocaleString('fr-FR')}
+                  </span>
                 </div>
-                <span
-                  className="font-display"
-                  style={{
-                    color: h.netGain >= 0 ? 'var(--kora-success)' : 'var(--kora-danger)',
-                    fontSize: 13,
-                    fontWeight: 700,
-                    flexShrink: 0,
-                  }}
-                >
-                  {h.netGain >= 0 ? '+' : ''}
-                  {h.netGain.toLocaleString('fr-FR')}
-                </span>
-              </div>
+              </SectionCard>
             ))}
             {history.length > 15 && (
-              <p style={{ color: 'var(--kora-muted-2)', fontSize: 11, textAlign: 'center', margin: '4px 0 0' }}>
-                +{history.length - 15} plus anciennes
-              </p>
+              <p className="profile-history-more">+{history.length - 15} plus anciennes</p>
             )}
           </div>
         )}
-      </div>
+      </section>
 
-      <div style={{ padding: '20px 20px 0' }}>
-        <button
-          type="button"
-          onClick={() => onNavigate('achievements')}
-          className="section-card"
-          style={{
-            width: '100%',
-            borderRadius: 16,
-            padding: '14px 16px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            cursor: 'pointer',
-          }}
-        >
-          <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 20 }}>🏅</span>
-            <span className="font-display" style={{ color: 'var(--kora-text)', fontSize: 14, fontWeight: 700 }}>
-              Achievements
+      <div className="profile-section">
+        <SectionCard onClick={() => onNavigate('achievements')} className="profile-achievements">
+          <div className="profile-achievements-row">
+            <span className="profile-achievements-left">
+              <span className="profile-achievements-emoji">🏅</span>
+              <span className="font-display profile-achievements-label">Achievements</span>
+              <span className="profile-achievements-count">
+                {unlockedAchievements}/{ACHIEVEMENTS.length}
+              </span>
             </span>
-            <span
-              style={{
-                background: 'rgba(214,168,79,0.15)',
-                color: 'var(--kora-gold)',
-                fontSize: 11,
-                padding: '2px 8px',
-                borderRadius: 99,
-                fontFamily: 'Plus Jakarta Sans',
-                fontWeight: 700,
-              }}
-            >
-              {unlockedAchievements}/{ACHIEVEMENTS.length}
-            </span>
-          </span>
-          <span style={{ color: 'var(--kora-gold)', fontSize: 13 }}>→</span>
-        </button>
+            <span className="profile-achievements-arrow">→</span>
+          </div>
+        </SectionCard>
       </div>
-    </div>
+    </ScreenShell>
   )
 }
