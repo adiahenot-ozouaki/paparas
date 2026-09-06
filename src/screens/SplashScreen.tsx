@@ -2,13 +2,7 @@ import { useEffect, useState } from 'react'
 import type { Screen } from '../types'
 import { useAuth } from '../auth/AuthContext'
 
-// ==========================================================================
-// SplashScreen — aligné manifest PWA (Garam Paparas / Paparas, #0B0D10).
-// Première visite : animation complète. Session connue ou revisit : skip rapide.
-// ==========================================================================
-
 const STORAGE_KEY_SEEN = 'kora:splashSeen:v1'
-
 const FULL_MS = 2800
 const SKIP_MS = 550
 
@@ -32,11 +26,8 @@ export default function SplashScreen({ onNavigate }: { onNavigate: (s: Screen) =
   const { user, isLoading } = useAuth()
   const [phase, setPhase] = useState(0)
   const [readyToLeave, setReadyToLeave] = useState(false)
-
-  // Mode court si déjà vu OU session restaurée (compte connecté)
   const preferSkip = hasSeenSplash() || !!user
 
-  // Phases d'anim (réduites si skip)
   useEffect(() => {
     if (preferSkip) {
       setPhase(4)
@@ -54,7 +45,6 @@ export default function SplashScreen({ onNavigate }: { onNavigate: (s: Screen) =
     }
   }, [preferSkip])
 
-  // Attendre la fin de isLoading auth avant de quitter (évite flash home anonyme)
   useEffect(() => {
     const delay = preferSkip ? SKIP_MS : FULL_MS
     const t = window.setTimeout(() => setReadyToLeave(true), delay)
@@ -74,7 +64,7 @@ export default function SplashScreen({ onNavigate }: { onNavigate: (s: Screen) =
       style={{
         position: 'absolute',
         inset: 0,
-        background: '#0B0D10',
+        background: 'var(--kora-void)',
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
@@ -84,7 +74,6 @@ export default function SplashScreen({ onNavigate }: { onNavigate: (s: Screen) =
     >
       <div className="pattern-african" style={{ position: 'absolute', inset: 0, opacity: 0.45 }} />
 
-      {/* Glow thème PWA */}
       <div
         style={{
           position: 'absolute',
@@ -122,7 +111,6 @@ export default function SplashScreen({ onNavigate }: { onNavigate: (s: Screen) =
         </>
       )}
 
-      {/* Marque — même langage que favicon / icône PWA (carte + pique or) */}
       <div
         style={{
           opacity: phase >= 1 || preferSkip ? 1 : 0,
@@ -138,7 +126,7 @@ export default function SplashScreen({ onNavigate }: { onNavigate: (s: Screen) =
             width: 88,
             height: 88,
             borderRadius: 24,
-            background: 'linear-gradient(145deg, #145C44 0%, #0d2a1f 55%, #0B0D10 100%)',
+            background: 'linear-gradient(145deg, var(--kora-green) 0%, var(--kora-green-deep) 55%, var(--kora-void) 100%)',
             border: '2px solid rgba(214,168,79,0.65)',
             boxShadow: '0 0 36px rgba(214,168,79,0.22), 0 10px 28px rgba(0,0,0,0.55)',
             display: 'flex',
@@ -150,27 +138,18 @@ export default function SplashScreen({ onNavigate }: { onNavigate: (s: Screen) =
         >
           <div
             style={{
-              position: 'absolute',
-              inset: 0,
-              backgroundImage:
-                'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'16\' height=\'16\'%3E%3Cpolygon points=\'8,0 16,8 8,16 0,8\' fill=\'none\' stroke=\'rgba(214,168,79,0.14)\' stroke-width=\'0.8\'/%3E%3C/svg%3E")',
-            }}
-          />
-          {/* Silhouette carte */}
-          <div
-            style={{
               position: 'relative',
               width: 36,
               height: 48,
               borderRadius: 6,
-              background: 'rgba(255,255,255,0.06)',
+              background: 'var(--kora-card-bg)',
               border: '1.5px solid rgba(214,168,79,0.5)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
             }}
           >
-            <span style={{ fontSize: 22, color: '#D6A84F', lineHeight: 1 }}>♠</span>
+            <span style={{ fontSize: 22, color: 'var(--kora-gold)', lineHeight: 1 }}>♠</span>
           </div>
         </div>
       </div>
@@ -197,7 +176,7 @@ export default function SplashScreen({ onNavigate }: { onNavigate: (s: Screen) =
         </h1>
         <p
           style={{
-            color: '#A9B0B7',
+            color: 'var(--kora-muted)',
             fontSize: 13,
             fontFamily: 'Plus Jakarta Sans',
             fontWeight: 600,
@@ -223,20 +202,12 @@ export default function SplashScreen({ onNavigate }: { onNavigate: (s: Screen) =
         }}
       >
         <div style={{ width: 20, height: 1, background: 'rgba(214,168,79,0.4)' }} />
-        <span
-          style={{
-            color: 'rgba(255,255,255,0.4)',
-            fontSize: 11,
-            letterSpacing: '0.14em',
-            fontFamily: 'Plus Jakarta Sans',
-          }}
-        >
+        <span style={{ color: 'var(--kora-muted-2)', fontSize: 11, letterSpacing: '0.14em', fontFamily: 'Plus Jakarta Sans' }}>
           JEU DE PLIS · KORA
         </span>
         <div style={{ width: 20, height: 1, background: 'rgba(214,168,79,0.4)' }} />
       </div>
 
-      {/* Loader — theme-color PWA */}
       <div
         style={{
           position: 'absolute',
@@ -257,16 +228,14 @@ export default function SplashScreen({ onNavigate }: { onNavigate: (s: Screen) =
                 width: 6,
                 height: 6,
                 borderRadius: '50%',
-                background: '#D6A84F',
+                background: 'var(--kora-gold)',
                 animation: `turnPulse 1.1s ease-in-out ${i * 0.18}s infinite`,
               }}
             />
           ))}
         </div>
         {isLoading && (
-          <span style={{ color: '#5b636b', fontSize: 11, fontFamily: 'Plus Jakarta Sans' }}>
-            Connexion…
-          </span>
+          <span style={{ color: 'var(--kora-muted-2)', fontSize: 11, fontFamily: 'Plus Jakarta Sans' }}>Connexion…</span>
         )}
       </div>
     </div>
