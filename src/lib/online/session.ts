@@ -5,6 +5,7 @@
 const KEY_TABLE = 'kora:onlineTableId'
 const KEY_INTENT = 'kora:onlineLobbyIntent'
 const KEY_JOIN_CODE = 'kora:onlineJoinCode'
+const KEY_JOIN_TABLE = 'kora:onlineJoinTableId'
 
 export type OnlineLobbyIntent = 'menu' | 'create' | 'join'
 
@@ -56,6 +57,26 @@ export function consumePendingJoinCode(): string | null {
   try {
     const v = sessionStorage.getItem(KEY_JOIN_CODE)
     sessionStorage.removeItem(KEY_JOIN_CODE)
+    return v
+  } catch {
+    return null
+  }
+}
+
+/** Join direct depuis « Tables ouvertes » (UUID) — pas besoin de code. */
+export function setPendingJoinTableId(tableId: string | null): void {
+  try {
+    if (tableId) sessionStorage.setItem(KEY_JOIN_TABLE, tableId)
+    else sessionStorage.removeItem(KEY_JOIN_TABLE)
+  } catch {
+    // ignore
+  }
+}
+
+export function consumePendingJoinTableId(): string | null {
+  try {
+    const v = sessionStorage.getItem(KEY_JOIN_TABLE)
+    sessionStorage.removeItem(KEY_JOIN_TABLE)
     return v
   } catch {
     return null
