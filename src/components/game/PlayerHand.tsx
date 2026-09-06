@@ -107,60 +107,15 @@ export function PlayerHand({
   }
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        bottom: 0,
-        left: 0,
-        right: 0,
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        paddingBottom: 12,
-        zIndex: 20,
-      }}
-    >
+    <div className="player-hand">
       {!compactMode && (
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 10,
-            marginBottom: 10,
-            background: 'rgba(11,13,16,0.8)',
-            backdropFilter: 'blur(8px)',
-            borderRadius: 14,
-            padding: '8px 14px',
-            border: `1.5px solid ${
-              isHumanTurn ? 'rgba(214,168,79,0.5)' : 'rgba(255,255,255,0.08)'
-            }`,
-            boxShadow: isHumanTurn ? '0 0 20px rgba(214,168,79,0.2)' : 'none',
-          }}
-        >
+        <div className={`player-hand-info${isHumanTurn ? ' is-turn' : ''}`}>
           <div>
-            <p
-              className="font-display"
-              style={{
-                color: '#fff',
-                fontSize: 13,
-                fontWeight: 700,
-                margin: 0,
-              }}
-            >
+            <p className="font-display player-hand-you">
               Vous{' '}
-              {humanIsBanked && (
-                <span style={{ color: '#A9B0B7', fontWeight: 500 }}>(en banque)</span>
-              )}
+              {humanIsBanked && <span className="player-hand-banked">(en banque)</span>}
             </p>
-
-            <p
-              style={{
-                color: '#D6A84F',
-                fontSize: 11,
-                margin: 0,
-                fontWeight: 600,
-              }}
-            >
+            <p className="player-hand-cap">
               {players[HUMAN_INDEX].capital.toLocaleString('fr-FR')} FCFA · {hand.length} cartes
             </p>
           </div>
@@ -168,43 +123,12 @@ export function PlayerHand({
       )}
 
       {humanIsBanked && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 110,
-            left: '50%',
-            transform: 'translateX(-50%)',
-            background: 'rgba(255,255,255,0.06)',
-            border: '1.5px solid rgba(255,255,255,0.15)',
-            borderRadius: 12,
-            padding: '6px 20px',
-            whiteSpace: 'nowrap',
-            zIndex: 20,
-          }}
-        >
-          <span
-            style={{
-              color: '#A9B0B7',
-              fontSize: 12,
-              fontFamily: 'Plus Jakarta Sans',
-              letterSpacing: '0.06em',
-            }}
-          >
-            🏦 Vous êtes en banque — vous ne jouez plus ce round
-          </span>
+        <div className="player-hand-bank-banner">
+          🏦 Vous êtes en banque — vous ne jouez plus ce round
         </div>
       )}
 
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'center',
-          position: 'relative',
-          height: compactMode ? 150 : 115,
-          width: '100%',
-          touchAction: 'none',
-        }}
-      >
+      <div className={`player-hand-fan${compactMode ? ' is-compact' : ''}`}>
         {hand.map((card, index) => {
           const total = hand.length
           const center = (total - 1) / 2
@@ -247,21 +171,19 @@ export function PlayerHand({
                   handleTap(index)
                 }
               }}
+              className={[
+                'player-hand-card',
+                playable ? 'is-playable' : '',
+                isDragging ? 'is-dragging' : '',
+                liftedByDrag ? 'is-lifted' : '',
+              ]
+                .filter(Boolean)
+                .join(' ')}
               style={{
-                position: 'absolute',
                 left: `calc(50% + ${translateX}px - 36px)`,
                 bottom: isSelected ? 28 : playable ? 12 : 6,
                 transform: `translate(${dragDx}px, ${dragDy}px) rotate(${isDragging ? 0 : rotate}deg) translateY(${isDragging ? 0 : translateY}px) scale(${liftedByDrag ? 1.08 : playable && !isSelected ? 1.02 : 1})`,
-                transition: isDragging
-                  ? 'none'
-                  : 'bottom 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1)',
                 zIndex: isDragging ? 30 : isSelected ? 20 : index + 1,
-                cursor: playable ? 'grab' : 'default',
-                filter: liftedByDrag
-                  ? 'drop-shadow(0 8px 16px rgba(0,0,0,0.5))'
-                  : playable
-                    ? 'drop-shadow(0 4px 10px rgba(214,168,79,0.25))'
-                    : undefined,
               }}
             >
               <PlayingCard
@@ -275,57 +197,21 @@ export function PlayerHand({
         })}
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: 8,
-          marginTop: 8,
-        }}
-      >
+      <div className="player-hand-actions">
         {selectedCardIndex !== null && isHumanTurn && (
-          <button
-            className="btn-primary glow-gold anim-scale-bounce"
-            onClick={onPlayCard}
-            style={{
-              padding: '12px 32px',
-              fontSize: 14,
-              borderRadius: 14,
-              letterSpacing: '0.1em',
-            }}
-          >
+          <button className="btn-primary glow-gold anim-scale-bounce player-hand-play-btn" onClick={onPlayCard}>
             JOUER CETTE CARTE
           </button>
         )}
 
         {isHumanTurn && selectedCardIndex === null && !canClaim && (
-          <p
-            style={{
-              color: '#A9B0B7',
-              fontSize: 11,
-              margin: 0,
-              letterSpacing: '0.04em',
-              opacity: 0.85,
-            }}
-          >
+          <p className="player-hand-hint">
             Tape une carte · double-tape ou glisse vers le haut pour jouer
           </p>
         )}
 
         {canClaim && (
-          <button
-            className="btn-primary anim-scale-bounce"
-            onClick={onClaimVictory}
-            style={{
-              padding: '10px 24px',
-              fontSize: 12,
-              borderRadius: 12,
-              letterSpacing: '0.06em',
-              background: 'linear-gradient(135deg, #9B59B6, #6f3d82)',
-              boxShadow: '0 4px 16px rgba(155,89,182,0.4)',
-            }}
-          >
+          <button className="btn-primary anim-scale-bounce player-hand-claim-btn" onClick={onClaimVictory}>
             👑 RÉCLAMER LA VICTOIRE
           </button>
         )}
