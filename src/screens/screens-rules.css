@@ -1,0 +1,246 @@
+/* Rules / tutoriel */
+
+.rules-screen {
+  position: absolute;
+  inset: 0;
+  background: #0b0d10;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.rules-pattern {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.45;
+}
+
+.rules-header {
+  padding: max(16px, env(safe-area-inset-top, 0px)) 20px 0;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+
+.rules-header-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.rules-header-text {
+  min-width: 0;
+}
+
+.rules-title {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0;
+  color: #fff;
+}
+
+.rules-subtitle {
+  color: #5b636b;
+  font-size: 12px;
+  margin: 2px 0 0;
+}
+
+.rules-progress {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 99px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.rules-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #176b50, #d6a84f);
+  border-radius: 99px;
+  transition: width 0.35s ease;
+}
+
+.rules-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  scrollbar-width: none;
+}
+
+.rules-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+.rules-tab {
+  padding: 7px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: #a9b0b7;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.rules-tab.is-active {
+  border: 1.5px solid rgba(214, 168, 79, 0.5);
+  background: rgba(214, 168, 79, 0.12);
+  color: #d6a84f;
+}
+
+.rules-content {
+  flex: 1;
+  overflow: auto;
+  padding: 8px 20px 12px;
+  position: relative;
+  z-index: 1;
+  -webkit-overflow-scrolling: touch;
+  content-visibility: auto;
+}
+
+.rules-footer {
+  flex-shrink: 0;
+  padding: 12px 20px max(16px, env(safe-area-inset-bottom, 0px));
+  display: flex;
+  gap: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: linear-gradient(180deg, transparent, rgba(11, 13, 16, 0.92));
+  position: relative;
+  z-index: 1;
+}
+
+.rules-nav-btn {
+  flex: 1;
+  padding: 12px !important;
+  border-radius: 14px !important;
+  font-size: 13px !important;
+}
+
+.rules-body {
+  color: #a9b0b7;
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0 0 14px;
+}
+
+.rules-strong {
+  color: #fff;
+  font-weight: 700;
+}
+
+.rules-muted {
+  color: #a9b0b7;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.rules-muted-sm {
+  color: #a9b0b7;
+  font-size: 12px;
+  margin: 0;
+}
+
+.rules-mb-10 { margin-bottom: 10px !important; }
+.rules-mb-12 { margin-bottom: 12px !important; }
+.rules-mt-10 { margin-top: 10px !important; }
+
+.rules-callout {
+  border-radius: 14px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border: 1px solid;
+}
+
+.rules-callout-inner {
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.rules-callout--neutral {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #a9b0b7;
+}
+
+.rules-callout--warn {
+  background: rgba(201, 75, 75, 0.1);
+  border-color: rgba(201, 75, 75, 0.3);
+  color: #e8a0a0;
+}
+
+.rules-callout--gold {
+  background: rgba(214, 168, 79, 0.1);
+  border-color: rgba(214, 168, 79, 0.3);
+  color: #f0d58a;
+}
+
+.rules-callout--ok {
+  background: rgba(76, 175, 118, 0.1);
+  border-color: rgba(76, 175, 118, 0.3);
+  color: #8fd4a8;
+}
+
+.rules-card {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+}
+
+.rules-card-title {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0 0 8px;
+  letter-spacing: 0.02em;
+}
+
+.rules-step {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 10px;
+  align-items: flex-start;
+}
+
+.rules-step-num {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: rgba(214, 168, 79, 0.15);
+  border: 1px solid rgba(214, 168, 79, 0.4);
+  color: #d6a84f;
+  font-size: 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.rules-step-text {
+  color: #a9b0b7;
+  font-size: 13px;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.rules-h-sm {
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 4px 0 10px;
+}
