@@ -46,7 +46,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
     <ScreenShell>
       <PageHeader title="Classement" subtitle="Local = votre score solo · En ligne = comptes réels" />
 
-      <div style={{ padding: '0 20px' }}>
+      <div className="lb-pad">
         <div className="segmented">
           {TABS.map((tab, i) => (
             <button
@@ -61,74 +61,31 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
         </div>
       </div>
 
-      <div className="anim-fade-in-up" style={{ padding: '24px 20px 0' }}>
+      <div className="anim-fade-in-up lb-body">
         {activeTab === 0 && (
           <>
-            <p style={{ color: '#5b636b', fontSize: 12, margin: '0 0 12px', lineHeight: 1.4 }}>
+            <p className="lb-hint">
               Une seule ligne ici : le classement local ne compare que vous-même (appareil).
             </p>
 
-            <SectionCard variant="green" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
-              <div
-                style={{
-                  width: 32,
-                  height: 32,
-                  borderRadius: 10,
-                  background: 'rgba(214,168,79,0.15)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  fontSize: 18,
-                }}
-              >
-                🥇
-              </div>
-              <div
-                style={{
-                  width: 44,
-                  height: 44,
-                  borderRadius: 14,
-                  background: 'linear-gradient(135deg, #123C32, #0d2a1f)',
-                  border: '1.5px solid rgba(214,168,79,0.45)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  fontSize: 22,
-                  flexShrink: 0,
-                }}
-              >
-                {youAvatar}
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <p className="font-display" style={{ color: '#D6A84F', fontSize: 15, fontWeight: 700, margin: 0 }}>
-                    {youName}
-                  </p>
-                  <span
-                    style={{
-                      background: 'rgba(214,168,79,0.15)',
-                      color: '#D6A84F',
-                      fontSize: 9,
-                      padding: '1px 6px',
-                      borderRadius: 99,
-                      fontFamily: 'Plus Jakarta Sans',
-                      fontWeight: 700,
-                    }}
-                  >
-                    VOUS
-                  </span>
+            <SectionCard variant="green" className="lb-row" style={{ marginBottom: 12 }}>
+              <div className="lb-medal">🥇</div>
+              <div className="lb-avatar">{youAvatar}</div>
+              <div className="lb-meta">
+                <div className="lb-name-row">
+                  <p className="font-display lb-name">{youName}</p>
+                  <span className="lb-you-pill">VOUS</span>
                 </div>
-                <p style={{ color: '#A9B0B7', fontSize: 12, margin: '2px 0 0' }}>
+                <p className="lb-sub">
                   Niv. {youLevel} · {lifetimeStats.gamesWon} victoire{lifetimeStats.gamesWon > 1 ? 's' : ''} ·{' '}
                   {lifetimeStats.gamesPlayed} partie{lifetimeStats.gamesPlayed > 1 ? 's' : ''}
                 </p>
               </div>
-              <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                <p className="font-display" style={{ color: '#D6A84F', fontSize: 16, fontWeight: 700, margin: '0 0 2px' }}>
+              <div className="lb-score">
+                <p className="font-display lb-score-value">
                   {lifetimeStats.netGainTotal.toLocaleString('fr-FR')}
                 </p>
-                <p style={{ color: '#A9B0B7', fontSize: 10, margin: 0 }}>gains nets</p>
+                <p className="lb-score-label">gains nets</p>
               </div>
             </SectionCard>
 
@@ -138,7 +95,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                 description="Terminez une partie pour faire progresser ce score."
               />
             ) : (
-              <p style={{ color: '#5b636b', fontSize: 11, margin: 0, textAlign: 'center' }}>
+              <p className="lb-hint lb-hint--center">
                 Pour vous comparer aux autres → onglet <strong style={{ color: '#A9B0B7' }}>En ligne</strong>
               </p>
             )}
@@ -152,12 +109,10 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                 title="Connexion requise"
                 description="Le classement en ligne utilise les stats réelles des comptes."
                 dashed={false}
-                action={
-                  <UiButton onClick={() => onNavigate('auth')}>Se connecter</UiButton>
-                }
+                action={<UiButton onClick={() => onNavigate('auth')}>Se connecter</UiButton>}
               />
             ) : loadingOnline ? (
-              <p style={{ color: '#A9B0B7', textAlign: 'center', fontSize: 13 }}>Chargement…</p>
+              <p className="lb-loading">Chargement…</p>
             ) : onlineError ? (
               <AlertBanner tone="error">{onlineError}</AlertBanner>
             ) : online.length === 0 ? (
@@ -166,7 +121,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                 description="Aucune statistique serveur pour l’instant. Jouez connecté pour apparaître ici."
               />
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div className="lb-online-list">
                 {online.map((e, i) => {
                   const isYou = user && e.userId === user.id
                   const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`
@@ -174,43 +129,25 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                     <SectionCard
                       key={e.userId}
                       variant={isYou ? 'green' : 'default'}
-                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}
+                      className="lb-row lb-row--tight"
                     >
-                      <span style={{ width: 28, textAlign: 'center', fontSize: i < 3 ? 16 : 12, color: '#A9B0B7' }}>
-                        {medal}
-                      </span>
-                      <div
-                        style={{
-                          width: 40,
-                          height: 40,
-                          borderRadius: 12,
-                          background: 'rgba(255,255,255,0.06)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontSize: 20,
-                        }}
-                      >
-                        {e.avatar}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <p
-                          className="font-display"
-                          style={{ color: isYou ? '#D6A84F' : '#fff', fontSize: 14, fontWeight: 700, margin: 0 }}
-                        >
+                      <span className={`lb-medal lb-medal--rank${i < 3 ? ' is-top' : ''}`}>{medal}</span>
+                      <div className="lb-avatar lb-avatar--sm">{e.avatar}</div>
+                      <div className="lb-meta">
+                        <p className={`font-display lb-name lb-name--plain${isYou ? ' lb-name--you' : ''}`}>
                           {e.username}
                           {isYou ? ' (vous)' : ''}
                         </p>
-                        <p style={{ color: '#A9B0B7', fontSize: 11, margin: '2px 0 0' }}>
+                        <p className="lb-sub lb-sub--sm">
                           {e.totalRoundsWon} round{e.totalRoundsWon > 1 ? 's' : ''} gagné
                           {e.totalRoundsWon > 1 ? 's' : ''}
                         </p>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <p className="font-display" style={{ color: '#D6A84F', fontSize: 14, fontWeight: 700, margin: 0 }}>
+                      <div className="lb-score">
+                        <p className="font-display lb-score-value lb-score-value--sm">
                           {e.netGainTotal.toLocaleString('fr-FR')}
                         </p>
-                        <p style={{ color: '#5b636b', fontSize: 10, margin: 0 }}>net</p>
+                        <p className="lb-score-label lb-score-label--dim">net</p>
                       </div>
                     </SectionCard>
                   )
