@@ -429,51 +429,100 @@ export default function RulesScreen({ onNavigate }: { onNavigate: (s: Screen) =>
   return (
     <div className="rules-screen">
       <div className="pattern-african rules-pattern" aria-hidden />
-      <header className="rules-header">
-        <div className="rules-header-row">
-          <BackButton absolute={false} onClick={() => onNavigate('home')} />
-          <div className="rules-header-text">
-            <h1 className="font-display rules-title">Règles & Tutoriel</h1>
-            <p className="rules-subtitle">
-              {index + 1} / {SECTIONS.length} · {SECTIONS[index].title}
-            </p>
+
+      <div className="rules-layout">
+        <aside className="rules-main">
+          <header className="rules-header">
+            <div className="rules-header-row">
+              <BackButton absolute={false} onClick={() => onNavigate('home')} />
+              <div className="rules-header-text">
+                <h1 className="font-display rules-title">Règles & Tutoriel</h1>
+                <p className="rules-subtitle">
+                  {index + 1} / {SECTIONS.length} · {SECTIONS[index].title}
+                </p>
+              </div>
+            </div>
+            <div className="rules-progress">
+              <div
+                className="rules-progress-fill"
+                style={{ width: `${((index + 1) / SECTIONS.length) * 100}%` }}
+              />
+            </div>
+          </header>
+
+          {/* Mobile horizontal tabs */}
+          <div className="rules-tabs rules-tabs--mobile">
+            {SECTIONS.map(s => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setActive(s.id)}
+                className={`rules-tab${s.id === active ? ' is-active' : ''}`}
+              >
+                <span>{s.icon}</span>
+                <span>{s.title}</span>
+              </button>
+            ))}
           </div>
-        </div>
-        <div className="rules-progress">
-          <div className="rules-progress-fill" style={{ width: `${((index + 1) / SECTIONS.length) * 100}%` }} />
-        </div>
-        <div className="rules-tabs">
-          {SECTIONS.map(s => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => setActive(s.id)}
-              className={`rules-tab${s.id === active ? ' is-active' : ''}`}
+
+          {/* Desktop sticky TOC */}
+          <nav className="rules-toc" aria-label="Sections du tutoriel">
+            <p className="rules-toc-label">Sommaire</p>
+            {SECTIONS.map((s, i) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setActive(s.id)}
+                className={`rules-toc-item${s.id === active ? ' is-active' : ''}`}
+              >
+                <span className="rules-toc-num">{i + 1}</span>
+                <span className="rules-toc-icon">{s.icon}</span>
+                <span className="rules-toc-title">{s.title}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="rules-side-nav">
+            <UiButton variant="secondary" disabled={index <= 0} onClick={() => go(-1)} className="rules-nav-btn">
+              ← Précédent
+            </UiButton>
+            <UiButton
+              variant={index >= SECTIONS.length - 1 ? 'secondary' : 'primary'}
+              onClick={() => {
+                if (index >= SECTIONS.length - 1) onNavigate('home')
+                else go(1)
+              }}
+              className={`rules-nav-btn${index < SECTIONS.length - 1 ? ' glow-gold' : ''}`}
             >
-              <span>{s.icon}</span>
-              <span>{s.title}</span>
-            </button>
-          ))}
+              {index >= SECTIONS.length - 1 ? 'Terminer' : 'Suivant →'}
+            </UiButton>
+          </div>
+        </aside>
+
+        <div className="rules-side">
+          <div className="rules-content">
+            <div className="anim-fade-in" key={active}>
+              {content}
+            </div>
+          </div>
+
+          <footer className="rules-footer rules-footer--mobile">
+            <UiButton variant="secondary" disabled={index <= 0} onClick={() => go(-1)} className="rules-nav-btn">
+              ← Précédent
+            </UiButton>
+            <UiButton
+              variant={index >= SECTIONS.length - 1 ? 'secondary' : 'primary'}
+              onClick={() => {
+                if (index >= SECTIONS.length - 1) onNavigate('home')
+                else go(1)
+              }}
+              className={`rules-nav-btn${index < SECTIONS.length - 1 ? ' glow-gold' : ''}`}
+            >
+              {index >= SECTIONS.length - 1 ? 'Terminer' : 'Suivant →'}
+            </UiButton>
+          </footer>
         </div>
-      </header>
-      <div className="rules-content">
-        <div className="anim-fade-in" key={active}>{content}</div>
       </div>
-      <footer className="rules-footer">
-        <UiButton variant="secondary" disabled={index <= 0} onClick={() => go(-1)} className="rules-nav-btn">
-          ← Précédent
-        </UiButton>
-        <UiButton
-          variant={index >= SECTIONS.length - 1 ? 'secondary' : 'primary'}
-          onClick={() => {
-            if (index >= SECTIONS.length - 1) onNavigate('home')
-            else go(1)
-          }}
-          className={`rules-nav-btn${index < SECTIONS.length - 1 ? ' glow-gold' : ''}`}
-        >
-          {index >= SECTIONS.length - 1 ? 'Terminer' : 'Suivant →'}
-        </UiButton>
-      </footer>
     </div>
   )
 }

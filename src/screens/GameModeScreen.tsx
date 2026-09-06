@@ -123,109 +123,127 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
 
   return (
     <ScreenShell bottomPad={24} className="mode-screen">
-      <div className="mode-header">
-        <BackButton absolute={false} onClick={() => onNavigate('home')} />
-        <PageHeader title="Mode de jeu" subtitle={`Solo libre · Online${user ? ' · connecté' : ' · compte requis'}`} />
-      </div>
+      <div className="mode-layout">
+        <div className="mode-main">
+          <div className="mode-header">
+            <BackButton absolute={false} onClick={() => onNavigate('home')} />
+            <PageHeader
+              title="Mode de jeu"
+              subtitle={`Solo libre · Online${user ? ' · connecté' : ' · compte requis'}`}
+            />
+          </div>
 
-      {myTables.length > 0 && (
-        <div className="mode-resume-list">
-          {myTables.slice(0, 2).map(t => (
-            <SectionCard key={t.tableId} variant="green" onClick={() => resumeTable(t)} className="mode-resume-card">
-              <p className="font-display text-gold mode-resume-title">
-                {t.status === 'playing' ? '▶ Reprendre la partie' : '↩ Retour au lobby'}
-              </p>
-              <p className="mode-resume-meta">
-                Code {t.code} · mise {t.baseStake.toLocaleString('fr-FR')} · siège {t.seatIndex + 1}
-              </p>
+          {myTables.length > 0 && (
+            <div className="mode-resume-list">
+              {myTables.slice(0, 2).map(t => (
+                <SectionCard
+                  key={t.tableId}
+                  variant="green"
+                  onClick={() => resumeTable(t)}
+                  className="mode-resume-card"
+                >
+                  <p className="font-display text-gold mode-resume-title">
+                    {t.status === 'playing' ? '▶ Reprendre la partie' : '↩ Retour au lobby'}
+                  </p>
+                  <p className="mode-resume-meta">
+                    Code {t.code} · mise {t.baseStake.toLocaleString('fr-FR')} · siège {t.seatIndex + 1}
+                  </p>
+                </SectionCard>
+              ))}
+            </div>
+          )}
+
+          <div className="mode-body mode-body--solo">
+            <p className="mode-group-label">Solo · IA</p>
+
+            <ModeCard
+              icon="⚡"
+              title="Partie rapide"
+              badge="1 TAP"
+              badgeTone="gold"
+              accent="var(--kora-gold)"
+              desc="As, mise 500, 8 rounds max — table IA tout de suite."
+              meta="3–10+A · capital 5 000"
+              onClick={startQuick}
+            />
+
+            <ModeCard
+              icon="🤖"
+              title="Entraînement"
+              badge="APPRENDRE"
+              badgeTone="green"
+              accent="var(--kora-success)"
+              desc="Paquet court (3–8), petites mises — idéal pour les règles."
+              meta="Variante 8 · mise 100 · 5 rounds"
+              onClick={startTraining}
+            />
+
+            <SectionCard variant="dashed" onClick={() => onNavigate('stakeConfig')}>
+              <span className="mode-config-hint">⚙️ Configurer une table solo (mise, capital, variante, fin)…</span>
             </SectionCard>
-          ))}
+          </div>
         </div>
-      )}
 
-      <div className="mode-body">
-        <p className="mode-group-label">Solo · IA</p>
+        <aside className="mode-side">
+          <div className="mode-body mode-body--online">
+            <p className="mode-group-label">En ligne · joueurs réels</p>
 
-        <ModeCard
-          icon="⚡"
-          title="Partie rapide"
-          badge="1 TAP"
-          badgeTone="gold"
-          accent="var(--kora-gold)"
-          desc="As, mise 500, 8 rounds max — table IA tout de suite."
-          meta="3–10+A · capital 5 000"
-          onClick={startQuick}
-        />
-
-        <ModeCard
-          icon="🤖"
-          title="Entraînement"
-          badge="APPRENDRE"
-          badgeTone="green"
-          accent="var(--kora-success)"
-          desc="Paquet court (3–8), petites mises — idéal pour les règles."
-          meta="Variante 8 · mise 100 · 5 rounds"
-          onClick={startTraining}
-        />
-
-        <SectionCard variant="dashed" onClick={() => onNavigate('stakeConfig')}>
-          <span className="mode-config-hint">⚙️ Configurer une table solo (mise, capital, variante, fin)…</span>
-        </SectionCard>
-
-        <p className="mode-group-label mode-group-label--spaced">En ligne · joueurs réels</p>
-
-        <SectionCard className="mode-online-card">
-          <div className="mode-online-accent" />
-          <div className="mode-online-body">
-            <div className="mode-online-head">
-              <span className="mode-online-emoji">🌐</span>
-              <span className="font-display mode-online-title">Table en ligne</span>
-              <span className="mode-badge mode-badge--green">ONLINE</span>
-              {!user && <span className="mode-badge mode-badge--muted">CONNEXION</span>}
-            </div>
-            <p className="mode-online-desc">Créez une table privée ou rejoignez avec un code / une table ouverte.</p>
-            <div className="mode-online-actions">
-              <UiButton onClick={openOnlineCreate} className="mode-online-btn">
-                Créer une table
-              </UiButton>
-              <UiButton variant="secondary" onClick={() => openOnlineJoin()} className="mode-online-btn">
-                Rejoindre (code)
-              </UiButton>
-            </div>
-          </div>
-        </SectionCard>
-      </div>
-
-      <div className="mode-open-tables">
-        <h3 className="font-display mode-open-title">Tables ouvertes</h3>
-        {listError && (
-          <div className="mode-list-error">
-            <AlertBanner tone="error">{listError}</AlertBanner>
-          </div>
-        )}
-        {openTables.length === 0 && !listError ? (
-          <EmptyState title="Aucune table en lobby" description="Créez-en une ou attendez un hôte." />
-        ) : (
-          <div className="mode-open-list">
-            {openTables.map(t => (
-              <SectionCard
-                key={t.table.id}
-                onClick={() => openOnlineJoin({ tableId: t.table.id, code: t.code })}
-                className="mode-open-item"
-              >
-                <div className="mode-open-row">
-                  <div>
-                    <p className="font-display mode-open-code">{t.code}</p>
-                    <p className="mode-open-meta">
-                      Mise {t.table.base_stake.toLocaleString('fr-FR')} · {t.seatCount}/4
-                    </p>
-                  </div>
-                  <span className="mode-open-cta">S’asseoir →</span>
+            <SectionCard className="mode-online-card">
+              <div className="mode-online-accent" />
+              <div className="mode-online-body">
+                <div className="mode-online-head">
+                  <span className="mode-online-emoji">🌐</span>
+                  <span className="font-display mode-online-title">Table en ligne</span>
+                  <span className="mode-badge mode-badge--green">ONLINE</span>
+                  {!user && <span className="mode-badge mode-badge--muted">CONNEXION</span>}
                 </div>
-              </SectionCard>
-            ))}
+                <p className="mode-online-desc">
+                  Créez une table privée ou rejoignez avec un code / une table ouverte.
+                </p>
+                <div className="mode-online-actions">
+                  <UiButton onClick={openOnlineCreate} className="mode-online-btn">
+                    Créer une table
+                  </UiButton>
+                  <UiButton variant="secondary" onClick={() => openOnlineJoin()} className="mode-online-btn">
+                    Rejoindre (code)
+                  </UiButton>
+                </div>
+              </div>
+            </SectionCard>
           </div>
-        )}
+
+          <div className="mode-open-tables">
+            <h3 className="font-display mode-open-title">Tables ouvertes</h3>
+            {listError && (
+              <div className="mode-list-error">
+                <AlertBanner tone="error">{listError}</AlertBanner>
+              </div>
+            )}
+            {openTables.length === 0 && !listError ? (
+              <EmptyState title="Aucune table en lobby" description="Créez-en une ou attendez un hôte." />
+            ) : (
+              <div className="mode-open-list">
+                {openTables.map(t => (
+                  <SectionCard
+                    key={t.table.id}
+                    onClick={() => openOnlineJoin({ tableId: t.table.id, code: t.code })}
+                    className="mode-open-item"
+                  >
+                    <div className="mode-open-row">
+                      <div>
+                        <p className="font-display mode-open-code">{t.code}</p>
+                        <p className="mode-open-meta">
+                          Mise {t.table.base_stake.toLocaleString('fr-FR')} · {t.seatCount}/4
+                        </p>
+                      </div>
+                      <span className="mode-open-cta">S’asseoir →</span>
+                    </div>
+                  </SectionCard>
+                ))}
+              </div>
+            )}
+          </div>
+        </aside>
       </div>
     </ScreenShell>
   )

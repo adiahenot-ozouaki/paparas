@@ -5,6 +5,7 @@ import { AuthProvider } from './auth/AuthContext'
 import { GameProvider } from './game/GameContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import BottomNav from './components/BottomNav'
+import SideNav from './components/SideNav'
 import AchievementToast from './components/AchievementToast'
 import SplashScreen from './screens/SplashScreen'
 import HomeScreen from './screens/HomeScreen'
@@ -67,27 +68,31 @@ export default function App() {
             <AuthProvider>
               <GameProvider>
                 <AchievementToast />
-                <div key={screen} className="anim-fade-in app-screen" style={{ position: 'absolute', inset: 0 }}>
-                  {screen === 'splash' && <SplashScreen onNavigate={navigate} />}
-                  {screen === 'home' && <HomeScreen onNavigate={navigate} />}
-                  {screen === 'gameMode' && <GameModeScreen onNavigate={navigate} />}
-                  {screen === 'stakeConfig' && <StakeConfigScreen onNavigate={navigate} />}
-                  {screen === 'lobby' && <LobbyScreen onNavigate={navigate} />}
-                  {screen === 'onlineLobby' && <OnlineLobbyScreen onNavigate={navigate} />}
-                  {screen === 'onlineGameTable' && <OnlineGameTableScreen onNavigate={navigate} />}
-                  {screen === 'auth' && <AuthScreen onNavigate={navigate} returnTo={authReturnTo} />}
-                  {screen === 'gameTable' && <GameTableScreen onNavigate={navigate} />}
-                  {screen === 'roundResult' && <RoundResultScreen onNavigate={navigate} />}
-                  {screen === 'victory' && <VictoryScreen onNavigate={navigate} />}
-                  {screen === 'defeat' && <DefeatScreen onNavigate={navigate} />}
-                  {screen === 'profile' && <ProfileScreen onNavigate={navigate} />}
-                  {screen === 'leaderboard' && <LeaderboardScreen onNavigate={navigate} />}
-                  {screen === 'stats' && <StatsScreen onNavigate={navigate} />}
-                  {screen === 'achievements' && <AchievementsScreen onNavigate={navigate} />}
-                  {screen === 'rules' && <RulesScreen onNavigate={navigate} />}
+                <div className={`app-layout${showNav ? ' app-layout--with-nav' : ''}`}>
+                  {showNav && <SideNav active={screen} onNavigate={navigate} />}
+                  <div className="app-main">
+                    <div key={screen} className="anim-fade-in app-screen">
+                      {screen === 'splash' && <SplashScreen onNavigate={navigate} />}
+                      {screen === 'home' && <HomeScreen onNavigate={navigate} />}
+                      {screen === 'gameMode' && <GameModeScreen onNavigate={navigate} />}
+                      {screen === 'stakeConfig' && <StakeConfigScreen onNavigate={navigate} />}
+                      {screen === 'lobby' && <LobbyScreen onNavigate={navigate} />}
+                      {screen === 'onlineLobby' && <OnlineLobbyScreen onNavigate={navigate} />}
+                      {screen === 'onlineGameTable' && <OnlineGameTableScreen onNavigate={navigate} />}
+                      {screen === 'auth' && <AuthScreen onNavigate={navigate} returnTo={authReturnTo} />}
+                      {screen === 'gameTable' && <GameTableScreen onNavigate={navigate} />}
+                      {screen === 'roundResult' && <RoundResultScreen onNavigate={navigate} />}
+                      {screen === 'victory' && <VictoryScreen onNavigate={navigate} />}
+                      {screen === 'defeat' && <DefeatScreen onNavigate={navigate} />}
+                      {screen === 'profile' && <ProfileScreen onNavigate={navigate} />}
+                      {screen === 'leaderboard' && <LeaderboardScreen onNavigate={navigate} />}
+                      {screen === 'stats' && <StatsScreen onNavigate={navigate} />}
+                      {screen === 'achievements' && <AchievementsScreen onNavigate={navigate} />}
+                      {screen === 'rules' && <RulesScreen onNavigate={navigate} />}
+                    </div>
+                    {showNav && <BottomNav active={screen} onNavigate={navigate} />}
+                  </div>
                 </div>
-
-                {showNav && <BottomNav active={screen} onNavigate={navigate} />}
               </GameProvider>
             </AuthProvider>
           </ErrorBoundary>

@@ -98,206 +98,229 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
 
   return (
     <ScreenShell className="stats-screen">
-      <div className="stats-header">
-        <PageHeader title="Statistiques" subtitle="Performance et combos" />
+      <div className="stats-layout">
+        <div className="stats-main">
+          <div className="stats-header">
+            <PageHeader title="Statistiques" subtitle="Performance et combos" />
 
-        <div className="segmented stats-scope">
-          {(
-            [
-              { id: 'global' as const, label: 'Global' },
-              { id: 'solo' as const, label: 'Solo récent' },
-            ] as const
-          ).map(t => (
-            <button
-              key={t.id}
-              type="button"
-              className={`segmented-btn${scope === t.id ? ' is-active' : ''}`}
-              onClick={() => setScope(t.id)}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-
-        <p className="stats-source-note">{display.sourceNote}</p>
-
-        <div className="stats-section-tabs">
-          {(
-            [
-              { id: 'perf' as const, label: 'Performances' },
-              { id: 'finance' as const, label: 'Finance' },
-              { id: 'combos' as const, label: 'Combos' },
-            ] as const
-          ).map(t => (
-            <button
-              key={t.id}
-              type="button"
-              onClick={() => setSection(t.id)}
-              className={`stats-tab${section === t.id ? ' is-active' : ''}`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="stats-body">
-        {!hasAnyGame && (
-          <div className="stats-empty">
-            <EmptyState
-              title={scope === 'solo' ? 'Aucune partie solo récente' : 'Aucune partie jouée'}
-              description={
-                scope === 'solo'
-                  ? 'Terminez une partie pour alimenter cet historique.'
-                  : 'Jouez pour voir vos statistiques ici.'
-              }
-            />
-          </div>
-        )}
-
-        {section === 'perf' && (
-          <>
-            <SectionCard className="anim-scale-bounce stats-win-card">
-              <div className="stats-ring-wrap">
-                <svg width="120" height="120" className="stats-ring-svg">
-                  <circle cx="60" cy="60" r="50" fill="none" stroke="var(--kora-card-border)" strokeWidth="10" />
-                  <circle
-                    cx="60"
-                    cy="60"
-                    r="50"
-                    fill="none"
-                    stroke="url(#gradStats)"
-                    strokeWidth="10"
-                    strokeDasharray={`${(winRatio / 100) * 2 * Math.PI * 50} ${2 * Math.PI * 50}`}
-                    strokeLinecap="round"
-                  />
-                  <defs>
-                    <linearGradient id="gradStats" x1="0%" y1="0%" x2="100%" y2="0%">
-                      <stop offset="0%" stopColor="var(--kora-green)" />
-                      <stop offset="100%" stopColor="var(--kora-gold)" />
-                    </linearGradient>
-                  </defs>
-                </svg>
-                <div className="stats-ring-center">
-                  <span className="text-gold font-display stats-ring-value">{winRatio.toFixed(1)}</span>
-                  <span className="stats-ring-unit">%</span>
-                </div>
-              </div>
-              <p className="font-display stats-ring-label">Taux de victoire</p>
-              <p className="stats-ring-sub">
-                {display.gamesWon} victoires sur {display.gamesPlayed} parties
-              </p>
-            </SectionCard>
-
-            <div className="stats-perf-grid">
-              {[
-                { label: 'Parties jouées', value: String(display.gamesPlayed), tone: 'text' },
-                { label: 'Parties gagnées', value: String(display.gamesWon), tone: 'success' },
-                { label: 'Rounds gagnés', value: String(display.totalRoundsWon), tone: 'gold' },
-                {
-                  label: 'Plis gagnés',
-                  value: scope === 'solo' ? '—' : display.totalTricksWon.toLocaleString('fr-FR'),
-                  tone: 'purple',
-                },
-              ].map(s => (
-                <SectionCard key={s.label} className="stats-metric">
-                  <p className={`font-display stats-metric-value tone-${s.tone}`}>{s.value}</p>
-                  <p className="stats-metric-label">{s.label}</p>
-                </SectionCard>
+            <div className="segmented stats-scope">
+              {(
+                [
+                  { id: 'global' as const, label: 'Global' },
+                  { id: 'solo' as const, label: 'Solo récent' },
+                ] as const
+              ).map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  className={`segmented-btn${scope === t.id ? ' is-active' : ''}`}
+                  onClick={() => setScope(t.id)}
+                >
+                  {t.label}
+                </button>
               ))}
             </div>
-          </>
-        )}
 
-        {section === 'finance' && (
-          <>
-            <SectionCard variant="green" className="stats-net-card">
-              <p className="stats-net-kicker">
-                GAIN NET {scope === 'solo' ? 'SOLO RÉCENT' : 'TOTAL'}
-              </p>
-              <div className="text-gold font-display stats-net-value">
-                {display.netGainTotal >= 0 ? '+' : ''}
-                {display.netGainTotal.toLocaleString('fr-FR')} FCFA
+            <p className="stats-source-note">{display.sourceNote}</p>
+
+            <div className="stats-section-tabs">
+              {(
+                [
+                  { id: 'perf' as const, label: 'Performances' },
+                  { id: 'finance' as const, label: 'Finance' },
+                  { id: 'combos' as const, label: 'Combos' },
+                ] as const
+              ).map(t => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setSection(t.id)}
+                  className={`stats-tab${section === t.id ? ' is-active' : ''}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <SectionCard className="anim-scale-bounce stats-win-card stats-kpi">
+            <div className="stats-ring-wrap">
+              <svg width="120" height="120" className="stats-ring-svg">
+                <circle cx="60" cy="60" r="50" fill="none" stroke="var(--kora-card-border)" strokeWidth="10" />
+                <circle
+                  cx="60"
+                  cy="60"
+                  r="50"
+                  fill="none"
+                  stroke="url(#gradStats)"
+                  strokeWidth="10"
+                  strokeDasharray={`${(winRatio / 100) * 2 * Math.PI * 50} ${2 * Math.PI * 50}`}
+                  strokeLinecap="round"
+                />
+                <defs>
+                  <linearGradient id="gradStats" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="var(--kora-green)" />
+                    <stop offset="100%" stopColor="var(--kora-gold)" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div className="stats-ring-center">
+                <span className="text-gold font-display stats-ring-value">{winRatio.toFixed(1)}</span>
+                <span className="stats-ring-unit">%</span>
               </div>
-            </SectionCard>
+            </div>
+            <p className="font-display stats-ring-label">Taux de victoire</p>
+            <p className="stats-ring-sub">
+              {display.gamesWon} victoires sur {display.gamesPlayed} parties
+            </p>
+          </SectionCard>
 
-            {[
-              { label: 'Gains totaux', value: `+${display.totalGains.toLocaleString('fr-FR')}`, tone: 'success' },
-              { label: 'Pertes totales', value: `-${display.totalLosses.toLocaleString('fr-FR')}`, tone: 'danger' },
-              {
-                label: 'Gain net',
-                value: `${display.netGainTotal >= 0 ? '+' : ''}${display.netGainTotal.toLocaleString('fr-FR')}`,
-                tone: 'gold',
-              },
-              { label: 'Capital maximum', value: display.maxCapitalEver.toLocaleString('fr-FR'), tone: 'text' },
-              { label: 'Capital minimum', value: display.minCapitalEver.toLocaleString('fr-FR'), tone: 'text' },
-            ].map(s => (
-              <SectionCard key={s.label} className="stats-finance-row">
-                <span className="stats-finance-label">{s.label}</span>
-                <span className={`font-display stats-finance-value tone-${s.tone}`}>{s.value} FCFA</span>
-              </SectionCard>
-            ))}
-          </>
-        )}
+          <SectionCard variant="green" className="stats-net-card stats-kpi-net">
+            <p className="stats-net-kicker">
+              GAIN NET {scope === 'solo' ? 'SOLO RÉCENT' : 'TOTAL'}
+            </p>
+            <div className="text-gold font-display stats-net-value">
+              {display.netGainTotal >= 0 ? '+' : ''}
+              {display.netGainTotal.toLocaleString('fr-FR')} FCFA
+            </div>
+          </SectionCard>
+        </div>
 
-        {section === 'combos' && (
-          <>
-            <SectionCard className="stats-combo-card">
-              <h3 className="font-display stats-combo-title">
-                {scope === 'solo' ? 'Meilleurs combos (parties solo)' : 'Combos réalisés'}
-              </h3>
-              {COMBO_ORDER.map((c, i) => {
-                const count = display.comboCounts[c]
-                const color = COMBO_COLOR[c]
-                return (
-                  <div key={c} className={`stats-combo-row${i < COMBO_ORDER.length - 1 ? ' has-gap' : ''}`}>
-                    <div className="stats-combo-head">
-                      <div className="stats-combo-name-row">
-                        <span className="font-display stats-combo-name" style={{ color }}>
-                          {COMBO_LABEL[c]}
-                        </span>
-                        <span className="stats-combo-mult">×{COMBO_MULTIPLIER[c]}</span>
+        <aside className="stats-side">
+          <div className="stats-body">
+            {!hasAnyGame && (
+              <div className="stats-empty">
+                <EmptyState
+                  title={scope === 'solo' ? 'Aucune partie solo récente' : 'Aucune partie jouée'}
+                  description={
+                    scope === 'solo'
+                      ? 'Terminez une partie pour alimenter cet historique.'
+                      : 'Jouez pour voir vos statistiques ici.'
+                  }
+                />
+              </div>
+            )}
+
+            {section === 'perf' && (
+              <div className="stats-perf-grid">
+                {[
+                  { label: 'Parties jouées', value: String(display.gamesPlayed), tone: 'text' },
+                  { label: 'Parties gagnées', value: String(display.gamesWon), tone: 'success' },
+                  { label: 'Rounds gagnés', value: String(display.totalRoundsWon), tone: 'gold' },
+                  {
+                    label: 'Plis gagnés',
+                    value: scope === 'solo' ? '—' : display.totalTricksWon.toLocaleString('fr-FR'),
+                    tone: 'purple',
+                  },
+                ].map(s => (
+                  <SectionCard key={s.label} className="stats-metric">
+                    <p className={`font-display stats-metric-value tone-${s.tone}`}>{s.value}</p>
+                    <p className="stats-metric-label">{s.label}</p>
+                  </SectionCard>
+                ))}
+              </div>
+            )}
+
+            {section === 'finance' && (
+              <div className="stats-finance-list">
+                {[
+                  {
+                    label: 'Gains totaux',
+                    value: `+${display.totalGains.toLocaleString('fr-FR')}`,
+                    tone: 'success',
+                  },
+                  {
+                    label: 'Pertes totales',
+                    value: `-${display.totalLosses.toLocaleString('fr-FR')}`,
+                    tone: 'danger',
+                  },
+                  {
+                    label: 'Gain net',
+                    value: `${display.netGainTotal >= 0 ? '+' : ''}${display.netGainTotal.toLocaleString('fr-FR')}`,
+                    tone: 'gold',
+                  },
+                  {
+                    label: 'Capital maximum',
+                    value: display.maxCapitalEver.toLocaleString('fr-FR'),
+                    tone: 'text',
+                  },
+                  {
+                    label: 'Capital minimum',
+                    value: display.minCapitalEver.toLocaleString('fr-FR'),
+                    tone: 'text',
+                  },
+                ].map(s => (
+                  <SectionCard key={s.label} className="stats-finance-row">
+                    <span className="stats-finance-label">{s.label}</span>
+                    <span className={`font-display stats-finance-value tone-${s.tone}`}>{s.value} FCFA</span>
+                  </SectionCard>
+                ))}
+              </div>
+            )}
+
+            {section === 'combos' && (
+              <>
+                <SectionCard className="stats-combo-card">
+                  <h3 className="font-display stats-combo-title">
+                    {scope === 'solo' ? 'Meilleurs combos (parties solo)' : 'Combos réalisés'}
+                  </h3>
+                  {COMBO_ORDER.map((c, i) => {
+                    const count = display.comboCounts[c]
+                    const color = COMBO_COLOR[c]
+                    return (
+                      <div key={c} className={`stats-combo-row${i < COMBO_ORDER.length - 1 ? ' has-gap' : ''}`}>
+                        <div className="stats-combo-head">
+                          <div className="stats-combo-name-row">
+                            <span className="font-display stats-combo-name" style={{ color }}>
+                              {COMBO_LABEL[c]}
+                            </span>
+                            <span className="stats-combo-mult">×{COMBO_MULTIPLIER[c]}</span>
+                          </div>
+                          <span className="font-display stats-combo-count">×{count}</span>
+                        </div>
+                        <div className="stats-combo-bar">
+                          <div
+                            className="stats-combo-fill"
+                            style={{ width: `${(count / maxComboCount) * 100}%`, background: color }}
+                          />
+                        </div>
                       </div>
-                      <span className="font-display stats-combo-count">×{count}</span>
-                    </div>
-                    <div className="stats-combo-bar">
-                      <div
-                        className="stats-combo-fill"
-                        style={{ width: `${(count / maxComboCount) * 100}%`, background: color }}
-                      />
-                    </div>
-                  </div>
-                )
-              })}
-            </SectionCard>
+                    )
+                  })}
+                </SectionCard>
 
-            {scope === 'global' && (
-              <SectionCard className="stats-special-card">
-                <h3 className="font-display stats-combo-title">Règles spéciales</h3>
-                <div className="stats-special-grid">
-                  {SPECIAL_ORDER.map(rule => (
-                    <div
-                      key={rule}
-                      className="stats-special-item"
-                      style={{ borderColor: SPECIAL_COLOR[rule] }}
-                    >
-                      <p className="font-display stats-special-count" style={{ color: SPECIAL_COLOR[rule] }}>
-                        {display.specialRuleCounts[rule]}
-                      </p>
-                      <p className="font-display stats-special-label">{SPECIAL_LABEL[rule]}</p>
+                {scope === 'global' && (
+                  <SectionCard className="stats-special-card">
+                    <h3 className="font-display stats-combo-title">Règles spéciales</h3>
+                    <div className="stats-special-grid">
+                      {SPECIAL_ORDER.map(rule => (
+                        <div
+                          key={rule}
+                          className="stats-special-item"
+                          style={{ borderColor: SPECIAL_COLOR[rule] }}
+                        >
+                          <p
+                            className="font-display stats-special-count"
+                            style={{ color: SPECIAL_COLOR[rule] }}
+                          >
+                            {display.specialRuleCounts[rule]}
+                          </p>
+                          <p className="font-display stats-special-label">{SPECIAL_LABEL[rule]}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
-              </SectionCard>
-            )}
+                  </SectionCard>
+                )}
 
-            {scope === 'solo' && (
-              <p className="stats-solo-note">
-                Les règles spéciales et le détail des plis restent dans la vue Global.
-              </p>
+                {scope === 'solo' && (
+                  <p className="stats-solo-note">
+                    Les règles spéciales et le détail des plis restent dans la vue Global.
+                  </p>
+                )}
+              </>
             )}
-          </>
-        )}
+          </div>
+        </aside>
       </div>
     </ScreenShell>
   )

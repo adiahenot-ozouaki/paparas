@@ -1,15 +1,15 @@
 {
-  "title": "Garam Paparas — Jeu de cartes africain",
-  "description": "Garam Paparas est un jeu de cartes de plis africain, stratégique et compétitif. Misez, formez des combos, affrontez Binu, Lebe et Goju, et devenez le dernier joueur en lice.",
+  "title": "Garam Paparas",
+  "description": "Jeu de plis Kora — Garam Paparas",
   "language": "fr",
   "robots": {
-    "index": false
+    "index": true
   },
-  "icons": {
-    "icon": "/favicon.svg"
-  },
+  "icons": {},
+  "openGraph": {},
+  "analytics": {},
+  "customScripts": {},
   "accessibility": {
-    "addBypassLinks": true,
-    "ignoreReducedMotion": false
+    "addBypassLinks": false
   }
 }
