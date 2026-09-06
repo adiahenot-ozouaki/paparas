@@ -21,6 +21,43 @@ export function validateUsername(raw: string): string | null {
   return null
 }
 
+/** Messages Auth Supabase → français joueur. */
+export function humanizeAuthError(raw: string | null | undefined): string {
+  if (!raw) return 'Une erreur est survenue.'
+  const s = raw.trim()
+  const lower = s.toLowerCase()
+
+  if (lower.includes('invalid login credentials') || lower.includes('invalid credentials')) {
+    return 'Email ou mot de passe incorrect.'
+  }
+  if (lower.includes('email not confirmed') || lower.includes('not confirmed')) {
+    return 'Confirmez votre email (lien dans votre boîte de réception) avant de vous connecter.'
+  }
+  if (lower.includes('user already registered') || lower.includes('already been registered')) {
+    return 'Un compte existe déjà avec cet email. Connectez-vous ou réinitialisez le mot de passe.'
+  }
+  if (lower.includes('password should be at least') || lower.includes('password is known to be weak')) {
+    return 'Mot de passe trop court ou trop faible (6 caractères minimum).'
+  }
+  if (lower.includes('unable to validate email') || lower.includes('invalid email')) {
+    return 'Adresse email invalide.'
+  }
+  if (lower.includes('rate limit') || lower.includes('too many requests') || lower.includes('email rate limit')) {
+    return 'Trop de tentatives. Attendez une minute puis réessayez.'
+  }
+  if (lower.includes('network') || lower.includes('failed to fetch')) {
+    return 'Réseau indisponible. Vérifiez votre connexion.'
+  }
+  if (lower.includes('signup is disabled')) {
+    return 'Les inscriptions sont temporairement fermées.'
+  }
+  if (lower.includes('user not found')) {
+    return 'Aucun compte trouvé pour cet email.'
+  }
+  if (s.length > 160) return s.slice(0, 150) + '…'
+  return s
+}
+
 interface AuthContextValue {
   session: Session | null
   user: User | null
@@ -30,6 +67,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string) => Promise<{ error: string | null }>
   signIn: (email: string, password: string) => Promise<{ error: string | null }>
   signOut: () => Promise<void>
+  resetPassword: (email: string) => Promise<{ error: string | null }>
   refreshProfile: () => Promise<void>
   updateProfile: (patch: { username?: string; avatar?: string }) => Promise<{ error: string | null }>
 }
@@ -42,7 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true)
 
   const loadProfile = useCallback(async (userId: string) => {
-    // Garantit profil + ligne stats (RPC idempotente)
     await supabase.rpc('kora_ensure_player_rows', { p_user_id: userId })
 
     const { data, error } = await supabase
@@ -86,17 +123,36 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [loadProfile])
 
   const signUp = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signUp({ email, password })
-    return { error: error?.message ?? null }
+    const { error } = await supabase.auth.signUp({
+      email: email.trim(),
+      password,
+    })
+    return { error: error ? humanizeAuthError(error.message) : null }
   }, [])
 
   const signIn = useCallback(async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    return { error: error?.message ?? null }
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    })
+    return { error: error ? humanizeAuthError(error.message) : null }
   }, [])
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
+  }, [])
+
+  const resetPassword = useCallback(async (email: string) => {
+    const trimmed = email.trim()
+    if (!trimmed) return { error: 'Indiquez votre adresse email.' }
+
+    const redirectTo =
+      typeof window !== 'undefined' ? `${window.location.origin}/` : undefined
+
+    const { error } = await supabase.auth.resetPasswordForEmail(trimmed, {
+      redirectTo,
+    })
+    return { error: error ? humanizeAuthError(error.message) : null }
   }, [])
 
   const refreshProfile = useCallback(async () => {
@@ -135,7 +191,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (error.code === '23505' || /unique|duplicate/i.test(error.message)) {
           return { error: 'Ce pseudo est déjà pris.' }
         }
-        return { error: error.message }
+        return { error: humanizeAuthError(error.message) }
       }
       if (data) setProfile(data as KoraProfile)
       else await loadProfile(session.user.id)
@@ -153,10 +209,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       signUp,
       signIn,
       signOut,
+      resetPassword,
       refreshProfile,
       updateProfile,
     }),
-    [session, profile, isLoading, signUp, signIn, signOut, refreshProfile, updateProfile],
+    [session, profile, isLoading, signUp, signIn, signOut, resetPassword, refreshProfile, updateProfile],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

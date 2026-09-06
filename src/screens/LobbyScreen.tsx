@@ -1,24 +1,46 @@
 import { useState } from 'react'
-import type { Screen } from '../types'
+import type { DeckVariant, Screen } from '../types'
 import { useGame, SEAT_NAMES, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
+import type { GameEndMode } from '../game/payout'
+
+const VARIANT_LABEL: Record<DeckVariant, string> = {
+  '8': '3–8 · 23 cartes',
+  '9': '3–9 · 27 cartes',
+  '10': '3–10 · 31 cartes',
+  as: '3–10+As · 35 cartes',
+}
+
+const END_MODE_LABEL: Record<GameEndMode, string> = {
+  fixedRounds: 'Hybride',
+  elimination: 'Élimination',
+  raceToCapital: 'Course',
+}
 
 export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  const { startNewGame, stakeConfig } = useGame()
+  const { startNewGame, stakeConfig, deckVariant } = useGame()
   const [ready, setReady] = useState(false)
   const [countdown, setCountdown] = useState<number | null>(null)
 
-  // Affichage lobby : sièges fixes (Vous + 3 IA) avec le capital de départ configuré.
-  // Les montants inventés du mock ne sont plus utilisés.
   const lobbyPlayers = SEAT_NAMES.map((name, i) => ({
     name,
     avatar: SEAT_AVATARS[i],
     capital: stakeConfig.startingCapital,
-    ready: i === HUMAN_INDEX ? ready : true, // les IA sont considérées prêtes
+    ready: i === HUMAN_INDEX ? ready : true,
     isYou: i === HUMAN_INDEX,
   }))
 
+  const endMode = stakeConfig.endMode ?? 'fixedRounds'
+  const maxRounds = stakeConfig.maxRounds ?? 10
+  const targetCapital = stakeConfig.targetCapital ?? stakeConfig.startingCapital * 3
+
+  const endDetail =
+    endMode === 'fixedRounds'
+      ? `max ${maxRounds} rounds`
+      : endMode === 'raceToCapital'
+        ? `objectif ${targetCapital.toLocaleString('fr-FR')} FCFA`
+        : 'dernier survivant'
+
   function enterTable() {
-    // Nouvelle partie : capitaux réinitialisés, round 1 distribué.
     startNewGame()
     onNavigate('gameTable')
   }
@@ -52,7 +74,6 @@ export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) =>
     >
       <div className="pattern-african" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
 
-      {/* Countdown overlay */}
       {countdown !== null && (
         <div
           style={{
@@ -66,15 +87,7 @@ export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) =>
             justifyContent: 'center',
           }}
         >
-          <div
-            className="anim-scale-bounce"
-            style={{
-              fontSize: 120,
-              fontFamily: 'Plus Jakarta Sans',
-              fontWeight: 800,
-              lineHeight: 1,
-            }}
-          >
+          <div className="anim-scale-bounce" style={{ fontSize: 120, fontFamily: 'Plus Jakarta Sans', fontWeight: 800, lineHeight: 1 }}>
             <span className="text-gold">{countdown}</span>
           </div>
           <p
@@ -91,7 +104,6 @@ export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) =>
         </div>
       )}
 
-      {/* Zone scrollable */}
       <div
         style={{
           flex: 1,
@@ -101,9 +113,9 @@ export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) =>
           WebkitOverflowScrolling: 'touch',
         }}
       >
-        {/* Header */}
-        <div style={{ padding: '20px 20px 0' }}>
+        <div style={{ padding: 'max(20px, env(safe-area-inset-top, 0px)) 20px 0' }}>
           <button
+            type="button"
             onClick={() => onNavigate('gameMode')}
             aria-label="Retour"
             style={{
@@ -125,25 +137,17 @@ export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) =>
           </button>
         </div>
 
-        {/* Table info */}
+        {/* Résumé config */}
         <div style={{ padding: '0 20px' }}>
           <div
             style={{
               background: 'linear-gradient(135deg, rgba(18,60,50,0.7) 0%, rgba(16,21,26,0.8) 100%)',
               border: '1px solid rgba(214,168,79,0.25)',
               borderRadius: 20,
-              padding: '20px',
+              padding: '18px',
             }}
           >
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: 16,
-                gap: 12,
-              }}
-            >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14, gap: 12 }}>
               <div style={{ minWidth: 0 }}>
                 <p
                   style={{
@@ -154,13 +158,10 @@ export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) =>
                     margin: '0 0 4px',
                   }}
                 >
-                  TABLE
+                  TABLE SOLO · IA
                 </p>
-                <h2
-                  className="text-gold font-display"
-                  style={{ fontSize: 24, fontWeight: 800, margin: 0, letterSpacing: '0.06em' }}
-                >
-                  GARAM VIP
+                <h2 className="text-gold font-display" style={{ fontSize: 22, fontWeight: 800, margin: 0, letterSpacing: '0.04em' }}>
+                  GARAM
                 </h2>
               </div>
               <div
@@ -172,48 +173,51 @@ export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) =>
                   flexShrink: 0,
                 }}
               >
-                <span
-                  style={{
-                    color: '#4CAF76',
-                    fontSize: 12,
-                    fontFamily: 'Plus Jakarta Sans',
-                    fontWeight: 600,
-                  }}
-                >
+                <span style={{ color: '#4CAF76', fontSize: 12, fontFamily: 'Plus Jakarta Sans', fontWeight: 600 }}>
                   ● EN ATTENTE
                 </span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
-              <div>
-                <p style={{ color: '#A9B0B7', fontSize: 11, margin: '0 0 2px' }}>Joueurs</p>
-                <p className="font-display" style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>
-                  {lobbyPlayers.length} / 4
-                </p>
-              </div>
-              <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', alignSelf: 'stretch' }} />
-              <div>
-                <p style={{ color: '#A9B0B7', fontSize: 11, margin: '0 0 2px' }}>Mise</p>
-                <p className="font-display text-gold" style={{ fontSize: 18, fontWeight: 700, margin: 0 }}>
-                  {stakeConfig.baseStake.toLocaleString('fr-FR')} FCFA
-                </p>
-              </div>
-              <div style={{ width: 1, background: 'rgba(255,255,255,0.08)', alignSelf: 'stretch' }} />
-              <div>
-                <p style={{ color: '#A9B0B7', fontSize: 11, margin: '0 0 2px' }}>Capital de départ</p>
-                <p className="font-display" style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>
-                  {stakeConfig.startingCapital.toLocaleString('fr-FR')}
-                </p>
-              </div>
+            {/* Grille config lisible */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 1fr',
+                gap: 10,
+              }}
+            >
+              <ConfigCell label="Mise" value={`${stakeConfig.baseStake.toLocaleString('fr-FR')} FCFA`} gold />
+              <ConfigCell label="Capital" value={`${stakeConfig.startingCapital.toLocaleString('fr-FR')} FCFA`} />
+              <ConfigCell label="Variante" value={VARIANT_LABEL[deckVariant]} />
+              <ConfigCell label="Fin" value={`${END_MODE_LABEL[endMode]} · ${endDetail}`} />
             </div>
+
+            <button
+              type="button"
+              onClick={() => onNavigate('stakeConfig')}
+              style={{
+                marginTop: 12,
+                width: '100%',
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px dashed rgba(255,255,255,0.12)',
+                borderRadius: 12,
+                padding: '10px 12px',
+                color: '#A9B0B7',
+                fontSize: 12,
+                fontFamily: 'Plus Jakarta Sans',
+                cursor: 'pointer',
+                textAlign: 'center',
+              }}
+            >
+              Modifier la config →
+            </button>
           </div>
         </div>
 
-        {/* Players */}
         <div style={{ padding: '20px' }}>
           <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: '0 0 14px', color: '#fff' }}>
-            Joueurs ({lobbyPlayers.length}/4)
+            Sièges ({lobbyPlayers.length}/4)
           </h3>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {lobbyPlayers.map((p, i) => (
@@ -289,6 +293,9 @@ export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) =>
                         VOUS
                       </span>
                     )}
+                    {!p.isYou && (
+                      <span style={{ color: '#5b636b', fontSize: 10, fontWeight: 600 }}>IA</span>
+                    )}
                   </div>
                   <p style={{ color: '#A9B0B7', fontSize: 12, margin: '2px 0 0' }}>
                     {p.capital.toLocaleString('fr-FR')} FCFA
@@ -319,15 +326,13 @@ export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) =>
           </div>
         </div>
 
-        {/* Espace sous la liste pour ne pas coller à la barre d'actions */}
         <div style={{ height: 8 }} />
       </div>
 
-      {/* Actions fixées en bas — toujours visibles */}
       <div
         style={{
           flexShrink: 0,
-          padding: '12px 20px 20px',
+          padding: '12px 20px max(20px, env(safe-area-inset-bottom, 0px))',
           display: 'flex',
           flexDirection: 'column',
           gap: 10,
@@ -339,34 +344,25 @@ export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) =>
       >
         {!ready ? (
           <button
+            type="button"
             className="btn-primary glow-gold"
             onClick={handleReady}
-            style={{
-              width: '100%',
-              padding: '18px',
-              fontSize: 16,
-              borderRadius: 18,
-              letterSpacing: '0.1em',
-            }}
+            style={{ width: '100%', padding: '18px', fontSize: 16, borderRadius: 18, letterSpacing: '0.1em' }}
           >
             ✓  PRÊT
           </button>
         ) : (
           <button
+            type="button"
             className="btn-primary glow-gold"
             onClick={enterTable}
-            style={{
-              width: '100%',
-              padding: '18px',
-              fontSize: 16,
-              borderRadius: 18,
-              letterSpacing: '0.1em',
-            }}
+            style={{ width: '100%', padding: '18px', fontSize: 16, borderRadius: 18, letterSpacing: '0.1em' }}
           >
             LANCER LA PARTIE →
           </button>
         )}
         <button
+          type="button"
           className="btn-secondary"
           onClick={() => onNavigate('gameMode')}
           style={{ width: '100%', padding: '14px', fontSize: 14, borderRadius: 14 }}
@@ -374,6 +370,34 @@ export default function LobbyScreen({ onNavigate }: { onNavigate: (s: Screen) =>
           Quitter la table
         </button>
       </div>
+    </div>
+  )
+}
+
+function ConfigCell({ label, value, gold }: { label: string; value: string; gold?: boolean }) {
+  return (
+    <div
+      style={{
+        background: 'rgba(0,0,0,0.25)',
+        borderRadius: 12,
+        padding: '10px 12px',
+        minWidth: 0,
+      }}
+    >
+      <p style={{ color: '#5b636b', fontSize: 10, margin: '0 0 4px', letterSpacing: '0.06em' }}>{label}</p>
+      <p
+        className="font-display"
+        style={{
+          color: gold ? '#D6A84F' : '#fff',
+          fontSize: 13,
+          fontWeight: 700,
+          margin: 0,
+          lineHeight: 1.25,
+          wordBreak: 'break-word',
+        }}
+      >
+        {value}
+      </p>
     </div>
   )
 }

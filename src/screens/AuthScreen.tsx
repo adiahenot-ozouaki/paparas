@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import type { Screen } from '../types'
 import { useAuth } from '../auth/AuthContext'
+import { AlertBanner, ScreenShell, UiButton } from '../components/ui'
 
 // ==========================================================================
-// AuthScreen — connexion / inscription pour le mode online.
-// Solo IA reste accessible sans compte.
+// AuthScreen — connexion / inscription / reset MDP pour le mode online.
 // ==========================================================================
+
+type Mode = 'signIn' | 'signUp' | 'reset'
 
 export default function AuthScreen({
   onNavigate,
@@ -14,95 +16,108 @@ export default function AuthScreen({
   onNavigate: (s: Screen) => void
   returnTo?: Screen
 }) {
-  const { user, profile, signUp, signIn, signOut, isLoading } = useAuth()
-  const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn')
+  const { user, profile, signUp, signIn, signOut, resetPassword, isLoading } = useAuth()
+  const [mode, setMode] = useState<Mode>('signIn')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
+
+  function switchMode(next: Mode) {
+    setMode(next)
+    setError(null)
+    setInfo(null)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
+    setInfo(null)
+
+    const trimmedEmail = email.trim()
+    if (!trimmedEmail) {
+      setError('Indiquez votre adresse email.')
+      return
+    }
+    if (mode !== 'reset' && password.length < 6) {
+      setError('Le mot de passe doit contenir au moins 6 caractères.')
+      return
+    }
+
     setSubmitting(true)
-    const result = mode === 'signUp' ? await signUp(email, password) : await signIn(email, password)
+
+    if (mode === 'reset') {
+      const result = await resetPassword(trimmedEmail)
+      setSubmitting(false)
+      if (result.error) {
+        setError(result.error)
+        return
+      }
+      setInfo(
+        'Si un compte existe pour cet email, un lien de réinitialisation vient d’être envoyé. Vérifiez aussi vos spams.',
+      )
+      return
+    }
+
+    const result = mode === 'signUp' ? await signUp(trimmedEmail, password) : await signIn(trimmedEmail, password)
     setSubmitting(false)
     if (result.error) {
       setError(result.error)
       return
+    }
+
+    if (mode === 'signUp') {
+      setInfo('Compte créé. Si la confirmation email est activée, ouvrez le lien reçu avant de vous connecter.')
     }
     onNavigate(returnTo)
   }
 
   if (isLoading) {
     return (
-      <div style={{ position: 'absolute', inset: 0, background: '#0B0D10', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <ScreenShell bottomPad={0} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span style={{ color: '#A9B0B7', fontSize: 13 }}>Chargement…</span>
-      </div>
+      </ScreenShell>
     )
   }
 
   if (user) {
     return (
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: '#0B0D10',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center',
-          gap: 16,
-          padding: 24,
-        }}
+      <ScreenShell
+        bottomPad={0}
+        style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24 }}
       >
-        <div className="pattern-african" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
         <div style={{ fontSize: 40 }}>{profile?.avatar ?? '🦅'}</div>
         <p className="font-display" style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: 0 }}>
           {profile?.username ?? 'Profil…'}
         </p>
         <p style={{ color: '#A9B0B7', fontSize: 12, margin: 0 }}>{user.email}</p>
-        <button
-          className="btn-primary glow-gold"
-          onClick={() => onNavigate(returnTo)}
-          style={{ padding: '12px 28px', fontSize: 14, borderRadius: 14, marginTop: 8 }}
-        >
+        <UiButton onClick={() => onNavigate(returnTo)} style={{ marginTop: 8 }}>
           Continuer →
-        </button>
-        <button
-          className="btn-secondary"
-          onClick={() => void signOut()}
-          style={{ padding: '10px 24px', fontSize: 13, borderRadius: 12 }}
-        >
+        </UiButton>
+        <UiButton variant="secondary" onClick={() => void signOut()}>
           Se déconnecter
-        </button>
-        <button
-          onClick={() => onNavigate('home')}
-          style={{ background: 'none', border: 'none', color: '#A9B0B7', fontSize: 12, cursor: 'pointer', marginTop: 8 }}
-        >
+        </UiButton>
+        <UiButton variant="ghost" onClick={() => onNavigate('home')}>
           Accueil
-        </button>
-      </div>
+        </UiButton>
+      </ScreenShell>
     )
   }
 
-  return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background: '#0B0D10',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: 24,
-      }}
-    >
-      <div className="pattern-african" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
+  const title = mode === 'signUp' ? 'Créer un compte' : mode === 'reset' ? 'Mot de passe oublié' : 'Connexion'
+  const subtitle =
+    mode === 'reset'
+      ? 'Recevez un lien de réinitialisation par email'
+      : 'Requis pour jouer en ligne · le solo IA reste libre'
 
+  return (
+    <ScreenShell
+      bottomPad={0}
+      style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 24 }}
+    >
       <button
+        type="button"
         onClick={() => onNavigate('home')}
         aria-label="Retour"
         style={{
@@ -117,82 +132,86 @@ export default function AuthScreen({
           color: '#fff',
           fontSize: 18,
           cursor: 'pointer',
+          zIndex: 2,
         }}
       >
         ←
       </button>
 
-      <h1 className="font-display text-gold" style={{ fontSize: 28, fontWeight: 800, margin: '0 0 8px', letterSpacing: '0.06em' }}>
-        {mode === 'signUp' ? 'Créer un compte' : 'Connexion'}
+      <h1 className="font-display text-gold" style={{ fontSize: 26, fontWeight: 800, margin: '0 0 8px', letterSpacing: '0.06em', textAlign: 'center' }}>
+        {title}
       </h1>
-      <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 24px', textAlign: 'center' }}>
-        Requis pour jouer en ligne · le solo IA reste libre
+      <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 24px', textAlign: 'center', maxWidth: 320 }}>
+        {subtitle}
       </p>
 
-      <form onSubmit={handleSubmit} style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <form onSubmit={e => void handleSubmit(e)} style={{ width: '100%', maxWidth: 320, display: 'flex', flexDirection: 'column', gap: 12 }}>
         <input
+          className="ui-field"
           type="email"
           required
           placeholder="Email"
           value={email}
           onChange={e => setEmail(e.target.value)}
           autoComplete="email"
-          style={inputStyle}
         />
-        <input
-          type="password"
-          required
-          minLength={6}
-          placeholder="Mot de passe (6 caractères min.)"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
-          style={inputStyle}
-        />
-
-        {error && (
-          <p role="alert" style={{ color: '#C94B4B', fontSize: 12, margin: 0 }}>
-            {error}
-          </p>
+        {mode !== 'reset' && (
+          <input
+            className="ui-field"
+            type="password"
+            required
+            minLength={6}
+            placeholder="Mot de passe (6 caractères min.)"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            autoComplete={mode === 'signUp' ? 'new-password' : 'current-password'}
+          />
         )}
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className="btn-primary glow-gold"
-          style={{ padding: '14px', fontSize: 14, borderRadius: 14, letterSpacing: '0.06em', marginTop: 8, opacity: submitting ? 0.6 : 1 }}
-        >
-          {submitting ? 'Un instant…' : mode === 'signUp' ? "S'inscrire" : 'Se connecter'}
-        </button>
+        {error && <AlertBanner tone="error">{error}</AlertBanner>}
+        {info && <AlertBanner tone="success">{info}</AlertBanner>}
+
+        <UiButton type="submit" disabled={submitting} fullWidth style={{ marginTop: 8, letterSpacing: '0.06em' }}>
+          {submitting
+            ? 'Un instant…'
+            : mode === 'signUp'
+              ? "S'inscrire"
+              : mode === 'reset'
+                ? 'Envoyer le lien'
+                : 'Se connecter'}
+        </UiButton>
       </form>
 
-      <button
-        onClick={() => {
-          setMode(m => (m === 'signUp' ? 'signIn' : 'signUp'))
-          setError(null)
-        }}
-        style={{
-          background: 'none',
-          border: 'none',
-          color: '#D6A84F',
-          fontSize: 12,
-          marginTop: 16,
-          cursor: 'pointer',
-          fontFamily: 'Plus Jakarta Sans',
-        }}
-      >
-        {mode === 'signUp' ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
-      </button>
-    </div>
-  )
-}
+      <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+        {mode === 'signIn' && (
+          <button
+            type="button"
+            onClick={() => switchMode('reset')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#A9B0B7',
+              fontSize: 12,
+              cursor: 'pointer',
+              fontFamily: 'Plus Jakarta Sans',
+              textDecoration: 'underline',
+              textUnderlineOffset: 3,
+            }}
+          >
+            Mot de passe oublié ?
+          </button>
+        )}
 
-const inputStyle: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.05)',
-  border: '1px solid rgba(255,255,255,0.12)',
-  borderRadius: 12,
-  padding: '12px 14px',
-  color: '#fff',
-  fontSize: 14,
-  fontFamily: 'Inter, sans-serif',
+        {mode === 'reset' ? (
+          <UiButton variant="ghost" onClick={() => switchMode('signIn')}>
+            ← Retour à la connexion
+          </UiButton>
+        ) : (
+          <UiButton variant="ghost" onClick={() => switchMode(mode === 'signUp' ? 'signIn' : 'signUp')}>
+            {mode === 'signUp' ? 'Déjà un compte ? Se connecter' : 'Pas encore de compte ? Créer un compte'}
+          </UiButton>
+        )}
+      </div>
+    </ScreenShell>
+  )
 }

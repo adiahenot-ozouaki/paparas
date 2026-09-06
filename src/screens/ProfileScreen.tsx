@@ -5,6 +5,13 @@ import { useAuth, validateUsername } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { ACHIEVEMENTS, getUnlockedAchievements } from '../game/achievements'
 import { fetchWallet } from '../lib/persistence/cloud'
+import {
+  type GameHistoryEntry,
+  clearGameHistory,
+  formatHistoryDate,
+  loadGameHistory,
+} from '../lib/persistence/gameHistory'
+import { ThemeToggle } from '../components/ui'
 
 const WINS_PER_LEVEL = 5
 
@@ -21,6 +28,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
   const [editError, setEditError] = useState<string | null>(null)
   const [savedOk, setSavedOk] = useState(false)
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
+  const [history, setHistory] = useState<GameHistoryEntry[]>(() => loadGameHistory())
 
   useEffect(() => {
     if (profile) {
@@ -43,6 +51,10 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
       cancelled = true
     }
   }, [user])
+
+  useEffect(() => {
+    setHistory(loadGameHistory())
+  }, [lifetimeStats.gamesPlayed])
 
   const capital = players[HUMAN_INDEX].capital
   const winRatio =
@@ -99,12 +111,17 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
     setEditing(true)
   }
 
+  function handleClearHistory() {
+    clearGameHistory()
+    setHistory([])
+  }
+
   return (
     <div
       style={{
         position: 'absolute',
         inset: 0,
-        background: '#0B0D10',
+        background: 'var(--kora-void)',
         overflowY: 'auto',
         paddingBottom: 80,
       }}
@@ -113,22 +130,13 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
 
       <div
         style={{
-          background: 'linear-gradient(135deg, #0F2820 0%, #10151A 100%)',
-          borderBottom: '1px solid rgba(214,168,79,0.15)',
+          background: 'linear-gradient(135deg, var(--kora-green-deep) 0%, var(--kora-surface) 100%)',
+          borderBottom: '1px solid var(--kora-border-gold-soft)',
           padding: '24px 20px 28px',
           position: 'relative',
           overflow: 'hidden',
         }}
       >
-        <div
-          style={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage:
-              'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'24\' height=\'24\'%3E%3Cpolygon points=\'12,1 23,12 12,23 1,12\' fill=\'none\' stroke=\'rgba(214,168,79,0.06)\' stroke-width=\'0.8\'/%3E%3C/svg%3E")',
-          }}
-        />
-
         <div style={{ position: 'relative', display: 'flex', gap: 16, alignItems: 'center' }}>
           <div style={{ position: 'relative' }}>
             <div
@@ -136,8 +144,8 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
                 width: 80,
                 height: 80,
                 borderRadius: 24,
-                background: 'linear-gradient(135deg, #123C32, #0d2a1f)',
-                border: '2.5px solid #D6A84F',
+                background: 'linear-gradient(135deg, var(--kora-green-deep), #0d2a1f)',
+                border: '2.5px solid var(--kora-gold)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -152,13 +160,13 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
                 position: 'absolute',
                 bottom: -6,
                 right: -6,
-                background: 'linear-gradient(135deg, #D6A84F, #C08030)',
+                background: 'linear-gradient(135deg, var(--kora-gold), var(--kora-gold-dark))',
                 borderRadius: 10,
                 padding: '2px 8px',
-                border: '2px solid #0B0D10',
+                border: '2px solid var(--kora-void)',
               }}
             >
-              <span className="font-display" style={{ color: '#0B0D10', fontSize: 10, fontWeight: 800 }}>
+              <span className="font-display" style={{ color: 'var(--kora-text-inverse)', fontSize: 10, fontWeight: 800 }}>
                 {level}
               </span>
             </div>
@@ -166,30 +174,19 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
           <div style={{ flex: 1, minWidth: 0 }}>
             {editing ? (
               <input
+                className="ui-field"
                 value={usernameDraft}
                 onChange={e => setUsernameDraft(e.target.value)}
                 maxLength={20}
                 placeholder="Votre pseudo"
-                style={{
-                  width: '100%',
-                  boxSizing: 'border-box',
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid rgba(214,168,79,0.35)',
-                  borderRadius: 12,
-                  padding: '10px 12px',
-                  color: '#fff',
-                  fontSize: 18,
-                  fontFamily: 'Cinzel, serif',
-                  fontWeight: 700,
-                  marginBottom: 6,
-                }}
+                style={{ fontSize: 18, fontFamily: 'Cinzel, serif', fontWeight: 700, marginBottom: 6 }}
               />
             ) : (
-              <h2 className="font-display" style={{ color: '#fff', fontSize: 22, fontWeight: 800, margin: '0 0 4px' }}>
+              <h2 className="font-display" style={{ color: 'var(--kora-text)', fontSize: 22, fontWeight: 800, margin: '0 0 4px' }}>
                 {displayName}
               </h2>
             )}
-            <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 8px' }}>
+            <p style={{ color: 'var(--kora-muted)', fontSize: 13, margin: '0 0 8px' }}>
               {user
                 ? user.email
                 : lifetimeStats.gamesPlayed > 0
@@ -199,16 +196,16 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
             </p>
             <div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ color: '#A9B0B7', fontSize: 11 }}>Niv. {level}</span>
-                <span className="font-display" style={{ color: '#D6A84F', fontSize: 11, fontWeight: 600 }}>
+                <span style={{ color: 'var(--kora-muted)', fontSize: 11 }}>Niv. {level}</span>
+                <span className="font-display" style={{ color: 'var(--kora-gold)', fontSize: 11, fontWeight: 600 }}>
                   {xpPercent}%
                 </span>
               </div>
-              <div style={{ height: 6, background: 'rgba(255,255,255,0.08)', borderRadius: 99, overflow: 'hidden' }}>
+              <div style={{ height: 6, background: 'var(--kora-card-bg)', borderRadius: 99, overflow: 'hidden' }}>
                 <div
                   style={{
                     width: `${xpPercent}%`,
-                    background: 'linear-gradient(90deg, #176B50, #D6A84F)',
+                    background: 'linear-gradient(90deg, var(--kora-green), var(--kora-gold))',
                     height: '100%',
                     borderRadius: 99,
                   }}
@@ -220,7 +217,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
 
         {user && editing && (
           <div style={{ position: 'relative', marginTop: 16 }}>
-            <p style={{ color: '#A9B0B7', fontSize: 11, margin: '0 0 8px', letterSpacing: '0.08em' }}>AVATAR</p>
+            <p style={{ color: 'var(--kora-muted)', fontSize: 11, margin: '0 0 8px', letterSpacing: '0.08em' }}>AVATAR</p>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
               {AVATAR_CHOICES.map(a => (
                 <button
@@ -233,8 +230,8 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
                     borderRadius: 12,
                     fontSize: 20,
                     cursor: 'pointer',
-                    border: a === avatarDraft ? '2px solid #D6A84F' : '1px solid rgba(255,255,255,0.1)',
-                    background: a === avatarDraft ? 'rgba(214,168,79,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: a === avatarDraft ? '2px solid var(--kora-gold)' : '1px solid var(--kora-card-border)',
+                    background: a === avatarDraft ? 'rgba(214,168,79,0.15)' : 'var(--kora-card-bg)',
                   }}
                 >
                   {a}
@@ -245,12 +242,12 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
         )}
 
         {editError && (
-          <p role="alert" style={{ position: 'relative', color: '#C94B4B', fontSize: 12, margin: '12px 0 0' }}>
+          <p role="alert" style={{ position: 'relative', color: 'var(--kora-danger)', fontSize: 12, margin: '12px 0 0' }}>
             {editError}
           </p>
         )}
         {savedOk && !editing && (
-          <p style={{ position: 'relative', color: '#4CAF76', fontSize: 12, margin: '12px 0 0' }}>Profil enregistré.</p>
+          <p style={{ position: 'relative', color: 'var(--kora-success)', fontSize: 12, margin: '12px 0 0' }}>Profil enregistré.</p>
         )}
 
         <div style={{ position: 'relative', marginTop: 16, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -279,133 +276,163 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
                   </button>
                 </>
               ) : (
-                <button
-                  className="btn-primary glow-gold"
-                  onClick={startEditing}
-                  style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}
-                >
+                <button className="btn-primary glow-gold" onClick={startEditing} style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}>
                   Modifier le profil
                 </button>
               )}
-              <button
-                className="btn-secondary"
-                onClick={() => void refreshCloudStats()}
-                style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}
-              >
+              <button className="btn-secondary" onClick={() => void refreshCloudStats()} style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}>
                 {statsSyncing ? 'Sync…' : 'Sync stats'}
               </button>
-              <button
-                className="btn-secondary"
-                onClick={() => void signOut()}
-                style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}
-              >
+              <button className="btn-secondary" onClick={() => void signOut()} style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}>
                 Se déconnecter
               </button>
             </>
           ) : (
-            <button
-              className="btn-primary glow-gold"
-              onClick={() => onNavigate('auth')}
-              style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}
-            >
+            <button className="btn-primary glow-gold" onClick={() => onNavigate('auth')} style={{ padding: '10px 16px', fontSize: 12, borderRadius: 12 }}>
               Connexion / Inscription
             </button>
           )}
         </div>
       </div>
 
-      <div style={{ padding: '16px 20px 0', display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <ThemeToggle />
+
+      <div
+        style={{
+          padding: '16px 20px 0',
+          display: 'grid',
+          gridTemplateColumns: user && walletBalance !== null ? '1fr 1fr' : '1fr',
+          gap: 10,
+        }}
+      >
         {user && walletBalance !== null && (
-          <div
-            style={{
-              background: 'linear-gradient(135deg, rgba(214,168,79,0.12), rgba(16,21,26,0.8))',
-              border: '1px solid rgba(214,168,79,0.35)',
-              borderRadius: 18,
-              padding: '18px 20px',
-            }}
-          >
-            <p
-              style={{
-                color: '#A9B0B7',
-                fontSize: 11,
-                fontFamily: 'Plus Jakarta Sans',
-                letterSpacing: '0.1em',
-                margin: '0 0 4px',
-              }}
-            >
-              WALLET (compte)
+          <div className="section-card section-card--gold" style={{ borderRadius: 18, padding: 16 }}>
+            <p style={{ color: 'var(--kora-muted)', fontSize: 10, fontFamily: 'Plus Jakarta Sans', letterSpacing: '0.1em', margin: '0 0 4px' }}>
+              WALLET
             </p>
-            <div className="text-gold font-display" style={{ fontSize: 28, fontWeight: 800 }}>
-              {walletBalance.toLocaleString('fr-FR')} FCFA
+            <div className="text-gold font-display" style={{ fontSize: 20, fontWeight: 800 }}>
+              {walletBalance.toLocaleString('fr-FR')}
             </div>
-            <p style={{ color: '#A9B0B7', fontSize: 11, margin: '6px 0 0' }}>
-              Buy-in online débité ici · cash-out recrédit à la sortie de table
-            </p>
+            <p style={{ color: 'var(--kora-muted-2)', fontSize: 10, margin: '4px 0 0' }}>FCFA · online</p>
           </div>
         )}
 
-        <div
-          style={{
-            background: 'linear-gradient(135deg, rgba(18,60,50,0.6), rgba(16,21,26,0.8))',
-            border: '1px solid rgba(214,168,79,0.25)',
-            borderRadius: 18,
-            padding: '18px 20px',
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
-        >
-          <div>
-            <p
-              style={{
-                color: '#A9B0B7',
-                fontSize: 11,
-                fontFamily: 'Plus Jakarta Sans',
-                letterSpacing: '0.1em',
-                margin: '0 0 4px',
-              }}
-            >
-              CAPITAL PARTIE SOLO
-            </p>
-            <div className="text-gold font-display" style={{ fontSize: 26, fontWeight: 800 }}>
-              {capital.toLocaleString('fr-FR')} FCFA
-            </div>
+        <div className="section-card section-card--green" style={{ borderRadius: 18, padding: 16 }}>
+          <p style={{ color: 'var(--kora-muted)', fontSize: 10, fontFamily: 'Plus Jakarta Sans', letterSpacing: '0.1em', margin: '0 0 4px' }}>
+            SOLO
+          </p>
+          <div className="text-gold font-display" style={{ fontSize: 20, fontWeight: 800 }}>
+            {capital.toLocaleString('fr-FR')}
           </div>
+          <p style={{ color: 'var(--kora-muted-2)', fontSize: 10, margin: '4px 0 0' }}>FCFA · partie en cours</p>
         </div>
       </div>
 
       <div style={{ padding: '16px 20px 0' }}>
-        <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px', color: '#fff' }}>
+        <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px', color: 'var(--kora-text)' }}>
           Statistiques
         </h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
           {STATS.map((s, i) => (
-            <div
-              key={i}
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.07)',
-                borderRadius: 14,
-                padding: '14px',
-              }}
-            >
+            <div key={i} className="section-card" style={{ borderRadius: 14, padding: 14 }}>
               <span style={{ fontSize: 20 }}>{s.icon}</span>
-              <p className="font-display" style={{ color: '#fff', fontSize: 18, fontWeight: 700, margin: '6px 0 2px' }}>
+              <p className="font-display" style={{ color: 'var(--kora-text)', fontSize: 18, fontWeight: 700, margin: '6px 0 2px' }}>
                 {s.value}
               </p>
-              <p style={{ color: '#A9B0B7', fontSize: 11 }}>{s.label}</p>
+              <p style={{ color: 'var(--kora-muted)', fontSize: 11 }}>{s.label}</p>
             </div>
           ))}
         </div>
       </div>
 
       <div style={{ padding: '20px 20px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+          <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: 0, color: 'var(--kora-text)' }}>
+            Historique
+          </h3>
+          {history.length > 0 && (
+            <button
+              type="button"
+              onClick={handleClearHistory}
+              style={{ background: 'transparent', border: 'none', color: 'var(--kora-muted-2)', fontSize: 11, cursor: 'pointer', padding: 0 }}
+            >
+              Effacer
+            </button>
+          )}
+        </div>
+
+        {history.length === 0 ? (
+          <div className="empty-state empty-state--dashed">
+            <p className="empty-state-title">Aucune partie enregistrée</p>
+            <p className="empty-state-desc">Les parties solo terminées apparaîtront ici (30 max).</p>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {history.slice(0, 15).map(h => (
+              <div
+                key={h.id}
+                className="section-card"
+                style={{ borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}
+              >
+                <div
+                  style={{
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: h.won ? 'var(--kora-surface-success)' : 'var(--kora-surface-danger)',
+                    border: `1px solid ${h.won ? 'var(--kora-border-success)' : 'var(--kora-border-danger)'}`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 16,
+                    flexShrink: 0,
+                  }}
+                >
+                  {h.won ? '🏆' : '💀'}
+                </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    <span className="font-display" style={{ color: 'var(--kora-text)', fontSize: 13, fontWeight: 700 }}>
+                      {h.won ? 'Victoire' : 'Défaite'}
+                    </span>
+                    <span style={{ color: 'var(--kora-muted-2)', fontSize: 10 }}>{h.mode === 'solo' ? 'Solo' : 'Online'}</span>
+                  </div>
+                  <p style={{ color: 'var(--kora-muted)', fontSize: 11, margin: '2px 0 0' }}>
+                    {formatHistoryDate(h.at)}
+                    {h.bestCombo ? ` · ${COMBO_LABEL[h.bestCombo as keyof typeof COMBO_LABEL] ?? h.bestCombo}` : ''}
+                    {` · ${h.roundsWon} rounds`}
+                  </p>
+                </div>
+                <span
+                  className="font-display"
+                  style={{
+                    color: h.netGain >= 0 ? 'var(--kora-success)' : 'var(--kora-danger)',
+                    fontSize: 13,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}
+                >
+                  {h.netGain >= 0 ? '+' : ''}
+                  {h.netGain.toLocaleString('fr-FR')}
+                </span>
+              </div>
+            ))}
+            {history.length > 15 && (
+              <p style={{ color: 'var(--kora-muted-2)', fontSize: 11, textAlign: 'center', margin: '4px 0 0' }}>
+                +{history.length - 15} plus anciennes
+              </p>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div style={{ padding: '20px 20px 0' }}>
         <button
+          type="button"
           onClick={() => onNavigate('achievements')}
+          className="section-card"
           style={{
             width: '100%',
-            background: 'rgba(255,255,255,0.04)',
-            border: '1px solid rgba(255,255,255,0.08)',
             borderRadius: 16,
             padding: '14px 16px',
             display: 'flex',
@@ -416,13 +443,13 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
         >
           <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <span style={{ fontSize: 20 }}>🏅</span>
-            <span className="font-display" style={{ color: '#fff', fontSize: 14, fontWeight: 700 }}>
+            <span className="font-display" style={{ color: 'var(--kora-text)', fontSize: 14, fontWeight: 700 }}>
               Achievements
             </span>
             <span
               style={{
                 background: 'rgba(214,168,79,0.15)',
-                color: '#D6A84F',
+                color: 'var(--kora-gold)',
                 fontSize: 11,
                 padding: '2px 8px',
                 borderRadius: 99,
@@ -433,7 +460,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
               {unlockedAchievements}/{ACHIEVEMENTS.length}
             </span>
           </span>
-          <span style={{ color: '#D6A84F', fontSize: 13 }}>→</span>
+          <span style={{ color: 'var(--kora-gold)', fontSize: 13 }}>→</span>
         </button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Screen } from '../types'
 import { useAuth } from '../auth/AuthContext'
 import { useGame } from '../game/GameContext'
@@ -15,7 +15,13 @@ import {
   type OpenLobbyTable,
   type SeatWithProfile,
 } from '../lib/online/api'
-import { getActiveOnlineTableId, setActiveOnlineTableId } from '../lib/online/session'
+import {
+  consumePendingJoinCode,
+  consumePendingJoinTableId,
+  getActiveOnlineTableId,
+  setActiveOnlineTableId,
+} from '../lib/online/session'
+import { humanizeError } from '../lib/online/errors'
 import { supabase } from '../lib/supabase/client'
 import type { KoraTable } from '../lib/supabase/database.types'
 
@@ -28,10 +34,12 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
   const [phase, setPhase] = useState<Phase>('menu')
   const [table, setTable] = useState<KoraTable | null>(null)
   const [seats, setSeats] = useState<SeatWithProfile[]>([])
-  const [joinCode, setJoinCode] = useState('')
+  const [joinCode, setJoinCode] = useState(() => consumePendingJoinCode() ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [openTables, setOpenTables] = useState<OpenLobbyTable[]>([])
+  const [listError, setListError] = useState<string | null>(null)
+  const autoJoinDone = useRef(false)
 
   const mySeat = useMemo(
     () => (user ? seats.find(s => s.user_id === user.id) : undefined),
@@ -54,19 +62,24 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
       const [t, s] = await Promise.all([fetchTable(tableId), fetchSeatsWithProfiles(tableId)])
       if (t.table) setTable(t.table)
       if (!s.error) setSeats(s.seats)
-      if (t.table?.status === 'playing') {
-        goToTable(tableId)
-      }
+      if (t.table?.status === 'playing') goToTable(tableId)
     },
     [goToTable],
   )
 
   const refreshOpenList = useCallback(async () => {
-    const open = await listOpenLobbyTables(10)
-    if (!open.error) setOpenTables(open.tables)
+    try {
+      const open = await listOpenLobbyTables(10)
+      if (open.error) setListError(humanizeError(open.error, 'Impossible de charger les tables ouvertes.'))
+      else {
+        setListError(null)
+        setOpenTables(open.tables)
+      }
+    } catch (e) {
+      setListError(humanizeError(e instanceof Error ? e.message : String(e)))
+    }
   }, [])
 
-  // Reconnexion auto si session ou siège actif
   useEffect(() => {
     if (authLoading || !user) return
     let cancelled = false
@@ -76,8 +89,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
         const t = await fetchTable(stored)
         if (!cancelled && t.table && (t.table.status === 'lobby' || t.table.status === 'playing')) {
           const seatsNow = await fetchSeatsWithProfiles(stored)
-          const stillSeated = seatsNow.seats.some(s => s.user_id === user.id)
-          if (stillSeated) {
+          if (seatsNow.seats.some(s => s.user_id === user.id)) {
             if (t.table.status === 'playing') {
               goToTable(stored)
               return
@@ -120,27 +132,16 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
   useEffect(() => {
     if (!table?.id) return
     const tableId = table.id
-
     const channel = supabase
       .channel(`lobby:${tableId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'kora_table_players', filter: `table_id=eq.${tableId}` },
-        () => {
-          void refresh(tableId)
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: 'UPDATE', schema: 'public', table: 'kora_tables', filter: `id=eq.${tableId}` },
-        () => {
-          void refresh(tableId)
-        },
-      )
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kora_table_players', filter: `table_id=eq.${tableId}` }, () => {
+        void refresh(tableId)
+      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kora_tables', filter: `id=eq.${tableId}` }, () => {
+        void refresh(tableId)
+      })
       .subscribe()
-
     const poll = setInterval(() => void refresh(tableId), 3000)
-
     return () => {
       clearInterval(poll)
       void supabase.removeChannel(channel)
@@ -150,6 +151,59 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
   useEffect(() => {
     if (!authLoading && !user) onNavigate('auth')
   }, [authLoading, user, onNavigate])
+
+  // Join auto depuis GameMode (Tables ouvertes → tableId, sans ressaisir le code)
+  useEffect(() => {
+    if (authLoading || !user || autoJoinDone.current || phase !== 'menu') return
+    const tableId = consumePendingJoinTableId()
+    if (!tableId) return
+    autoJoinDone.current = true
+    void (async () => {
+      setBusy(true)
+      setError(null)
+      try {
+        const { table: t, error: tErr } = await fetchTable(tableId)
+        if (tErr || !t) {
+          setError(humanizeError(tErr, 'Table introuvable. Elle a peut‑être été fermée.'))
+          setBusy(false)
+          return
+        }
+        if (t.status === 'playing') {
+          const seatsNow = await fetchSeatsWithProfiles(t.id)
+          if (seatsNow.seats.some(s => s.user_id === user.id)) {
+            goToTable(t.id)
+            setBusy(false)
+            return
+          }
+          setError('Cette table a déjà démarré.')
+          setBusy(false)
+          return
+        }
+        if (t.status !== 'lobby') {
+          setError('Cette table n’est plus disponible.')
+          setBusy(false)
+          return
+        }
+        const already = (await fetchSeatsWithProfiles(t.id)).seats.find(s => s.user_id === user.id)
+        if (!already) {
+          const buyIn = Math.min(Math.max(stakeConfig.startingCapital, t.min_buy_in), t.max_buy_in)
+          const { error: joinErr } = await joinOnlineTable({ tableId: t.id, userId: user.id, buyIn })
+          if (joinErr) {
+            setError(humanizeError(joinErr, 'Impossible de rejoindre la table.'))
+            setBusy(false)
+            return
+          }
+        }
+        setActiveOnlineTableId(t.id)
+        setTable(t)
+        await refresh(t.id)
+        setPhase('table')
+      } catch (e) {
+        setError(humanizeError(e instanceof Error ? e.message : String(e)))
+      }
+      setBusy(false)
+    })()
+  }, [authLoading, user, phase, goToTable, refresh, stakeConfig.startingCapital])
 
   async function handleCreate() {
     if (!user) return
@@ -165,7 +219,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
       maxBuyIn: stakeConfig.startingCapital * 3,
     })
     if (createErr || !created) {
-      setError(createErr ?? 'Échec création')
+      setError(humanizeError(createErr, 'Impossible de créer la table.'))
       setBusy(false)
       return
     }
@@ -176,7 +230,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
       preferredSeat: 0,
     })
     if (joinErr) {
-      setError(joinErr)
+      setError(humanizeError(joinErr, 'Impossible de rejoindre la table.'))
       setBusy(false)
       return
     }
@@ -191,50 +245,46 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
     if (!user) return
     setBusy(true)
     setError(null)
-
-    const { table: t, error: tErr } = await fetchTable(tableId)
-    if (tErr || !t) {
-      setError(tErr ?? 'Table introuvable')
-      setBusy(false)
-      return
-    }
-    if (t.status === 'playing') {
-      const seatsNow = await fetchSeatsWithProfiles(t.id)
-      const already = seatsNow.seats.find(s => s.user_id === user.id)
-      if (already) {
-        goToTable(t.id)
+    try {
+      const { table: t, error: tErr } = await fetchTable(tableId)
+      if (tErr || !t) {
+        setError(humanizeError(tErr, 'Table introuvable. Elle a peut‑être été fermée.'))
         setBusy(false)
         return
       }
-      setError('Cette table a déjà démarré.')
-      setBusy(false)
-      return
-    }
-    if (t.status !== 'lobby') {
-      setError('Cette table n’est plus disponible.')
-      setBusy(false)
-      return
-    }
-
-    const already = (await fetchSeatsWithProfiles(t.id)).seats.find(s => s.user_id === user.id)
-    if (!already) {
-      const buyIn = Math.min(Math.max(stakeConfig.startingCapital, t.min_buy_in), t.max_buy_in)
-      const { error: joinErr } = await joinOnlineTable({
-        tableId: t.id,
-        userId: user.id,
-        buyIn,
-      })
-      if (joinErr) {
-        setError(joinErr)
+      if (t.status === 'playing') {
+        const seatsNow = await fetchSeatsWithProfiles(t.id)
+        if (seatsNow.seats.find(s => s.user_id === user.id)) {
+          goToTable(t.id)
+          setBusy(false)
+          return
+        }
+        setError('Cette table a déjà démarré.')
         setBusy(false)
         return
       }
+      if (t.status !== 'lobby') {
+        setError('Cette table n’est plus disponible.')
+        setBusy(false)
+        return
+      }
+      const already = (await fetchSeatsWithProfiles(t.id)).seats.find(s => s.user_id === user.id)
+      if (!already) {
+        const buyIn = Math.min(Math.max(stakeConfig.startingCapital, t.min_buy_in), t.max_buy_in)
+        const { error: joinErr } = await joinOnlineTable({ tableId: t.id, userId: user.id, buyIn })
+        if (joinErr) {
+          setError(humanizeError(joinErr, 'Impossible de rejoindre la table.'))
+          setBusy(false)
+          return
+        }
+      }
+      setActiveOnlineTableId(t.id)
+      setTable(t)
+      await refresh(t.id)
+      setPhase('table')
+    } catch (e) {
+      setError(humanizeError(e instanceof Error ? e.message : String(e)))
     }
-
-    setActiveOnlineTableId(t.id)
-    setTable(t)
-    await refresh(t.id)
-    setPhase('table')
     setBusy(false)
   }
 
@@ -247,19 +297,28 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
     }
     setBusy(true)
     setError(null)
-
     let tableId = raw
-    if (!raw.includes('-') && raw.length <= 12) {
-      const { data } = await supabase.from('kora_tables').select('id, status').eq('status', 'lobby').limit(40)
-      const match = (data ?? []).find(t => tableInviteCode(t.id) === raw.toUpperCase().replace(/-/g, ''))
-      if (!match) {
-        setError('Aucune table lobby avec ce code. Vérifiez le code ou collez l’UUID complet.')
-        setBusy(false)
-        return
+    try {
+      if (!raw.includes('-') && raw.length <= 12) {
+        const { data, error } = await supabase.from('kora_tables').select('id, status').eq('status', 'lobby').limit(40)
+        if (error) {
+          setError(humanizeError(error.message, 'Recherche de table impossible.'))
+          setBusy(false)
+          return
+        }
+        const match = (data ?? []).find(t => tableInviteCode(t.id) === raw.toUpperCase().replace(/-/g, ''))
+        if (!match) {
+          setError('Aucune table en lobby avec ce code. Vérifiez le code ou choisissez une table ouverte.')
+          setBusy(false)
+          return
+        }
+        tableId = match.id
       }
-      tableId = match.id
+    } catch (e) {
+      setError(humanizeError(e instanceof Error ? e.message : String(e)))
+      setBusy(false)
+      return
     }
-
     setBusy(false)
     await handleJoinById(tableId)
   }
@@ -269,7 +328,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
     setBusy(true)
     setError(null)
     const { error: e } = await setSeatReady(table.id, user.id, !mySeat.is_ready)
-    if (e) setError(e)
+    if (e) setError(humanizeError(e, 'Impossible de changer le statut prêt.'))
     await refresh(table.id)
     setBusy(false)
   }
@@ -280,7 +339,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
     setError(null)
     const { ok, body } = await callEngine('start_table', table.id)
     if (!ok) {
-      setError(String(body.error ?? 'Impossible de démarrer'))
+      setError(humanizeError(String(body.error ?? ''), 'Impossible de démarrer la table.'))
       setBusy(false)
       return
     }
@@ -313,18 +372,8 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
   }
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background: '#0B0D10',
-        display: 'flex',
-        flexDirection: 'column',
-        overflow: 'hidden',
-      }}
-    >
+    <div style={{ position: 'absolute', inset: 0, background: '#0B0D10', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
       <div className="pattern-african" style={{ position: 'absolute', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
-
       <div style={{ padding: '20px 20px 0', position: 'relative' }}>
         <button
           onClick={() => (phase === 'table' ? void handleLeave() : onNavigate('gameMode'))}
@@ -361,53 +410,43 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
               borderRadius: 12,
               padding: '12px 14px',
               marginBottom: 16,
-              color: '#C94B4B',
-              fontSize: 13,
             }}
           >
-            {error}
+            <p style={{ color: '#E8A0A0', fontSize: 13, margin: '0 0 8px', lineHeight: 1.45 }}>{error}</p>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              style={{
+                background: 'transparent',
+                border: '1px solid rgba(201,75,75,0.4)',
+                borderRadius: 8,
+                color: '#E8A0A0',
+                fontSize: 11,
+                padding: '4px 10px',
+                cursor: 'pointer',
+              }}
+            >
+              Fermer
+            </button>
           </div>
         )}
 
         {phase === 'menu' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 420, margin: '0 auto' }}>
-            <div
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 16,
-                padding: 16,
-              }}
-            >
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 16 }}>
               <p style={{ color: '#A9B0B7', fontSize: 12, margin: '0 0 8px' }}>
-                Mise {stakeConfig.baseStake.toLocaleString('fr-FR')} · Capital{' '}
-                {stakeConfig.startingCapital.toLocaleString('fr-FR')} FCFA · {deckVariant}
+                Mise {stakeConfig.baseStake.toLocaleString('fr-FR')} · Capital {stakeConfig.startingCapital.toLocaleString('fr-FR')} FCFA ·{' '}
+                {deckVariant}
               </p>
-              <button
-                className="btn-primary glow-gold"
-                disabled={busy}
-                onClick={() => void handleCreate()}
-                style={{ width: '100%', padding: 14, borderRadius: 14, fontSize: 14 }}
-              >
+              <button className="btn-primary glow-gold" disabled={busy} onClick={() => void handleCreate()} style={{ width: '100%', padding: 14, borderRadius: 14, fontSize: 14 }}>
                 Créer une table privée
               </button>
-              <button
-                className="btn-secondary"
-                onClick={() => onNavigate('stakeConfig')}
-                style={{ width: '100%', padding: 12, borderRadius: 12, fontSize: 13, marginTop: 10 }}
-              >
+              <button className="btn-secondary" onClick={() => onNavigate('stakeConfig')} style={{ width: '100%', padding: 12, borderRadius: 12, fontSize: 13, marginTop: 10 }}>
                 Modifier mise / capital
               </button>
             </div>
 
-            <div
-              style={{
-                background: 'rgba(255,255,255,0.04)',
-                border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 16,
-                padding: 16,
-              }}
-            >
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 16 }}>
               <p className="font-display" style={{ color: '#fff', fontSize: 14, fontWeight: 700, margin: '0 0 10px' }}>
                 Rejoindre avec un code
               </p>
@@ -427,12 +466,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
                   marginBottom: 10,
                 }}
               />
-              <button
-                className="btn-primary"
-                disabled={busy}
-                onClick={() => void handleJoin()}
-                style={{ width: '100%', padding: 14, borderRadius: 14, fontSize: 14 }}
-              >
+              <button className="btn-primary" disabled={busy} onClick={() => void handleJoin()} style={{ width: '100%', padding: 14, borderRadius: 14, fontSize: 14 }}>
                 Rejoindre
               </button>
             </div>
@@ -441,9 +475,17 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
               <p className="font-display" style={{ color: '#fff', fontSize: 14, fontWeight: 700, margin: '0 0 10px' }}>
                 Tables ouvertes
               </p>
-              {openTables.length === 0 ? (
+              {listError && (
+                <div style={{ background: 'rgba(201,75,75,0.1)', border: '1px solid rgba(201,75,75,0.3)', borderRadius: 12, padding: '10px 12px', marginBottom: 10 }}>
+                  <p style={{ color: '#E8A0A0', fontSize: 12, margin: '0 0 8px' }}>{listError}</p>
+                  <button type="button" className="btn-secondary" disabled={busy} onClick={() => void refreshOpenList()} style={{ padding: '8px 12px', fontSize: 12, borderRadius: 10 }}>
+                    Réessayer
+                  </button>
+                </div>
+              )}
+              {openTables.length === 0 && !listError ? (
                 <p style={{ color: '#5b636b', fontSize: 12, margin: 0 }}>Aucune table en lobby pour l’instant.</p>
-              ) : (
+              ) : openTables.length === 0 ? null : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                   {openTables.map(t => (
                     <button
@@ -512,9 +554,8 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
                 </span>
               </div>
               <p style={{ color: '#A9B0B7', fontSize: 12, margin: 0 }}>
-                Mise {table.base_stake.toLocaleString('fr-FR')} · Buy-in{' '}
-                {table.min_buy_in.toLocaleString('fr-FR')}–{table.max_buy_in.toLocaleString('fr-FR')} ·{' '}
-                {seats.length}/4
+                Mise {table.base_stake.toLocaleString('fr-FR')} · Buy-in {table.min_buy_in.toLocaleString('fr-FR')}–
+                {table.max_buy_in.toLocaleString('fr-FR')} · {seats.length}/4
               </p>
             </div>
 
@@ -575,22 +616,12 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
 
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {mySeat && table.status === 'lobby' && (
-                <button
-                  className="btn-primary glow-gold"
-                  disabled={busy}
-                  onClick={() => void handleToggleReady()}
-                  style={{ width: '100%', padding: 16, borderRadius: 16, fontSize: 15 }}
-                >
+                <button className="btn-primary glow-gold" disabled={busy} onClick={() => void handleToggleReady()} style={{ width: '100%', padding: 16, borderRadius: 16, fontSize: 15 }}>
                   {mySeat.is_ready ? '↩ Annuler prêt' : '✓  PRÊT'}
                 </button>
               )}
               {canStart && (
-                <button
-                  className="btn-primary"
-                  disabled={busy}
-                  onClick={() => void handleStart()}
-                  style={{ width: '100%', padding: 16, borderRadius: 16, fontSize: 15 }}
-                >
+                <button className="btn-primary" disabled={busy} onClick={() => void handleStart()} style={{ width: '100%', padding: 16, borderRadius: 16, fontSize: 15 }}>
                   LANCER LA TABLE →
                 </button>
               )}
@@ -599,12 +630,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
                   Il faut ≥ 2 joueurs, tous prêts, pour démarrer.
                 </p>
               )}
-              <button
-                className="btn-secondary"
-                disabled={busy}
-                onClick={() => void handleLeave()}
-                style={{ width: '100%', padding: 12, borderRadius: 12, fontSize: 13 }}
-              >
+              <button className="btn-secondary" disabled={busy} onClick={() => void handleLeave()} style={{ width: '100%', padding: 12, borderRadius: 12, fontSize: 13 }}>
                 Quitter la table
               </button>
             </div>

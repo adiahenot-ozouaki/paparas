@@ -3,9 +3,19 @@ import { useGame, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
 import { useAuth } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { gameOverReasonLabel } from '../game/payout'
+import { NewlyUnlockedAchievements, ShareScoreButton } from '../components/EndGameExtras'
 
 export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  const { players, roundsWon, bestCombo, gameStartedAt, stakeConfig, lastGameOver, startNewGame } = useGame()
+  const {
+    players,
+    roundsWon,
+    bestCombo,
+    gameStartedAt,
+    stakeConfig,
+    lastGameOver,
+    lifetimeStats,
+    startNewGame,
+  } = useGame()
   const { profile } = useAuth()
 
   const finalCapital = players[HUMAN_INDEX].capital
@@ -14,11 +24,12 @@ export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) 
   const elapsedMinutes = Math.max(1, Math.round((Date.now() - gameStartedAt) / 60000))
   const reasonText = gameOverReasonLabel(lastGameOver?.reason, stakeConfig)
   const avatar = profile?.avatar ?? SEAT_AVATARS[HUMAN_INDEX]
+  const bestComboLabel = humanBestCombo ? COMBO_LABEL[humanBestCombo] : undefined
 
   const STATS = [
     { label: 'Condition de fin', value: reasonText },
     { label: 'Rounds gagnés', value: String(roundsWon[HUMAN_INDEX]) },
-    { label: 'Meilleur combo', value: humanBestCombo ? `${COMBO_LABEL[humanBestCombo]}` : '—' },
+    { label: 'Meilleur combo', value: bestComboLabel ?? '—' },
     { label: 'Capital final', value: `${finalCapital.toLocaleString('fr-FR')} FCFA` },
     { label: 'Temps de partie', value: `${elapsedMinutes} min` },
   ]
@@ -128,6 +139,10 @@ export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) 
         <div style={{ color: '#A9B0B7', fontSize: 14, marginTop: 4 }}>FCFA</div>
       </div>
 
+      <div className="anim-fade-in-up" style={{ width: '100%', animationDelay: '0.45s' }}>
+        <NewlyUnlockedAchievements stats={lifetimeStats} />
+      </div>
+
       <div
         className="anim-fade-in-up"
         style={{
@@ -162,13 +177,28 @@ export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) 
 
       <div style={{ width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <button
+          type="button"
           className="btn-primary glow-gold anim-fade-in-up"
           onClick={handleReplay}
           style={{ padding: '18px', fontSize: 15, borderRadius: 18, letterSpacing: '0.1em', animationDelay: '0.6s' }}
         >
           REJOUER
         </button>
+        <ShareScoreButton
+          className="btn-secondary anim-fade-in-up"
+          style={{ padding: '14px', fontSize: 14, borderRadius: 14, animationDelay: '0.65s' }}
+          payload={{
+            won: true,
+            netGain,
+            finalCapital,
+            roundsWon: roundsWon[HUMAN_INDEX],
+            bestComboLabel,
+            reason: reasonText,
+            username: profile?.username,
+          }}
+        />
         <button
+          type="button"
           className="btn-secondary anim-fade-in-up"
           onClick={() => onNavigate('home')}
           style={{ padding: '14px', fontSize: 14, borderRadius: 14, animationDelay: '0.7s' }}

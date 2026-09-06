@@ -1,13 +1,18 @@
 // ==========================================================================
-// session.ts — table online active (persistance courte pour navigation).
+// session.ts — table online active + intention d’entrée lobby.
 // ==========================================================================
 
-const KEY = 'kora:onlineTableId'
+const KEY_TABLE = 'kora:onlineTableId'
+const KEY_INTENT = 'kora:onlineLobbyIntent'
+const KEY_JOIN_CODE = 'kora:onlineJoinCode'
+const KEY_JOIN_TABLE = 'kora:onlineJoinTableId'
+
+export type OnlineLobbyIntent = 'menu' | 'create' | 'join'
 
 export function setActiveOnlineTableId(tableId: string | null): void {
   try {
-    if (tableId) sessionStorage.setItem(KEY, tableId)
-    else sessionStorage.removeItem(KEY)
+    if (tableId) sessionStorage.setItem(KEY_TABLE, tableId)
+    else sessionStorage.removeItem(KEY_TABLE)
   } catch {
     // ignore
   }
@@ -15,7 +20,64 @@ export function setActiveOnlineTableId(tableId: string | null): void {
 
 export function getActiveOnlineTableId(): string | null {
   try {
-    return sessionStorage.getItem(KEY)
+    return sessionStorage.getItem(KEY_TABLE)
+  } catch {
+    return null
+  }
+}
+
+export function setOnlineLobbyIntent(intent: OnlineLobbyIntent): void {
+  try {
+    sessionStorage.setItem(KEY_INTENT, intent)
+  } catch {
+    // ignore
+  }
+}
+
+export function getOnlineLobbyIntent(): OnlineLobbyIntent {
+  try {
+    const v = sessionStorage.getItem(KEY_INTENT)
+    if (v === 'create' || v === 'join' || v === 'menu') return v
+  } catch {
+    // ignore
+  }
+  return 'menu'
+}
+
+export function setPendingJoinCode(code: string | null): void {
+  try {
+    if (code) sessionStorage.setItem(KEY_JOIN_CODE, code)
+    else sessionStorage.removeItem(KEY_JOIN_CODE)
+  } catch {
+    // ignore
+  }
+}
+
+export function consumePendingJoinCode(): string | null {
+  try {
+    const v = sessionStorage.getItem(KEY_JOIN_CODE)
+    sessionStorage.removeItem(KEY_JOIN_CODE)
+    return v
+  } catch {
+    return null
+  }
+}
+
+/** Join direct depuis « Tables ouvertes » (UUID) — pas besoin de code. */
+export function setPendingJoinTableId(tableId: string | null): void {
+  try {
+    if (tableId) sessionStorage.setItem(KEY_JOIN_TABLE, tableId)
+    else sessionStorage.removeItem(KEY_JOIN_TABLE)
+  } catch {
+    // ignore
+  }
+}
+
+export function consumePendingJoinTableId(): string | null {
+  try {
+    const v = sessionStorage.getItem(KEY_JOIN_TABLE)
+    sessionStorage.removeItem(KEY_JOIN_TABLE)
+    return v
   } catch {
     return null
   }

@@ -3,11 +3,7 @@ import type { Screen } from '../types'
 import { useGame, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
 import { useAuth } from '../auth/AuthContext'
 import { fetchOnlineLeaderboard, type LeaderboardEntry } from '../lib/online/api'
-
-// ==========================================================================
-// LeaderboardScreen — Local (lifetimeStats) + En ligne (kora_lifetime_stats).
-// Plus d’onglets vides Global / Amis / Hebdo ni lignes DEMO.
-// ==========================================================================
+import { AlertBanner, EmptyState, PageHeader, ScreenShell, SectionCard, UiButton } from '../components/ui'
 
 const TABS = ['Local', 'En ligne'] as const
 const WINS_PER_LEVEL = 5
@@ -47,51 +43,17 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
   const youLevel = 1 + Math.floor(lifetimeStats.gamesWon / WINS_PER_LEVEL)
 
   return (
-    <div
-      style={{
-        position: 'absolute',
-        inset: 0,
-        background: '#0B0D10',
-        overflowY: 'auto',
-        paddingBottom: 80,
-      }}
-    >
-      <div className="pattern-african" style={{ position: 'fixed', inset: 0, pointerEvents: 'none', opacity: 0.5 }} />
+    <ScreenShell>
+      <PageHeader title="Classement" subtitle="Local = votre score solo · En ligne = comptes réels" />
 
-      <div style={{ padding: '20px 20px 0', position: 'relative' }}>
-        <h1 className="font-display" style={{ fontSize: 28, fontWeight: 800, margin: '0 0 4px', letterSpacing: '0.02em' }}>
-          Classement
-        </h1>
-        <p style={{ color: '#A9B0B7', fontSize: 14, margin: '0 0 16px' }}>
-          Local (solo) · En ligne (stats serveur)
-        </p>
-
-        <div
-          style={{
-            display: 'flex',
-            gap: 4,
-            background: 'rgba(255,255,255,0.05)',
-            borderRadius: 14,
-            padding: 4,
-          }}
-        >
+      <div style={{ padding: '0 20px' }}>
+        <div className="segmented">
           {TABS.map((tab, i) => (
             <button
               key={tab}
+              type="button"
+              className={`segmented-btn${activeTab === i ? ' is-active' : ''}`}
               onClick={() => setActiveTab(i)}
-              style={{
-                flex: 1,
-                padding: '8px 4px',
-                borderRadius: 10,
-                border: 'none',
-                background: activeTab === i ? '#D6A84F' : 'transparent',
-                color: activeTab === i ? '#0B0D10' : '#A9B0B7',
-                fontFamily: 'Plus Jakarta Sans',
-                fontWeight: activeTab === i ? 700 : 500,
-                fontSize: 13,
-                cursor: 'pointer',
-                transition: 'all 0.2s ease',
-              }}
             >
               {tab}
             </button>
@@ -102,18 +64,11 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
       <div className="anim-fade-in-up" style={{ padding: '24px 20px 0' }}>
         {activeTab === 0 && (
           <>
-            <div
-              style={{
-                background: 'rgba(18,60,50,0.35)',
-                border: '1px solid rgba(214,168,79,0.3)',
-                borderRadius: 16,
-                padding: '16px',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                marginBottom: 12,
-              }}
-            >
+            <p style={{ color: '#5b636b', fontSize: 12, margin: '0 0 12px', lineHeight: 1.4 }}>
+              Une seule ligne ici : le classement local ne compare que vous-même (appareil).
+            </p>
+
+            <SectionCard variant="green" style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 12 }}>
               <div
                 style={{
                   width: 32,
@@ -165,31 +120,27 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                   </span>
                 </div>
                 <p style={{ color: '#A9B0B7', fontSize: 12, margin: '2px 0 0' }}>
-                  Niv. {youLevel} · {lifetimeStats.gamesWon} victoire{lifetimeStats.gamesWon > 1 ? 's' : ''} solo
+                  Niv. {youLevel} · {lifetimeStats.gamesWon} victoire{lifetimeStats.gamesWon > 1 ? 's' : ''} ·{' '}
+                  {lifetimeStats.gamesPlayed} partie{lifetimeStats.gamesPlayed > 1 ? 's' : ''}
                 </p>
               </div>
               <div style={{ textAlign: 'right', flexShrink: 0 }}>
                 <p className="font-display" style={{ color: '#D6A84F', fontSize: 16, fontWeight: 700, margin: '0 0 2px' }}>
-                  {Math.max(0, lifetimeStats.netGainTotal).toLocaleString('fr-FR')}
+                  {lifetimeStats.netGainTotal.toLocaleString('fr-FR')}
                 </p>
-                <p style={{ color: '#A9B0B7', fontSize: 10, margin: 0 }}>pts (gains nets)</p>
+                <p style={{ color: '#A9B0B7', fontSize: 10, margin: 0 }}>gains nets</p>
               </div>
-            </div>
+            </SectionCard>
 
-            {lifetimeStats.gamesPlayed === 0 && (
-              <div
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.07)',
-                  borderRadius: 14,
-                  padding: '14px 16px',
-                  textAlign: 'center',
-                }}
-              >
-                <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0 }}>
-                  Jouez une partie solo pour faire progresser ce score local.
-                </p>
-              </div>
+            {lifetimeStats.gamesPlayed === 0 ? (
+              <EmptyState
+                title="Pas encore de parties solo"
+                description="Terminez une partie pour faire progresser ce score."
+              />
+            ) : (
+              <p style={{ color: '#5b636b', fontSize: 11, margin: 0, textAlign: 'center' }}>
+                Pour vous comparer aux autres → onglet <strong style={{ color: '#A9B0B7' }}>En ligne</strong>
+              </p>
             )}
           </>
         )}
@@ -197,54 +148,33 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
         {activeTab === 1 && (
           <>
             {!user ? (
-              <div
-                style={{
-                  background: 'rgba(255,255,255,0.04)',
-                  border: '1px solid rgba(255,255,255,0.08)',
-                  borderRadius: 16,
-                  padding: '28px 20px',
-                  textAlign: 'center',
-                }}
-              >
-                <p className="font-display" style={{ color: '#fff', fontSize: 15, fontWeight: 700, margin: '0 0 8px' }}>
-                  Connexion requise
-                </p>
-                <p style={{ color: '#A9B0B7', fontSize: 13, margin: '0 0 16px' }}>
-                  Le classement en ligne utilise les stats réelles des comptes.
-                </p>
-                <button
-                  className="btn-primary glow-gold"
-                  onClick={() => onNavigate('auth')}
-                  style={{ padding: '12px 24px', borderRadius: 14, fontSize: 13 }}
-                >
-                  Se connecter
-                </button>
-              </div>
+              <EmptyState
+                title="Connexion requise"
+                description="Le classement en ligne utilise les stats réelles des comptes."
+                dashed={false}
+                action={
+                  <UiButton onClick={() => onNavigate('auth')}>Se connecter</UiButton>
+                }
+              />
             ) : loadingOnline ? (
               <p style={{ color: '#A9B0B7', textAlign: 'center', fontSize: 13 }}>Chargement…</p>
             ) : onlineError ? (
-              <p style={{ color: '#C94B4B', textAlign: 'center', fontSize: 13 }}>{onlineError}</p>
+              <AlertBanner tone="error">{onlineError}</AlertBanner>
             ) : online.length === 0 ? (
-              <p style={{ color: '#A9B0B7', textAlign: 'center', fontSize: 13 }}>
-                Aucune statistique en ligne pour l’instant.
-              </p>
+              <EmptyState
+                title="Classement vide"
+                description="Aucune statistique serveur pour l’instant. Jouez connecté pour apparaître ici."
+              />
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 {online.map((e, i) => {
                   const isYou = user && e.userId === user.id
                   const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}`
                   return (
-                    <div
+                    <SectionCard
                       key={e.userId}
-                      style={{
-                        background: isYou ? 'rgba(18,60,50,0.35)' : 'rgba(255,255,255,0.04)',
-                        border: isYou ? '1px solid rgba(214,168,79,0.3)' : '1px solid rgba(255,255,255,0.07)',
-                        borderRadius: 14,
-                        padding: '12px 14px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10,
-                      }}
+                      variant={isYou ? 'green' : 'default'}
+                      style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px' }}
                     >
                       <span style={{ width: 28, textAlign: 'center', fontSize: i < 3 ? 16 : 12, color: '#A9B0B7' }}>
                         {medal}
@@ -264,12 +194,16 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                         {e.avatar}
                       </div>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <p className="font-display" style={{ color: isYou ? '#D6A84F' : '#fff', fontSize: 14, fontWeight: 700, margin: 0 }}>
+                        <p
+                          className="font-display"
+                          style={{ color: isYou ? '#D6A84F' : '#fff', fontSize: 14, fontWeight: 700, margin: 0 }}
+                        >
                           {e.username}
                           {isYou ? ' (vous)' : ''}
                         </p>
                         <p style={{ color: '#A9B0B7', fontSize: 11, margin: '2px 0 0' }}>
-                          {e.totalRoundsWon} round{e.totalRoundsWon > 1 ? 's' : ''} gagné{e.totalRoundsWon > 1 ? 's' : ''}
+                          {e.totalRoundsWon} round{e.totalRoundsWon > 1 ? 's' : ''} gagné
+                          {e.totalRoundsWon > 1 ? 's' : ''}
                         </p>
                       </div>
                       <div style={{ textAlign: 'right' }}>
@@ -278,7 +212,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                         </p>
                         <p style={{ color: '#5b636b', fontSize: 10, margin: 0 }}>net</p>
                       </div>
-                    </div>
+                    </SectionCard>
                   )
                 })}
               </div>
@@ -286,6 +220,6 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
           </>
         )}
       </div>
-    </div>
+    </ScreenShell>
   )
 }

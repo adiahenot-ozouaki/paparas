@@ -18,6 +18,7 @@ import {
   saveLocalLifetimeStats,
 } from '../lib/persistence/stats'
 import { syncLifetimeStatsWithCloud } from '../lib/persistence/cloud'
+import { appendGameHistory } from '../lib/persistence/gameHistory'
 
 // Re-export pour achievements / écrans qui importent depuis GameContext.
 export type { LifetimeStats } from '../lib/persistence/stats'
@@ -26,7 +27,7 @@ export { DEFAULT_LIFETIME_STATS } from '../lib/persistence/stats'
 // ==========================================================================
 // GameContext — état de partie partagé entre écrans.
 //
-// Persistance solo : localStorage (partie active + lifetimeStats).
+// Persistance solo : localStorage (partie active + lifetimeStats + historique).
 // Si l'utilisateur est connecté : merge upward vers kora_lifetime_stats
 // via RPC kora_merge_lifetime_stats (voir cloud.ts).
 // Achievements = dérivés purs de lifetimeStats (game/achievements.ts).
@@ -197,7 +198,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id])
 
-  // Connexion / changement de compte → merge local ↔ cloud une fois
   useEffect(() => {
     if (!user?.id) {
       lastSyncedUser.current = null
@@ -351,12 +351,24 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   const recordGameResult = useCallback(
     (won: boolean) => {
+      const netGain = players[HUMAN_INDEX].capital - stakeConfig.startingCapital
+      const humanBest = bestCombo[HUMAN_INDEX]
+
+      appendGameHistory({
+        won,
+        netGain,
+        finalCapital: players[HUMAN_INDEX].capital,
+        startingCapital: stakeConfig.startingCapital,
+        roundsWon: roundsWon[HUMAN_INDEX],
+        bestCombo: humanBest,
+        endReason: lastGameOver?.reason ?? null,
+        mode: 'solo',
+      })
+
       setLifetimeStats(prev => {
         const comboMultiplierOf = (c: ComboType | null) => (c === null ? 0 : getComboMultiplier(c))
-        const humanBest = bestCombo[HUMAN_INDEX]
         const bestComboEver =
           comboMultiplierOf(humanBest) > comboMultiplierOf(prev.bestComboEver) ? humanBest : prev.bestComboEver
-        const netGain = players[HUMAN_INDEX].capital - stakeConfig.startingCapital
 
         const next: LifetimeStats = {
           ...prev,
@@ -371,7 +383,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
       })
       clearPersistedGame()
     },
-    [players, roundsWon, bestCombo, stakeConfig, persistStats],
+    [players, roundsWon, bestCombo, stakeConfig, persistStats, lastGameOver],
   )
 
   useEffect(() => {
