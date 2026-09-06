@@ -9,7 +9,15 @@ import {
   setPendingJoinCode,
   setPendingJoinTableId,
 } from '../lib/online/session'
-import { AlertBanner, EmptyState, PageHeader, ScreenShell, SectionCard, UiButton } from '../components/ui'
+import {
+  AlertBanner,
+  BackButton,
+  EmptyState,
+  PageHeader,
+  ScreenShell,
+  SectionCard,
+  UiButton,
+} from '../components/ui'
 
 const QUICK_PRESET = {
   baseStake: 500,
@@ -114,45 +122,20 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
   }
 
   return (
-    <ScreenShell bottomPad={24}>
-      <div style={{ padding: 'max(20px, env(safe-area-inset-top, 0px)) 20px 0' }}>
-        <button
-          type="button"
-          onClick={() => onNavigate('home')}
-          aria-label="Retour"
-          style={{
-            background: 'var(--kora-card-bg)',
-            border: '1px solid var(--kora-card-border)',
-            borderRadius: 12,
-            width: 40,
-            height: 40,
-            color: 'var(--kora-text)',
-            fontSize: 18,
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            marginBottom: 16,
-          }}
-        >
-          ←
-        </button>
+    <ScreenShell bottomPad={24} className="mode-screen">
+      <div className="mode-header">
+        <BackButton absolute={false} onClick={() => onNavigate('home')} />
         <PageHeader title="Mode de jeu" subtitle={`Solo libre · Online${user ? ' · connecté' : ' · compte requis'}`} />
       </div>
 
       {myTables.length > 0 && (
-        <div style={{ padding: '0 20px 8px' }}>
+        <div className="mode-resume-list">
           {myTables.slice(0, 2).map(t => (
-            <SectionCard
-              key={t.tableId}
-              variant="green"
-              onClick={() => resumeTable(t)}
-              style={{ marginBottom: 10 }}
-            >
-              <p className="font-display text-gold" style={{ fontSize: 14, fontWeight: 700, margin: '0 0 4px' }}>
+            <SectionCard key={t.tableId} variant="green" onClick={() => resumeTable(t)} className="mode-resume-card">
+              <p className="font-display text-gold mode-resume-title">
                 {t.status === 'playing' ? '▶ Reprendre la partie' : '↩ Retour au lobby'}
               </p>
-              <p style={{ color: 'var(--kora-muted)', fontSize: 12, margin: 0 }}>
+              <p className="mode-resume-meta">
                 Code {t.code} · mise {t.baseStake.toLocaleString('fr-FR')} · siège {t.seatIndex + 1}
               </p>
             </SectionCard>
@@ -160,26 +143,15 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
         </div>
       )}
 
-      <div style={{ padding: '12px 20px 8px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-        <p
-          style={{
-            color: 'var(--kora-muted-2)',
-            fontSize: 11,
-            fontFamily: 'Plus Jakarta Sans',
-            letterSpacing: '0.12em',
-            margin: 0,
-            fontWeight: 700,
-          }}
-        >
-          SOLO · IA
-        </p>
+      <div className="mode-body">
+        <p className="mode-group-label">Solo · IA</p>
 
         <ModeCard
           icon="⚡"
           title="Partie rapide"
           badge="1 TAP"
           badgeTone="gold"
-          color="var(--kora-gold)"
+          accent="var(--kora-gold)"
           desc="As, mise 500, 8 rounds max — table IA tout de suite."
           meta="3–10+A · capital 5 000"
           onClick={startQuick}
@@ -190,84 +162,33 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
           title="Entraînement"
           badge="APPRENDRE"
           badgeTone="green"
-          color="var(--kora-success)"
+          accent="var(--kora-success)"
           desc="Paquet court (3–8), petites mises — idéal pour les règles."
           meta="Variante 8 · mise 100 · 5 rounds"
           onClick={startTraining}
         />
 
         <SectionCard variant="dashed" onClick={() => onNavigate('stakeConfig')}>
-          <span style={{ color: 'var(--kora-muted)', fontSize: 13, fontFamily: 'Plus Jakarta Sans' }}>
-            ⚙️ Configurer une table solo (mise, capital, variante, fin)…
-          </span>
+          <span className="mode-config-hint">⚙️ Configurer une table solo (mise, capital, variante, fin)…</span>
         </SectionCard>
 
-        <p
-          style={{
-            color: 'var(--kora-muted-2)',
-            fontSize: 11,
-            fontFamily: 'Plus Jakarta Sans',
-            letterSpacing: '0.12em',
-            margin: '12px 0 0',
-            fontWeight: 700,
-          }}
-        >
-          EN LIGNE · JOUEURS RÉELS
-        </p>
+        <p className="mode-group-label mode-group-label--spaced">En ligne · joueurs réels</p>
 
-        <SectionCard style={{ position: 'relative', overflow: 'hidden' }}>
-          <div
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: 4,
-              height: '100%',
-              background: 'linear-gradient(180deg, var(--kora-green), transparent)',
-            }}
-          />
-          <div style={{ paddingLeft: 10 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 22 }}>🌐</span>
-              <span className="font-display" style={{ color: 'var(--kora-text)', fontSize: 17, fontWeight: 700 }}>
-                Table en ligne
-              </span>
-              <span
-                style={{
-                  background: 'rgba(23,107,80,0.25)',
-                  color: 'var(--kora-success)',
-                  fontSize: 9,
-                  fontWeight: 700,
-                  padding: '2px 8px',
-                  borderRadius: 99,
-                  letterSpacing: '0.08em',
-                }}
-              >
-                ONLINE
-              </span>
-              {!user && (
-                <span
-                  style={{
-                    background: 'var(--kora-card-bg)',
-                    color: 'var(--kora-muted)',
-                    fontSize: 9,
-                    fontWeight: 700,
-                    padding: '2px 8px',
-                    borderRadius: 99,
-                  }}
-                >
-                  CONNEXION
-                </span>
-              )}
+        <SectionCard className="mode-online-card">
+          <div className="mode-online-accent" />
+          <div className="mode-online-body">
+            <div className="mode-online-head">
+              <span className="mode-online-emoji">🌐</span>
+              <span className="font-display mode-online-title">Table en ligne</span>
+              <span className="mode-badge mode-badge--green">ONLINE</span>
+              {!user && <span className="mode-badge mode-badge--muted">CONNEXION</span>}
             </div>
-            <p style={{ color: 'var(--kora-muted)', fontSize: 13, margin: '0 0 14px', lineHeight: 1.45 }}>
-              Créez une table privée ou rejoignez avec un code / une table ouverte.
-            </p>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <UiButton onClick={openOnlineCreate} style={{ flex: 1, minWidth: 120 }}>
+            <p className="mode-online-desc">Créez une table privée ou rejoignez avec un code / une table ouverte.</p>
+            <div className="mode-online-actions">
+              <UiButton onClick={openOnlineCreate} className="mode-online-btn">
                 Créer une table
               </UiButton>
-              <UiButton variant="secondary" onClick={() => openOnlineJoin()} style={{ flex: 1, minWidth: 120 }}>
+              <UiButton variant="secondary" onClick={() => openOnlineJoin()} className="mode-online-btn">
                 Rejoindre (code)
               </UiButton>
             </div>
@@ -275,34 +196,32 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
         </SectionCard>
       </div>
 
-      <div style={{ padding: '8px 20px 24px' }}>
-        <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px', color: 'var(--kora-text)' }}>
-          Tables ouvertes
-        </h3>
+      <div className="mode-open-tables">
+        <h3 className="font-display mode-open-title">Tables ouvertes</h3>
         {listError && (
-          <div style={{ marginBottom: 10 }}>
+          <div className="mode-list-error">
             <AlertBanner tone="error">{listError}</AlertBanner>
           </div>
         )}
         {openTables.length === 0 && !listError ? (
           <EmptyState title="Aucune table en lobby" description="Créez-en une ou attendez un hôte." />
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div className="mode-open-list">
             {openTables.map(t => (
               <SectionCard
                 key={t.table.id}
                 onClick={() => openOnlineJoin({ tableId: t.table.id, code: t.code })}
-                style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}
+                className="mode-open-item"
               >
-                <div>
-                  <p className="font-display" style={{ color: 'var(--kora-text)', fontSize: 14, fontWeight: 700, margin: 0 }}>
-                    {t.code}
-                  </p>
-                  <p style={{ color: 'var(--kora-muted)', fontSize: 11, margin: '2px 0 0' }}>
-                    Mise {t.table.base_stake.toLocaleString('fr-FR')} · {t.seatCount}/4
-                  </p>
+                <div className="mode-open-row">
+                  <div>
+                    <p className="font-display mode-open-code">{t.code}</p>
+                    <p className="mode-open-meta">
+                      Mise {t.table.base_stake.toLocaleString('fr-FR')} · {t.seatCount}/4
+                    </p>
+                  </div>
+                  <span className="mode-open-cta">S’asseoir →</span>
                 </div>
-                <span style={{ color: 'var(--kora-gold)', fontSize: 12, fontWeight: 700 }}>S’asseoir →</span>
               </SectionCard>
             ))}
           </div>
@@ -317,7 +236,7 @@ function ModeCard({
   title,
   desc,
   meta,
-  color,
+  accent,
   badge,
   badgeTone,
   onClick,
@@ -326,62 +245,27 @@ function ModeCard({
   title: string
   desc: string
   meta: string
-  color: string
+  accent: string
   badge: string
   badgeTone: 'gold' | 'green'
   onClick: () => void
 }) {
-  const badgeBg = badgeTone === 'gold' ? 'rgba(214,168,79,0.2)' : 'rgba(76,175,118,0.2)'
-  const badgeFg = badgeTone === 'gold' ? 'var(--kora-gold)' : 'var(--kora-success)'
   return (
     <button
       type="button"
-      className="anim-fade-in-up section-card"
+      className={`anim-fade-in-up section-card mode-card mode-card--${badgeTone}`}
       onClick={onClick}
-      style={{
-        cursor: 'pointer',
-        textAlign: 'left',
-        position: 'relative',
-        overflow: 'hidden',
-        display: 'block',
-        width: '100%',
-        borderRadius: 20,
-        padding: 18,
-      }}
+      style={{ ['--mode-accent' as string]: accent }}
     >
-      <div
-        style={{
-          position: 'absolute',
-          top: 0,
-          left: 0,
-          width: 4,
-          height: '100%',
-          background: `linear-gradient(180deg, ${color}, transparent)`,
-        }}
-      />
-      <div style={{ paddingLeft: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: 22 }}>{icon}</span>
-          <span className="font-display" style={{ color: 'var(--kora-text)', fontSize: 17, fontWeight: 700 }}>
-            {title}
-          </span>
-          <span
-            style={{
-              background: badgeBg,
-              color: badgeFg,
-              fontSize: 9,
-              fontWeight: 700,
-              padding: '2px 8px',
-              borderRadius: 99,
-              letterSpacing: '0.08em',
-              fontFamily: 'Plus Jakarta Sans',
-            }}
-          >
-            {badge}
-          </span>
+      <div className="mode-card-accent" />
+      <div className="mode-card-body">
+        <div className="mode-card-head">
+          <span className="mode-card-icon">{icon}</span>
+          <span className="font-display mode-card-title">{title}</span>
+          <span className={`mode-badge mode-badge--${badgeTone}`}>{badge}</span>
         </div>
-        <p style={{ color: 'var(--kora-muted)', fontSize: 13, margin: '0 0 6px', lineHeight: 1.4 }}>{desc}</p>
-        <p style={{ color: 'var(--kora-muted-2)', fontSize: 11, margin: 0 }}>{meta}</p>
+        <p className="mode-card-desc">{desc}</p>
+        <p className="mode-card-meta">{meta}</p>
       </div>
     </button>
   )

@@ -97,11 +97,11 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
   const hasAnyGame = display.gamesPlayed > 0
 
   return (
-    <ScreenShell>
-      <div style={{ padding: '20px 20px 0' }}>
+    <ScreenShell className="stats-screen">
+      <div className="stats-header">
         <PageHeader title="Statistiques" subtitle="Performance et combos" />
 
-        <div className="segmented" style={{ marginBottom: 12 }}>
+        <div className="segmented stats-scope">
           {(
             [
               { id: 'global' as const, label: 'Global' },
@@ -119,11 +119,9 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
           ))}
         </div>
 
-        <p style={{ color: 'var(--kora-muted-2)', fontSize: 11, margin: '0 0 14px', lineHeight: 1.4 }}>
-          {display.sourceNote}
-        </p>
+        <p className="stats-source-note">{display.sourceNote}</p>
 
-        <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+        <div className="stats-section-tabs">
           {(
             [
               { id: 'perf' as const, label: 'Performances' },
@@ -135,20 +133,7 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
               key={t.id}
               type="button"
               onClick={() => setSection(t.id)}
-              style={{
-                padding: '8px 16px',
-                borderRadius: 12,
-                border:
-                  section === t.id ? '1.5px solid var(--kora-border-gold)' : '1px solid var(--kora-card-border)',
-                background: section === t.id ? 'rgba(214,168,79,0.12)' : 'var(--kora-card-bg)',
-                color: section === t.id ? 'var(--kora-gold)' : 'var(--kora-muted)',
-                fontFamily: 'Plus Jakarta Sans',
-                fontWeight: 600,
-                fontSize: 13,
-                cursor: 'pointer',
-                whiteSpace: 'nowrap',
-                flexShrink: 0,
-              }}
+              className={`stats-tab${section === t.id ? ' is-active' : ''}`}
             >
               {t.label}
             </button>
@@ -156,9 +141,9 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
         </div>
       </div>
 
-      <div style={{ padding: '20px' }}>
+      <div className="stats-body">
         {!hasAnyGame && (
-          <div style={{ marginBottom: 16 }}>
+          <div className="stats-empty">
             <EmptyState
               title={scope === 'solo' ? 'Aucune partie solo récente' : 'Aucune partie jouée'}
               description={
@@ -172,9 +157,9 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
 
         {section === 'perf' && (
           <>
-            <SectionCard className="anim-scale-bounce" style={{ textAlign: 'center', marginBottom: 16, borderRadius: 20, padding: 24 }}>
-              <div style={{ position: 'relative', width: 120, height: 120, margin: '0 auto 16px' }}>
-                <svg width="120" height="120" style={{ transform: 'rotate(-90deg)' }}>
+            <SectionCard className="anim-scale-bounce stats-win-card">
+              <div className="stats-ring-wrap">
+                <svg width="120" height="120" className="stats-ring-svg">
                   <circle cx="60" cy="60" r="50" fill="none" stroke="var(--kora-card-border)" strokeWidth="10" />
                   <circle
                     cx="60"
@@ -193,46 +178,31 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
                     </linearGradient>
                   </defs>
                 </svg>
-                <div
-                  style={{
-                    position: 'absolute',
-                    inset: 0,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  <span className="text-gold font-display" style={{ fontSize: 28, fontWeight: 800, lineHeight: 1 }}>
-                    {winRatio.toFixed(1)}
-                  </span>
-                  <span style={{ color: 'var(--kora-muted)', fontSize: 12 }}>%</span>
+                <div className="stats-ring-center">
+                  <span className="text-gold font-display stats-ring-value">{winRatio.toFixed(1)}</span>
+                  <span className="stats-ring-unit">%</span>
                 </div>
               </div>
-              <p className="font-display" style={{ color: 'var(--kora-text)', fontSize: 15, fontWeight: 700, margin: '0 0 4px' }}>
-                Taux de victoire
-              </p>
-              <p style={{ color: 'var(--kora-muted)', fontSize: 13, margin: 0 }}>
+              <p className="font-display stats-ring-label">Taux de victoire</p>
+              <p className="stats-ring-sub">
                 {display.gamesWon} victoires sur {display.gamesPlayed} parties
               </p>
             </SectionCard>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+            <div className="stats-perf-grid">
               {[
-                { label: 'Parties jouées', value: String(display.gamesPlayed), color: 'var(--kora-text)' },
-                { label: 'Parties gagnées', value: String(display.gamesWon), color: 'var(--kora-success)' },
-                { label: 'Rounds gagnés', value: String(display.totalRoundsWon), color: 'var(--kora-gold)' },
+                { label: 'Parties jouées', value: String(display.gamesPlayed), tone: 'text' },
+                { label: 'Parties gagnées', value: String(display.gamesWon), tone: 'success' },
+                { label: 'Rounds gagnés', value: String(display.totalRoundsWon), tone: 'gold' },
                 {
                   label: 'Plis gagnés',
                   value: scope === 'solo' ? '—' : display.totalTricksWon.toLocaleString('fr-FR'),
-                  color: '#9B59B6',
+                  tone: 'purple',
                 },
-              ].map((s, i) => (
-                <SectionCard key={i} style={{ borderRadius: 14, padding: 14 }}>
-                  <p className="font-display" style={{ color: s.color, fontSize: 22, fontWeight: 800, margin: '0 0 4px' }}>
-                    {s.value}
-                  </p>
-                  <p style={{ color: 'var(--kora-muted)', fontSize: 12, margin: 0 }}>{s.label}</p>
+              ].map(s => (
+                <SectionCard key={s.label} className="stats-metric">
+                  <p className={`font-display stats-metric-value tone-${s.tone}`}>{s.value}</p>
+                  <p className="stats-metric-label">{s.label}</p>
                 </SectionCard>
               ))}
             </div>
@@ -241,50 +211,30 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
 
         {section === 'finance' && (
           <>
-            <SectionCard variant="green" style={{ borderRadius: 20, padding: 20, marginBottom: 16 }}>
-              <p
-                style={{
-                  color: 'var(--kora-muted)',
-                  fontSize: 11,
-                  fontFamily: 'Plus Jakarta Sans',
-                  letterSpacing: '0.1em',
-                  margin: '0 0 8px',
-                }}
-              >
+            <SectionCard variant="green" className="stats-net-card">
+              <p className="stats-net-kicker">
                 GAIN NET {scope === 'solo' ? 'SOLO RÉCENT' : 'TOTAL'}
               </p>
-              <div className="text-gold font-display" style={{ fontSize: 36, fontWeight: 800 }}>
+              <div className="text-gold font-display stats-net-value">
                 {display.netGainTotal >= 0 ? '+' : ''}
                 {display.netGainTotal.toLocaleString('fr-FR')} FCFA
               </div>
             </SectionCard>
 
             {[
-              { label: 'Gains totaux', value: `+${display.totalGains.toLocaleString('fr-FR')}`, color: 'var(--kora-success)' },
-              { label: 'Pertes totales', value: `-${display.totalLosses.toLocaleString('fr-FR')}`, color: 'var(--kora-danger)' },
+              { label: 'Gains totaux', value: `+${display.totalGains.toLocaleString('fr-FR')}`, tone: 'success' },
+              { label: 'Pertes totales', value: `-${display.totalLosses.toLocaleString('fr-FR')}`, tone: 'danger' },
               {
                 label: 'Gain net',
                 value: `${display.netGainTotal >= 0 ? '+' : ''}${display.netGainTotal.toLocaleString('fr-FR')}`,
-                color: 'var(--kora-gold)',
+                tone: 'gold',
               },
-              { label: 'Capital maximum', value: display.maxCapitalEver.toLocaleString('fr-FR'), color: 'var(--kora-text)' },
-              { label: 'Capital minimum', value: display.minCapitalEver.toLocaleString('fr-FR'), color: 'var(--kora-text)' },
-            ].map((s, i) => (
-              <SectionCard
-                key={i}
-                style={{
-                  borderRadius: 14,
-                  padding: '14px 16px',
-                  marginBottom: 8,
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <span style={{ color: 'var(--kora-muted)', fontSize: 14 }}>{s.label}</span>
-                <span className="font-display" style={{ color: s.color, fontSize: 16, fontWeight: 700 }}>
-                  {s.value} FCFA
-                </span>
+              { label: 'Capital maximum', value: display.maxCapitalEver.toLocaleString('fr-FR'), tone: 'text' },
+              { label: 'Capital minimum', value: display.minCapitalEver.toLocaleString('fr-FR'), tone: 'text' },
+            ].map(s => (
+              <SectionCard key={s.label} className="stats-finance-row">
+                <span className="stats-finance-label">{s.label}</span>
+                <span className={`font-display stats-finance-value tone-${s.tone}`}>{s.value} FCFA</span>
               </SectionCard>
             ))}
           </>
@@ -292,35 +242,28 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
 
         {section === 'combos' && (
           <>
-            <SectionCard style={{ borderRadius: 20, padding: 20, marginBottom: 16 }}>
-              <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: '0 0 16px', color: 'var(--kora-text)' }}>
+            <SectionCard className="stats-combo-card">
+              <h3 className="font-display stats-combo-title">
                 {scope === 'solo' ? 'Meilleurs combos (parties solo)' : 'Combos réalisés'}
               </h3>
               {COMBO_ORDER.map((c, i) => {
                 const count = display.comboCounts[c]
                 const color = COMBO_COLOR[c]
                 return (
-                  <div key={c} style={{ marginBottom: i < COMBO_ORDER.length - 1 ? 14 : 0 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <span className="font-display" style={{ color, fontSize: 15, fontWeight: 800 }}>
+                  <div key={c} className={`stats-combo-row${i < COMBO_ORDER.length - 1 ? ' has-gap' : ''}`}>
+                    <div className="stats-combo-head">
+                      <div className="stats-combo-name-row">
+                        <span className="font-display stats-combo-name" style={{ color }}>
                           {COMBO_LABEL[c]}
                         </span>
-                        <span style={{ color: 'var(--kora-muted)', fontSize: 12 }}>×{COMBO_MULTIPLIER[c]}</span>
+                        <span className="stats-combo-mult">×{COMBO_MULTIPLIER[c]}</span>
                       </div>
-                      <span className="font-display" style={{ color: 'var(--kora-text)', fontSize: 14, fontWeight: 700 }}>
-                        ×{count}
-                      </span>
+                      <span className="font-display stats-combo-count">×{count}</span>
                     </div>
-                    <div style={{ height: 8, background: 'var(--kora-card-bg)', borderRadius: 99, overflow: 'hidden' }}>
+                    <div className="stats-combo-bar">
                       <div
-                        style={{
-                          width: `${(count / maxComboCount) * 100}%`,
-                          height: '100%',
-                          background: color,
-                          borderRadius: 99,
-                          transition: 'width 1s cubic-bezier(0.34, 1.56, 0.64, 1)',
-                        }}
+                        className="stats-combo-fill"
+                        style={{ width: `${(count / maxComboCount) * 100}%`, background: color }}
                       />
                     </div>
                   </div>
@@ -329,33 +272,19 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
             </SectionCard>
 
             {scope === 'global' && (
-              <SectionCard style={{ borderRadius: 20, padding: 20 }}>
-                <h3 className="font-display" style={{ fontSize: 15, fontWeight: 700, margin: '0 0 16px', color: 'var(--kora-text)' }}>
-                  Règles spéciales
-                </h3>
-                <div style={{ display: 'flex', gap: 10 }}>
+              <SectionCard className="stats-special-card">
+                <h3 className="font-display stats-combo-title">Règles spéciales</h3>
+                <div className="stats-special-grid">
                   {SPECIAL_ORDER.map(rule => (
                     <div
                       key={rule}
-                      style={{
-                        flex: 1,
-                        background: 'var(--kora-card-bg)',
-                        border: `1.5px solid ${SPECIAL_COLOR[rule]}`,
-                        borderRadius: 16,
-                        padding: '16px 8px',
-                        textAlign: 'center',
-                        opacity: 0.95,
-                      }}
+                      className="stats-special-item"
+                      style={{ borderColor: SPECIAL_COLOR[rule] }}
                     >
-                      <p
-                        className="font-display"
-                        style={{ color: SPECIAL_COLOR[rule], fontSize: 24, fontWeight: 800, margin: '0 0 4px' }}
-                      >
+                      <p className="font-display stats-special-count" style={{ color: SPECIAL_COLOR[rule] }}>
                         {display.specialRuleCounts[rule]}
                       </p>
-                      <p className="font-display" style={{ color: 'var(--kora-text)', fontSize: 14, fontWeight: 700, margin: 0 }}>
-                        {SPECIAL_LABEL[rule]}
-                      </p>
+                      <p className="font-display stats-special-label">{SPECIAL_LABEL[rule]}</p>
                     </div>
                   ))}
                 </div>
@@ -363,7 +292,7 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
             )}
 
             {scope === 'solo' && (
-              <p style={{ color: 'var(--kora-muted-2)', fontSize: 11, margin: 0, lineHeight: 1.4 }}>
+              <p className="stats-solo-note">
                 Les règles spéciales et le détail des plis restent dans la vue Global.
               </p>
             )}
