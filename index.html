@@ -1,10 +1,9 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 
-    <!-- SEO de base -->
     <title>Garam Paparas — Jeu de cartes Kora</title>
     <meta
       name="description"
@@ -14,27 +13,22 @@
     <meta name="author" content="Garam Paparas" />
     <meta name="robots" content="index, follow" />
 
-    <!-- Préconnexion polices (chargées via @import dans index.css) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <!-- Thème / système -->
-    <meta name="theme-color" content="#0B0D10" />
-    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#0B0D10" id="meta-theme-color" />
+    <meta name="color-scheme" content="dark light" />
 
-    <!-- PWA / écran d'accueil -->
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="apple-mobile-web-app-title" content="Paparas" />
     <meta name="application-name" content="Garam Paparas" />
 
-    <!-- Icônes -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/manifest.webmanifest" />
 
-    <!-- Open Graph (Facebook, LinkedIn, iMessage, etc.) -->
     <meta property="og:type" content="website" />
     <meta property="og:locale" content="fr_FR" />
     <meta property="og:site_name" content="Garam Paparas" />
@@ -43,14 +37,12 @@
       property="og:description"
       content="Jeu de plis africain (variante Kora). Solo contre 3 IA, mises configurables, combos et victoires spéciales."
     />
-    <!-- Remplacer par l’URL publique réelle une fois déployé -->
     <meta property="og:url" content="https://paparas.app/" />
     <meta property="og:image" content="https://paparas.app/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
     <meta property="og:image:alt" content="Garam Paparas — table de jeu Kora" />
 
-    <!-- Twitter / X -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Garam Paparas — Jeu de cartes Kora" />
     <meta
@@ -58,6 +50,23 @@
       content="Jeu de plis africain (variante Kora). Solo contre 3 IA, mises, combos et règles spéciales."
     />
     <meta name="twitter:image" content="https://paparas.app/og-image.png" />
+
+    <!-- Anti-FOUC : appliquer le thème stocké avant le premier paint -->
+    <script>
+      (function () {
+        try {
+          var mode = localStorage.getItem('kora:theme:v1') || 'dark'
+          var resolved = mode
+          if (mode === 'system') {
+            resolved = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+          }
+          document.documentElement.setAttribute('data-theme', resolved)
+          document.documentElement.style.colorScheme = resolved
+          var meta = document.getElementById('meta-theme-color')
+          if (meta) meta.setAttribute('content', resolved === 'light' ? '#F3EFE6' : '#0B0D10')
+        } catch (e) {}
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>
