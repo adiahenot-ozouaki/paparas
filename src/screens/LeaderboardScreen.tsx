@@ -23,9 +23,9 @@ const LB_TAB_OPTIONS: { id: LbTab; label: string }[] = [
 
 function metricSubline(e: LeaderboardEntry, metric: LeaderboardMetric): string {
   if (metric === 'elo') return `${e.gamesWon} win · ${e.totalRoundsWon} rounds`
-  if (metric === 'net') return `Elo ${e.eloRating} · ${e.totalRoundsWon} rounds`
-  if (metric === 'wins') return `${e.gamesPlayed} parties · Elo ${e.eloRating}`
-  if (metric === 'rounds' || metric === 'tricks') return `Elo ${e.eloRating} · ${e.gamesWon} wins`
+  if (metric === 'net') return `Elo ${e.eloOnline} · ${e.totalRoundsWon} rounds`
+  if (metric === 'wins') return `${e.gamesPlayed} parties · Elo ${e.eloOnline}`
+  if (metric === 'rounds' || metric === 'tricks') return `Elo ${e.eloOnline} · ${e.gamesWon} wins`
   return `${e.comboCounts.kora} Kora · ${e.comboCounts['33']}×33`
 }
 
@@ -124,7 +124,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
         <div className="lb-main">
           <PageHeader
             title="Classement"
-            subtitle="Local = solo · En ligne = comptes · plusieurs critères + Elo"
+            subtitle="Local = Elo solo · En ligne = Elo online + autres critères"
           />
 
           <div className="lb-pad">
@@ -161,7 +161,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                   <span className="lb-you-pill">VOUS</span>
                 </div>
                 <p className="lb-sub">
-                  Elo {lifetimeStats.eloRating ?? 1000} · Niv. {progress.level} ·{' '}
+                  Elo solo {lifetimeStats.eloSolo ?? 1000} · Niv. {progress.level} ·{' '}
                   {lifetimeStats.gamesWon} victoire{lifetimeStats.gamesWon > 1 ? 's' : ''}
                 </p>
               </div>
@@ -213,7 +213,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
             {activeTab === 'local' && (
               <>
                 <p className="lb-hint">
-                  Score local appareil. Elo solo mis à jour en fin de partie contre les IA.
+                  Elo solo = parties vs IA · Elo online = parties en ligne (classement En ligne).
                 </p>
 
                 {lifetimeStats.gamesPlayed === 0 ? (
@@ -224,8 +224,12 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                 ) : (
                   <div className="lb-local-metrics">
                     <SectionCard className="lb-local-metric">
-                      <p className="font-display lb-local-value">{lifetimeStats.eloRating ?? 1000}</p>
-                      <p className="lb-local-label">Elo</p>
+                      <p className="font-display lb-local-value">{lifetimeStats.eloSolo ?? 1000}</p>
+                      <p className="lb-local-label">Elo solo</p>
+                    </SectionCard>
+                    <SectionCard className="lb-local-metric">
+                      <p className="font-display lb-local-value">{lifetimeStats.eloOnline ?? 1000}</p>
+                      <p className="lb-local-label">Elo online</p>
                     </SectionCard>
                     <SectionCard className="lb-local-metric">
                       <p className="font-display lb-local-value">{lifetimeStats.gamesWon}</p>
