@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { gameOverReasonLabel } from '../game/payout'
 import { NewlyUnlockedAchievements, ShareScoreButton } from '../components/EndGameExtras'
-import { UiButton } from '../components/ui'
+import { SectionCard, UiButton } from '../components/ui'
 
 export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const {
@@ -40,57 +40,57 @@ export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) 
     onNavigate('lobby')
   }
 
+  const tag =
+    lastGameOver?.reason === 'max_rounds'
+      ? 'PLUS HAUT CAPITAL'
+      : lastGameOver?.reason === 'race_target'
+        ? 'OBJECTIF ATTEINT'
+        : 'DERNIER JOUEUR EN LICE'
+
   return (
     <div className="end-screen end-screen--victory">
       <div className="pattern-african end-screen-pattern" aria-hidden />
 
       <div className="anim-scale-bounce end-hero-badge end-hero-badge--gold">🏆</div>
 
-      <div className="anim-fade-in-up end-headline" style={{ animationDelay: '0.2s' }}>
-        <h1 className="text-shimmer font-display end-title end-title--xl">VICTOIRE</h1>
+      <div className="anim-fade-in-up end-headline delay-2">
+        <h1 className="text-shimmer font-display end-title end-title--xl text-hero">VICTOIRE</h1>
       </div>
 
-      <div className="anim-fade-in-up end-player-block" style={{ animationDelay: '0.3s' }}>
+      <div className="anim-fade-in-up end-player-block delay-3">
         <div className="end-player-avatar">{avatar}</div>
-        <p className="font-display end-player-tag">
-          {lastGameOver?.reason === 'max_rounds'
-            ? 'PLUS HAUT CAPITAL'
-            : lastGameOver?.reason === 'race_target'
-              ? 'OBJECTIF ATTEINT'
-              : 'DERNIER JOUEUR EN LICE'}
-        </p>
-        <p className="end-muted">{reasonText}</p>
+        <p className="font-display end-player-tag text-sm">{tag}</p>
+        <p className="end-muted text-sm">{reasonText}</p>
       </div>
 
-      <div className="anim-scale-bounce end-net-card" style={{ animationDelay: '0.4s' }}>
-        <p className="end-net-kicker">GAINS NETS DE LA PARTIE</p>
-        <div className="text-gold font-display end-net-value">
+      <SectionCard variant="green" className="anim-scale-bounce end-net-card delay-4">
+        <p className="end-net-kicker text-xs">GAINS NETS DE LA PARTIE</p>
+        <div className="text-gold font-display end-net-value text-2xl">
           {netGain >= 0 ? '+' : ''}
           {netGain.toLocaleString('fr-FR')}
         </div>
-        <div className="end-net-unit">FCFA</div>
-      </div>
+        <div className="end-net-unit text-sm">FCFA</div>
+      </SectionCard>
 
-      <div className="anim-fade-in-up end-full" style={{ animationDelay: '0.45s' }}>
+      <div className="anim-fade-in-up end-full delay-45">
         <NewlyUnlockedAchievements stats={lifetimeStats} />
       </div>
 
-      <div className="anim-fade-in-up end-stat-list" style={{ animationDelay: '0.5s' }}>
+      <SectionCard className="anim-fade-in-up end-stat-list delay-5" padding="md">
         {STATS.map((s, i) => (
           <div key={s.label} className={`end-stat-row${i < STATS.length - 1 ? ' has-border' : ''}`}>
-            <span className="end-stat-label">{s.label}</span>
-            <span className="font-display end-stat-value">{s.value}</span>
+            <span className="end-stat-label text-sm">{s.label}</span>
+            <span className="font-display end-stat-value text-md">{s.value}</span>
           </div>
         ))}
-      </div>
+      </SectionCard>
 
       <div className="end-actions">
-        <UiButton fullWidth onClick={handleReplay} className="anim-fade-in-up end-cta-primary" style={{ animationDelay: '0.6s' }}>
+        <UiButton fullWidth onClick={handleReplay} className="anim-fade-in-up end-cta-primary delay-6">
           REJOUER
         </UiButton>
         <ShareScoreButton
-          className="btn-secondary anim-fade-in-up end-cta-secondary"
-          style={{ animationDelay: '0.65s' }}
+          className="ui-btn ui-btn--full ui-btn--ghost anim-fade-in-up end-cta-secondary delay-65"
           payload={{
             won: true,
             netGain,
@@ -105,8 +105,7 @@ export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) 
           variant="secondary"
           fullWidth
           onClick={() => onNavigate('home')}
-          className="anim-fade-in-up end-cta-secondary"
-          style={{ animationDelay: '0.7s' }}
+          className="anim-fade-in-up end-cta-secondary delay-7"
         >
           Accueil
         </UiButton>

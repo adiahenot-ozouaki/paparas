@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { gameOverReasonLabel } from '../game/payout'
 import { NewlyUnlockedAchievements, ShareScoreButton } from '../components/EndGameExtras'
-import { UiButton } from '../components/ui'
+import { SectionCard, UiButton } from '../components/ui'
 
 export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const {
@@ -43,62 +43,61 @@ export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) =
 
       <div className="anim-scale-bounce end-hero-badge end-hero-badge--danger">💀</div>
 
-      <div className="anim-fade-in-up end-headline" style={{ animationDelay: '0.15s' }}>
-        <h1 className="font-display end-title">PARTIE TERMINÉE</h1>
+      <div className="anim-fade-in-up end-headline delay-2">
+        <h1 className="font-display end-title text-hero">PARTIE TERMINÉE</h1>
       </div>
 
-      <div className="anim-fade-in-up end-player-block" style={{ animationDelay: '0.25s' }}>
-        <p className="end-muted">{reasonText}</p>
-        {winnerName && <p className="end-winner-line">Vainqueur : {winnerName}</p>}
-        <p className="end-dim">Votre capital : {finalCapital.toLocaleString('fr-FR')} FCFA</p>
+      <div className="anim-fade-in-up end-player-block delay-3">
+        <p className="end-muted text-sm">{reasonText}</p>
+        {winnerName && <p className="end-winner-line text-md">Vainqueur : {winnerName}</p>}
+        <p className="end-dim text-sm">Votre capital : {finalCapital.toLocaleString('fr-FR')} FCFA</p>
       </div>
 
-      <div className="anim-fade-in-up end-full" style={{ animationDelay: '0.3s' }}>
+      <div className="anim-fade-in-up end-full delay-35">
         <NewlyUnlockedAchievements stats={lifetimeStats} />
       </div>
 
-      <div className="anim-fade-in-up end-stat-list" style={{ animationDelay: '0.35s' }}>
+      <SectionCard className="anim-fade-in-up end-stat-list delay-4" padding="md">
         <div className="end-list-head">
-          <span className="end-list-head-label">CLASSEMENT FINAL</span>
+          <span className="end-list-head-label text-xs">CLASSEMENT FINAL</span>
         </div>
         {ranking.map((p, rank) => (
           <div
             key={p.id}
             className={`end-rank-row${rank < ranking.length - 1 ? ' has-border' : ''}${p.seatIndex === HUMAN_INDEX ? ' is-you' : ''}${p.isEliminated ? ' is-out' : ''}`}
           >
-            <span className="font-display end-rank-num">#{rank + 1}</span>
+            <span className="font-display end-rank-num text-sm">#{rank + 1}</span>
             <span className="end-rank-avatar">{SEAT_AVATARS[p.seatIndex]}</span>
-            <span className="font-display end-rank-name">
+            <span className="font-display end-rank-name text-md">
               {SEAT_NAMES[p.seatIndex]}
               {p.isEliminated ? ' (éliminé)' : ''}
             </span>
-            <span className={`font-display end-rank-cap${rank === 0 ? ' is-gold' : ''}`}>
+            <span className={`font-display end-rank-cap text-md${rank === 0 ? ' is-gold' : ''}`}>
               {p.capital.toLocaleString('fr-FR')} FCFA
             </span>
           </div>
         ))}
-      </div>
+      </SectionCard>
 
-      <div className="anim-fade-in-up end-stat-list" style={{ animationDelay: '0.45s' }}>
+      <SectionCard className="anim-fade-in-up end-stat-list delay-5" padding="md">
         {[
           { label: 'Rounds gagnés', value: String(roundsWon[HUMAN_INDEX]) },
           { label: 'Meilleur combo', value: bestComboLabel ?? '—' },
           { label: 'Temps de partie', value: `${elapsedMinutes} min` },
         ].map((s, i) => (
           <div key={s.label} className={`end-stat-row${i < 2 ? ' has-border' : ''}`}>
-            <span className="end-stat-label">{s.label}</span>
-            <span className="font-display end-stat-value">{s.value}</span>
+            <span className="end-stat-label text-sm">{s.label}</span>
+            <span className="font-display end-stat-value text-md">{s.value}</span>
           </div>
         ))}
-      </div>
+      </SectionCard>
 
       <div className="end-actions">
-        <UiButton fullWidth onClick={handleReplay} className="anim-fade-in-up end-cta-primary" style={{ animationDelay: '0.55s' }}>
+        <UiButton fullWidth onClick={handleReplay} className="anim-fade-in-up end-cta-primary delay-6">
           REJOUER
         </UiButton>
         <ShareScoreButton
-          className="btn-secondary anim-fade-in-up end-cta-secondary"
-          style={{ animationDelay: '0.6s' }}
+          className="ui-btn ui-btn--full ui-btn--ghost anim-fade-in-up end-cta-secondary delay-65"
           payload={{
             won: false,
             netGain,
@@ -113,8 +112,7 @@ export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) =
           variant="secondary"
           fullWidth
           onClick={() => onNavigate('home')}
-          className="anim-fade-in-up end-cta-secondary"
-          style={{ animationDelay: '0.65s' }}
+          className="anim-fade-in-up end-cta-secondary delay-7"
         >
           Accueil
         </UiButton>
