@@ -1,80 +1,81 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { AlertTriangle } from 'lucide-react'
 
 // ==========================================================================
 // ErrorBoundary — filet de sécurité générique.
-//
-// Si un composant lève une exception pendant le rendu (ex : un edge-case
-// non prévu dans round.ts provoque un throw dans un useEffect qui met à
-// jour roundState), React démonte tout l'arbre par défaut -> écran blanc
-// silencieux, sans aucune explication ni porte de sortie pour le joueur.
-//
-// Cette limite affiche à la place un message de récupération. Le capital
-// et la partie en cours restent intacts (persistés dans localStorage via
-// GameContext), donc un rechargement ne fait perdre aucune progression.
 // ==========================================================================
 
-interface ErrorBoundaryProps {
-  children: ReactNode
-}
+type Props = { children: ReactNode; fallbackTitle?: string }
+type State = { error: Error | null }
 
-interface ErrorBoundaryState {
-  hasError: boolean
-  error: Error | null
-}
+export default class ErrorBoundary extends Component<Props, State> {
+  state: State = { error: null }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
-  state: ErrorBoundaryState = { hasError: false, error: null }
-
-  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
-    return { hasError: true, error }
+  static getDerivedStateFromError(error: Error): State {
+    return { error }
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    // Pas de service de reporting externe branché pour l'instant — au
-    // minimum on trace dans la console pour faciliter le debug.
-    console.error('[ErrorBoundary] Erreur interceptée :', error, info.componentStack)
+    console.error('[ErrorBoundary]', error, info.componentStack)
   }
 
-  handleReload = () => {
+  private handleReload = () => {
+    window.location.reload()
+  }
+
+  private handleGoHome = () => {
+    this.setState({ error: null })
+    window.location.hash = ''
     window.location.reload()
   }
 
   render() {
-    if (!this.state.hasError) {
-      return this.props.children
-    }
+    if (!this.state.error) return this.props.children
 
     return (
       <div
         style={{
-          position: 'absolute',
-          inset: 0,
-          background: '#0B0D10',
+          minHeight: '100dvh',
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          padding: 32,
+          padding: 24,
+          background: 'var(--kora-void, #0B0D10)',
+          color: 'var(--kora-text, #fff)',
           textAlign: 'center',
-          gap: 16,
-          zIndex: 9999,
+          gap: 12,
         }}
       >
-        <div style={{ fontSize: 40 }}>⚠️</div>
-        <h1 className="font-display" style={{ color: '#fff', fontSize: 20, fontWeight: 800, margin: 0 }}>
-          Un problème est survenu
-        </h1>
-        <p style={{ color: '#A9B0B7', fontSize: 13, margin: 0, maxWidth: 280 }}>
-          La partie a rencontré une erreur inattendue. Votre capital et votre progression sont sauvegardés — vous
-          pouvez recharger l'application sans rien perdre.
+        <div className="error-boundary-icon">
+          <AlertTriangle size={40} strokeWidth={1.75} className="kora-icon" aria-hidden />
+        </div>
+        <h1 style={{ fontSize: 20, margin: 0 }}>{this.props.fallbackTitle ?? 'Oups, un problème est survenu'}</h1>
+        <p style={{ color: 'var(--kora-muted, #A9B0B7)', fontSize: 14, maxWidth: 360, margin: 0 }}>
+          La partie en cours et votre capital sont conservés. Rechargez pour continuer.
         </p>
-        <button
-          className="btn-primary glow-gold"
-          onClick={this.handleReload}
-          style={{ padding: '14px 32px', fontSize: 14, borderRadius: 14, letterSpacing: '0.06em', marginTop: 8 }}
+        <pre
+          style={{
+            fontSize: 11,
+            color: 'var(--kora-muted, #A9B0B7)',
+            background: 'rgba(255,255,255,0.04)',
+            padding: 12,
+            borderRadius: 12,
+            maxWidth: 360,
+            overflow: 'auto',
+            textAlign: 'left',
+          }}
         >
-          RECHARGER
-        </button>
+          {this.state.error.message}
+        </pre>
+        <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+          <button type="button" className="btn-primary" onClick={this.handleReload}>
+            Recharger
+          </button>
+          <button type="button" className="btn-secondary" onClick={this.handleGoHome}>
+            Accueil
+          </button>
+        </div>
       </div>
     )
   }
