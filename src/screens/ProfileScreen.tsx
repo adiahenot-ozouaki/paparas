@@ -1,6 +1,6 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Screen } from '../types'
-import { useGame, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
+import { useGame, HUMAN_INDEX } from '../game/GameContext'
 import { useAuth, validateUsername } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { ACHIEVEMENTS, getUnlockedAchievements } from '../game/achievements'
@@ -13,9 +13,14 @@ import {
   loadGameHistory,
 } from '../lib/persistence/gameHistory'
 import {
+  AVATAR_ACCEPT,
+  DEFAULT_AVATAR_SRC,
+  isAvatarImageUrl,
+  uploadProfileAvatar,
+} from '../lib/avatar'
+import {
   AVATAR_OPTIONS,
   AvatarIcon,
-  resolveAvatarId,
   Medal,
   Gamepad2,
   Trophy,
@@ -53,11 +58,14 @@ const PROFILE_STAT_ICONS: Record<string, ReactNode> = {
 export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const { players, lifetimeStats, statsSyncing, refreshCloudStats } = useGame()
   const { user, profile, signOut, updateProfile } = useAuth()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [editing, setEditing] = useState(false)
   const [usernameDraft, setUsernameDraft] = useState('')
-  const [avatarDraft, setAvatarDraft] = useState('bird')
+  /** Valeur stockée : URL upload, preset id, ou '' pour défaut. */
+  const [avatarDraft, setAvatarDraft] = useState('')
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
   const [savedOk, setSavedOk] = useState(false)
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
@@ -66,7 +74,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
   useEffect(() => {
     if (profile) {
       setUsernameDraft(profile.username)
-      setAvatarDraft(resolveAvatarId(profile.avatar))
+      setAvatarDraft(profile.avatar ?? '')
       if (typeof profile.wallet_balance === 'number') setWalletBalance(profile.wallet_balance)
     }
   }, [profile])
@@ -98,7 +106,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
   const bestComboLabel = lifetimeStats.bestComboEver ? COMBO_LABEL[lifetimeStats.bestComboEver] : '—'
   const unlockedAchievements = getUnlockedAchievements(lifetimeStats).length
   const displayName = profile?.username ?? 'Vous'
-  const displayAvatar = resolveAvatarId(profile?.avatar ?? SEAT_AVATARS[HUMAN_INDEX])
+  const displayAvatar = profile?.avatar ?? ''
 
   const STATS = [
     { label: 'Parties jouées', value: String(lifetimeStats.gamesPlayed), icon: 'gamepad' },
@@ -136,10 +144,23 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
 
   function startEditing() {
     setUsernameDraft(profile?.username ?? '')
-    setAvatarDraft(resolveAvatarId(profile?.avatar))
+    setAvatarDraft(profile?.avatar ?? '')
     setEditError(null)
     setSavedOk(false)
     setEditing(true)
+  }
+
+  async function handleAvatarFile(file: File | null) {
+    if (!file || !user) return
+    setEditError(null)
+    setUploading(true)
+    const { url, error } = await uploadProfileAvatar(user.id, file)
+    setUploading(false)
+    if (error || !url) {
+      setEditError(error ?? 'Upload échoué.')
+      return
+    }
+    setAvatarDraft(url)
   }
 
   function handleClearHistory() {
@@ -155,7 +176,7 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
             <div className="profile-hero-row">
               <div className="profile-avatar-wrap">
                 <div className="profile-avatar">
-                  <AvatarIcon avatar={editing ? avatarDraft : displayAvatar} size={40} />
+                  <AvatarIcon avatar={editing ? avatarDraft : displayAvatar} size={48} />
                 </div>
                 <div className="profile-level-badge">
                   <span className="font-display profile-level-num">{progress.level}</span>
@@ -200,7 +221,45 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
 
             {user && editing && (
               <div className="profile-avatar-picker">
-                <p className="profile-section-label">Avatar</p>
+                <p className="profile-section-label">Photo de profil</p>
+
+                <div className="profile-avatar-upload-row">
+                  <AvatarIcon avatar={avatarDraft} size={56} />
+                  <div className="profile-avatar-upload-actions">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept={AVATAR_ACCEPT}
+                      className="sr-only"
+                      aria-label="Choisir une photo"
+                      onChange={e => {
+                        const f = e.target.files?.[0] ?? null
+                        void handleAvatarFile(f)
+                        e.target.value = ''
+                      }}
+                    />
+                    <UiButton
+                      type="button"
+                      disabled={uploading || saving}
+                      onClick={() => fileInputRef.current?.click()}
+                      className="profile-btn"
+                    >
+                      {uploading ? 'Upload…' : 'Importer une photo'}
+                    </UiButton>
+                    <UiButton
+                      type="button"
+                      variant="secondary"
+                      disabled={uploading || saving}
+                      onClick={() => setAvatarDraft('')}
+                      className="profile-btn"
+                    >
+                      Image par défaut
+                    </UiButton>
+                  </div>
+                </div>
+                <p className="profile-avatar-hint">JPG, PNG, WebP ou GIF — max 2 Mo</p>
+
+                <p className="profile-section-label profile-section-label--spaced">Ou icône</p>
                 <div className="profile-avatar-grid">
                   {AVATAR_OPTIONS.map(a => (
                     <button
@@ -208,11 +267,20 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
                       type="button"
                       onClick={() => setAvatarDraft(a.id)}
                       className={`profile-avatar-choice${a.id === avatarDraft ? ' is-selected' : ''}`}
+                      aria-label={a.label}
                     >
                       <AvatarIcon avatar={a.id} size={24} />
                     </button>
                   ))}
                 </div>
+                {isAvatarImageUrl(avatarDraft) && (
+                  <p className="profile-avatar-hint">Photo importée active (remplace l’icône).</p>
+                )}
+                {!avatarDraft && (
+                  <p className="profile-avatar-hint">
+                    Aperçu : image par défaut (<code>{DEFAULT_AVATAR_SRC}</code>).
+                  </p>
+                )}
               </div>
             )}
 
@@ -228,12 +296,16 @@ export default function ProfileScreen({ onNavigate }: { onNavigate: (s: Screen) 
                 <>
                   {editing ? (
                     <>
-                      <UiButton disabled={saving} onClick={() => void handleSaveProfile()} className="profile-btn">
+                      <UiButton
+                        disabled={saving || uploading}
+                        onClick={() => void handleSaveProfile()}
+                        className="profile-btn"
+                      >
                         {saving ? 'Enregistrement…' : 'Enregistrer'}
                       </UiButton>
                       <UiButton
                         variant="secondary"
-                        disabled={saving}
+                        disabled={saving || uploading}
                         onClick={() => {
                           setEditing(false)
                           setEditError(null)
