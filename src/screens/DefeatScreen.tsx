@@ -1,5 +1,6 @@
 import type { Screen } from '../types'
 import { motion } from 'framer-motion'
+import { Skull } from 'lucide-react'
 import { useGame, SEAT_NAMES, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
 import { useAuth } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
@@ -54,7 +55,7 @@ export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) =
         animate={{ scale: 1, opacity: 1 }}
         transition={{ type: 'spring', stiffness: 380, damping: 18 }}
       >
-        💀
+        <Skull size={40} strokeWidth={1.75} className="kora-icon" aria-hidden />
       </motion.div>
 
       <motion.div className="end-headline" {...fadeUp(0.15)}>
@@ -126,12 +127,7 @@ export default function DefeatScreen({ onNavigate }: { onNavigate: (s: Screen) =
             username: profile?.username,
           }}
         />
-        <UiButton
-          variant="secondary"
-          fullWidth
-          onClick={() => onNavigate('home')}
-          className="end-cta-secondary"
-        >
+        <UiButton variant="secondary" fullWidth onClick={() => onNavigate('home')} className="end-cta-secondary">
           Accueil
         </UiButton>
       </motion.div>
