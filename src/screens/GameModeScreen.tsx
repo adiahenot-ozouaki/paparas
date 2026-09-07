@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import type { Screen } from '../types'
 import { useAuth } from '../auth/AuthContext'
 import { useGame } from '../game/GameContext'
@@ -9,6 +9,7 @@ import {
   setPendingJoinCode,
   setPendingJoinTableId,
 } from '../lib/online/session'
+import { Zap, Bot, Globe } from '../components/icons'
 import {
   AlertBanner,
   BackButton,
@@ -143,7 +144,7 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
                   className="mode-resume-card"
                 >
                   <p className="font-display text-gold mode-resume-title">
-                    {t.status === 'playing' ? '▶ Reprendre la partie' : '↩ Retour au lobby'}
+                    {t.status === 'playing' ? 'Reprendre la partie' : 'Retour au lobby'}
                   </p>
                   <p className="mode-resume-meta">
                     Code {t.code} · mise {t.baseStake.toLocaleString('fr-FR')} · siège {t.seatIndex + 1}
@@ -157,7 +158,7 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
             <p className="mode-group-label">Solo · IA</p>
 
             <ModeCard
-              icon="⚡"
+              icon={<Zap size={22} className="kora-icon" />}
               title="Partie rapide"
               badge="1 TAP"
               badgeTone="gold"
@@ -168,7 +169,7 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
             />
 
             <ModeCard
-              icon="🤖"
+              icon={<Bot size={22} className="kora-icon" />}
               title="Entraînement"
               badge="APPRENDRE"
               badgeTone="green"
@@ -179,7 +180,7 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
             />
 
             <SectionCard variant="dashed" onClick={() => onNavigate('stakeConfig')}>
-              <span className="mode-config-hint">⚙️ Configurer une table solo (mise, capital, variante, fin)…</span>
+              <span className="mode-config-hint">Configurer une table solo (mise, capital, variante, fin)…</span>
             </SectionCard>
           </div>
         </div>
@@ -192,7 +193,9 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
               <div className="mode-online-accent" />
               <div className="mode-online-body">
                 <div className="mode-online-head">
-                  <span className="mode-online-emoji">🌐</span>
+                  <span className="mode-online-emoji">
+                    <Globe size={22} className="kora-icon" aria-hidden />
+                  </span>
                   <span className="font-display mode-online-title">Table en ligne</span>
                   <span className="mode-badge mode-badge--green">ONLINE</span>
                   {!user && <span className="mode-badge mode-badge--muted">CONNEXION</span>}
@@ -236,7 +239,7 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
                           Mise {t.table.base_stake.toLocaleString('fr-FR')} · {t.seatCount}/4
                         </p>
                       </div>
-                      <span className="mode-open-cta">S’asseoir →</span>
+                      <span className="mode-open-cta">S’asseoir</span>
                     </div>
                   </SectionCard>
                 ))}
@@ -259,7 +262,7 @@ function ModeCard({
   badgeTone,
   onClick,
 }: {
-  icon: string
+  icon: ReactNode
   title: string
   desc: string
   meta: string
