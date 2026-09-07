@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Screen } from '../types'
 import { getActiveOnlineTableId } from '../lib/online/session'
 import { NAV_ITEMS, MORE_NAV_ITEMS, isNavItemActive, isMoreNavActive } from './navItems'
+import { MoreHorizontal } from 'lucide-react'
 
 interface BottomNavProps {
   active: Screen
@@ -25,12 +26,10 @@ export default function BottomNav({ active, onNavigate }: BottomNavProps) {
     }
   }, [active])
 
-  // Close overflow when route changes
   useEffect(() => {
     setMoreOpen(false)
   }, [active])
 
-  // Click outside + Escape
   useEffect(() => {
     if (!moreOpen) return
     function onKey(e: KeyboardEvent) {
@@ -71,6 +70,7 @@ export default function BottomNav({ active, onNavigate }: BottomNavProps) {
     <nav className="nav-pill bottom-nav" aria-label="Navigation principale">
       {NAV_ITEMS.map(item => {
         const isActive = isNavItemActive(active, item)
+        const Icon = item.icon
 
         if (item.highlight) {
           return (
@@ -82,7 +82,9 @@ export default function BottomNav({ active, onNavigate }: BottomNavProps) {
               aria-current={isActive ? 'page' : undefined}
               className={`btn-primary glow-gold-sm bottom-nav-play${hasOnlineTable ? ' has-table' : ''}`}
             >
-              <span className="bottom-nav-play-icon">{item.icon}</span>
+              <span className="bottom-nav-play-icon">
+                <Icon size={22} strokeWidth={2} className="kora-icon" aria-hidden />
+              </span>
               <span className="bottom-nav-play-label">{hasOnlineTable ? 'TABLE' : item.label}</span>
               {hasOnlineTable && <span className="bottom-nav-live-dot" aria-hidden />}
             </button>
@@ -97,7 +99,9 @@ export default function BottomNav({ active, onNavigate }: BottomNavProps) {
             aria-current={isActive ? 'page' : undefined}
             className={`bottom-nav-item${isActive ? ' is-active' : ''}`}
           >
-            <span className="bottom-nav-item-icon">{item.icon}</span>
+            <span className="bottom-nav-item-icon">
+              <Icon size={20} strokeWidth={2} className="kora-icon" aria-hidden />
+            </span>
             <span className="bottom-nav-item-label">{item.label}</span>
             {isActive && <span className="bottom-nav-item-dot" aria-hidden />}
           </button>
@@ -114,7 +118,7 @@ export default function BottomNav({ active, onNavigate }: BottomNavProps) {
         onClick={() => setMoreOpen(v => !v)}
       >
         <span className="bottom-nav-overflow-icon" aria-hidden>
-          ⋯
+          <MoreHorizontal size={22} strokeWidth={2} className="kora-icon" />
         </span>
         <span className="bottom-nav-overflow-label">Plus</span>
       </button>
@@ -129,6 +133,7 @@ export default function BottomNav({ active, onNavigate }: BottomNavProps) {
         >
           {MORE_NAV_ITEMS.map(item => {
             const isActive = active === item.id
+            const Icon = item.icon
             return (
               <button
                 key={item.id}
@@ -138,7 +143,9 @@ export default function BottomNav({ active, onNavigate }: BottomNavProps) {
                 aria-current={isActive ? 'page' : undefined}
                 onClick={() => goMore(item.id)}
               >
-                <span className="bottom-nav-sheet-icon">{item.icon}</span>
+                <span className="bottom-nav-sheet-icon">
+                  <Icon size={18} strokeWidth={2} className="kora-icon" aria-hidden />
+                </span>
                 <span className="bottom-nav-sheet-label">{item.label}</span>
               </button>
             )
