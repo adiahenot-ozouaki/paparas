@@ -110,8 +110,8 @@ export default function AuthScreen({
     <ScreenShell bottomPad={0} className="auth-screen auth-screen--center">
       <BackButton onClick={() => onNavigate('home')} />
 
-      <h1 className="font-display text-gold auth-title">{title}</h1>
-      <p className="auth-muted auth-subtitle">{subtitle}</p>
+      <h1 className="font-display text-gold auth-title text-2xl">{title}</h1>
+      <p className="auth-muted auth-subtitle text-sm">{subtitle}</p>
 
       <form onSubmit={e => void handleSubmit(e)} className="auth-form">
         <input
