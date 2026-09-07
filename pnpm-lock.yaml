@@ -51,3 +51,5 @@ importers:
       vite:
         specifier: ^8.0.0
         version: 8.0.3(@types/node@22.19.17)(jiti@2.6.1)
+
+packages: {}
