@@ -366,11 +366,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
         won,
         netGain,
         finalCapital: players[HUMAN_INDEX].capital,
-        startingCapital: stakeConfig.startingCapital,
         roundsWon: roundsWon[HUMAN_INDEX],
         bestCombo: humanBest,
         endReason: lastGameOver?.reason ?? null,
         mode: 'solo',
+        startingCapital: stakeConfig.startingCapital,
       })
 
       setLifetimeStats(prev => {
@@ -392,7 +392,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           }
         }
 
-        const eloDelta = soloGameEloDelta(prev.eloRating ?? 1000, won)
+        const eloDelta = soloGameEloDelta(prev.eloSolo ?? 1000, won)
         const next: LifetimeStats = {
           ...prev,
           gamesPlayed: prev.gamesPlayed + 1,
@@ -401,8 +401,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
           bestComboEver,
           netGainTotal: prev.netGainTotal + netGain,
           opponentStats,
-          eloRating: applyEloDelta(prev.eloRating ?? 1000, eloDelta),
-          eloGames: (prev.eloGames ?? 0) + 1,
+          eloSolo: applyEloDelta(prev.eloSolo ?? 1000, eloDelta),
+          eloSoloGames: (prev.eloSoloGames ?? 0) + 1,
         }
         persistStats(next)
         return next
