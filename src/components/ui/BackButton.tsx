@@ -1,11 +1,7 @@
 import type { ButtonHTMLAttributes } from 'react'
-
-// ==========================================================================
-// BackButton — flèche de retour standard (coin haut-gauche).
-// ==========================================================================
+import { ArrowLeft } from 'lucide-react'
 
 type BackButtonProps = Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> & {
-  /** Position absolute (défaut true) */
   absolute?: boolean
 }
 
@@ -23,7 +19,7 @@ export default function BackButton({
       className={`back-btn ${absolute ? 'back-btn--absolute' : ''} ${className}`.trim()}
       {...rest}
     >
-      ←
+      <ArrowLeft size={20} strokeWidth={2} className="kora-icon" aria-hidden />
     </button>
   )
 }

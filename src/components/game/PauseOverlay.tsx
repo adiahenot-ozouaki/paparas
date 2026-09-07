@@ -1,3 +1,4 @@
+import { Pause } from 'lucide-react'
 import { UiButton } from '../ui'
 
 interface PauseOverlayProps {
@@ -10,7 +11,7 @@ export function PauseOverlay({ onResume, onQuit }: PauseOverlayProps) {
   return (
     <div className="game-overlay game-overlay--dim game-overlay--z-pause">
       <div className="game-overlay-emoji" aria-hidden>
-        ⏸
+        <Pause size={28} className="kora-icon" aria-hidden />
       </div>
       <h2 className="font-display game-overlay-title">PARTIE EN PAUSE</h2>
       <p className="game-overlay-desc">

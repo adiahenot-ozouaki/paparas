@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { Screen } from '../types'
 import { getActiveOnlineTableId } from '../lib/online/session'
-import { NAV_ITEMS, isNavItemActive } from './navItems'
+import { NAV_ITEMS, MORE_NAV_ITEMS, isNavItemActive } from './navItems'
+import { SpadeIcon } from './icons'
 
 type SideNavProps = {
   active: Screen
@@ -33,7 +34,9 @@ export default function SideNav({ active, onNavigate }: SideNavProps) {
   return (
     <aside className="side-nav" aria-label="Navigation principale">
       <div className="side-nav-brand">
-        <span className="side-nav-brand-suit">♠</span>
+        <span className="side-nav-brand-suit">
+          <SpadeIcon size={22} className="kora-icon" />
+        </span>
         <div>
           <p className="font-display side-nav-brand-title">GARAM</p>
           <p className="side-nav-brand-sub">PAPARAS</p>
@@ -43,6 +46,7 @@ export default function SideNav({ active, onNavigate }: SideNavProps) {
       <nav className="side-nav-list">
         {NAV_ITEMS.map(item => {
           const isActive = isNavItemActive(active, item)
+          const Icon = item.icon
           if (item.highlight) {
             return (
               <button
@@ -53,7 +57,9 @@ export default function SideNav({ active, onNavigate }: SideNavProps) {
                 aria-current={isActive ? 'page' : undefined}
                 aria-label={hasOnlineTable ? 'Reprendre la table en ligne' : item.label}
               >
-                <span className="side-nav-item-icon">{item.icon}</span>
+                <span className="side-nav-item-icon">
+                  <Icon size={18} strokeWidth={2} className="kora-icon" aria-hidden />
+                </span>
                 <span className="side-nav-item-label">{hasOnlineTable ? 'Table active' : item.label}</span>
                 {hasOnlineTable && <span className="side-nav-live-dot" aria-hidden />}
               </button>
@@ -67,7 +73,9 @@ export default function SideNav({ active, onNavigate }: SideNavProps) {
               onClick={() => onNavigate(item.id)}
               aria-current={isActive ? 'page' : undefined}
             >
-              <span className="side-nav-item-icon">{item.icon}</span>
+              <span className="side-nav-item-icon">
+                <Icon size={18} strokeWidth={2} className="kora-icon" aria-hidden />
+              </span>
               <span className="side-nav-item-label">{item.label}</span>
             </button>
           )
@@ -75,22 +83,23 @@ export default function SideNav({ active, onNavigate }: SideNavProps) {
       </nav>
 
       <div className="side-nav-footer">
-        <button
-          type="button"
-          className="side-nav-item side-nav-item--muted"
-          onClick={() => onNavigate('rules')}
-        >
-          <span className="side-nav-item-icon">📖</span>
-          <span className="side-nav-item-label">Règles</span>
-        </button>
-        <button
-          type="button"
-          className="side-nav-item side-nav-item--muted"
-          onClick={() => onNavigate('achievements')}
-        >
-          <span className="side-nav-item-icon">✨</span>
-          <span className="side-nav-item-label">Hauts faits</span>
-        </button>
+        {MORE_NAV_ITEMS.map(item => {
+          const Icon = item.icon
+          return (
+            <button
+              key={item.id}
+              type="button"
+              className={`side-nav-item side-nav-item--muted${active === item.id ? ' is-active' : ''}`}
+              onClick={() => onNavigate(item.id)}
+              aria-current={active === item.id ? 'page' : undefined}
+            >
+              <span className="side-nav-item-icon">
+                <Icon size={18} strokeWidth={2} className="kora-icon" aria-hidden />
+              </span>
+              <span className="side-nav-item-label">{item.label}</span>
+            </button>
+          )
+        })}
       </div>
     </aside>
   )

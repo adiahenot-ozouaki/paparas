@@ -1,0 +1,122 @@
+/* ==========================================================================
+   P1 — Composants unifiés
+   - Segmented tabs (Stats scope/sections, Leaderboard)
+   - Cards cliquables: hover / focus-visible gold ring / active scale
+   - Page padding: mobile 20px | ≥900px 32px | layout ≥1100px 28px
+   Loaded last from main.tsx so overrides win over screens-*.css
+   ========================================================================== */
+
+/* —— Page padding rhythm —— */
+:root {
+  --page-pad-x: 20px;
+  --page-pad-y: 0px;
+  --page-pad-layout: 20px;
+}
+
+@media (min-width: 900px) {
+  :root {
+    --page-pad-x: 32px;
+    --page-pad-layout: 32px;
+  }
+}
+
+@media (min-width: 1100px) {
+  :root {
+    --page-pad-layout: 28px;
+  }
+}
+
+.page-pad,
+.page-pad-x {
+  padding-left: var(--page-pad-x);
+  padding-right: var(--page-pad-x);
+}
+
+.page-pad-layout {
+  padding-left: var(--page-pad-layout);
+  padding-right: var(--page-pad-layout);
+}
+
+/* —— Focus ring kit —— */
+:where(button, a, [role="tab"], .ui-field):focus-visible {
+  outline: 2px solid var(--kora-gold, #D6A84F);
+  outline-offset: 2px;
+}
+
+:where(.btn-primary, .btn-secondary, .ui-btn, .icon-btn, .back-btn, .section-card--clickable, .mode-card):focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px var(--kora-void, #0B0D10),
+    0 0 0 4px var(--kora-gold, #D6A84F);
+}
+
+/* —— Clickable cards —— */
+.section-card--clickable {
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+}
+
+.section-card--clickable:hover {
+  border-color: var(--kora-border-gold-soft, rgba(214, 168, 79, 0.28));
+  background: color-mix(in srgb, var(--kora-gold, #D6A84F) 6%, var(--kora-card-bg, rgba(255, 255, 255, 0.04)));
+}
+
+.section-card--clickable:active {
+  transform: scale(0.985);
+}
+
+.mode-card {
+  transition: border-color 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease;
+}
+
+.mode-card:hover {
+  border-color: var(--kora-border-gold-soft, rgba(214, 168, 79, 0.28));
+}
+
+.mode-card:active {
+  transform: scale(0.985);
+}
+
+/* —— Segmented (unified tabs) —— */
+.segmented-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.segmented-btn:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--kora-gold, #D6A84F);
+}
+
+.segmented--auto .segmented-btn {
+  flex: 0 1 auto;
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+/* Stats section tabs = Segmented — force kit chrome over legacy .stats-tab row */
+.stats-section-tabs.segmented,
+.segmented.stats-section-tabs {
+  display: flex;
+  gap: 4px;
+  overflow: visible;
+  padding: 4px;
+  margin-bottom: 4px;
+  background: var(--kora-card-bg, rgba(255, 255, 255, 0.05));
+  border-radius: 14px;
+}
+
+.stats-section-tabs .segmented-btn {
+  flex: 1;
+  white-space: nowrap;
+}
+
+.stats-source-note {
+  color: var(--kora-muted-2, #5b636b);
+}
+
+.stats-body {
+  padding: 20px var(--page-pad-x, 20px);
+}

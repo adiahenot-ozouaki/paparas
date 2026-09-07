@@ -37,13 +37,79 @@ export interface MyActiveTable {
   code: string
 }
 
+export type LeaderboardMetric =
+  | 'elo'
+  | 'net'
+  | 'wins'
+  | 'rounds'
+  | 'tricks'
+  | 'kora'
+  | '33'
+  | 'trinity'
+  | 'kmt'
+
+export const LEADERBOARD_METRICS: {
+  id: LeaderboardMetric
+  label: string
+  short: string
+}[] = [
+  { id: 'elo', label: 'Elo en ligne', short: 'Elo' },
+  { id: 'net', label: 'Gains nets', short: 'Net' },
+  { id: 'wins', label: 'Victoires', short: 'Wins' },
+  { id: 'rounds', label: 'Rounds', short: 'Rounds' },
+  { id: 'tricks', label: 'Plis', short: 'Plis' },
+  { id: 'kora', label: 'Kora', short: 'Kora' },
+  { id: '33', label: '33', short: '33' },
+  { id: 'trinity', label: 'Trinité', short: 'Tri' },
+  { id: 'kmt', label: 'KMT', short: 'KMT' },
+]
+
 export interface LeaderboardEntry {
   userId: string
   username: string
   avatar: string
   netGainTotal: number
   totalRoundsWon: number
+  totalTricksWon: number
   gamesWon: number
+  gamesPlayed: number
+  /** Elo ONLINE only */
+  eloOnline: number
+  comboCounts: { simple: number; kora: number; '33': number; trinity: number; kmt: number }
+  /** Valeur affichée pour le critère actif */
+  score: number
+}
+
+function metricValue(e: Omit<LeaderboardEntry, 'score'>, metric: LeaderboardMetric): number {
+  switch (metric) {
+    case 'elo':
+      return e.eloOnline
+    case 'net':
+      return e.netGainTotal
+    case 'wins':
+      return e.gamesWon
+    case 'rounds':
+      return e.totalRoundsWon
+    case 'tricks':
+      return e.totalTricksWon
+    case 'kora':
+      return e.comboCounts.kora
+    case '33':
+      return e.comboCounts['33']
+    case 'trinity':
+      return e.comboCounts.trinity
+    case 'kmt':
+      return e.comboCounts.kmt
+    default:
+      return e.netGainTotal
+  }
+}
+
+export function formatLeaderboardScore(metric: LeaderboardMetric, value: number): string {
+  if (metric === 'net') {
+    return `${value >= 0 ? '+' : ''}${value.toLocaleString('fr-FR')}`
+  }
+  return value.toLocaleString('fr-FR')
 }
 
 function edgeFunctionUrl(): string {
@@ -318,38 +384,79 @@ export async function findMyActiveTables(userId: string): Promise<{
 }
 
 /** Classement réel depuis kora_lifetime_stats + kora_profiles (nécessite session). */
-export async function fetchOnlineLeaderboard(limit = 30): Promise<{
+export async function fetchOnlineLeaderboard(
+  limit = 40,
+  metric: LeaderboardMetric = 'elo',
+): Promise<{
   entries: LeaderboardEntry[]
   error: string | null
 }> {
-  const { data: stats, error } = await supabase
+  const orderCol =
+    metric === 'elo'
+      ? 'elo_rating'
+      : metric === 'wins'
+        ? 'games_won'
+        : metric === 'rounds'
+          ? 'total_rounds_won'
+          : metric === 'tricks'
+            ? 'total_tricks_won'
+            : 'net_gain_total'
+
+  let { data: stats, error } = await supabase
     .from('kora_lifetime_stats')
-    .select('user_id, net_gain_total, total_rounds_won, games_won')
-    .order('net_gain_total', { ascending: false })
-    .limit(limit)
+    .select(
+      'user_id, net_gain_total, total_rounds_won, total_tricks_won, games_won, games_played, combo_counts, elo_rating',
+    )
+    .order(orderCol, { ascending: false })
+    .limit(Math.max(limit * 3, 80))
+
+  if (error && metric === 'elo') {
+    const fallback = await supabase
+      .from('kora_lifetime_stats')
+      .select(
+        'user_id, net_gain_total, total_rounds_won, total_tricks_won, games_won, games_played, combo_counts',
+      )
+      .order('net_gain_total', { ascending: false })
+      .limit(Math.max(limit * 3, 80))
+    stats = fallback.data
+    error = fallback.error
+  }
 
   if (error) return { entries: [], error: error.message }
   const rows = stats ?? []
   if (rows.length === 0) return { entries: [], error: null }
 
-  const ids = rows.map(r => r.user_id)
+  const ids = rows.map(r => r.user_id as string)
   const { data: profiles } = await supabase.from('kora_profiles').select('id, username, avatar').in('id', ids)
   const byId = new Map((profiles ?? []).map(p => [p.id, p]))
 
-  return {
-    entries: rows.map(r => {
-      const p = byId.get(r.user_id)
-      return {
-        userId: r.user_id,
-        username: p?.username ?? 'Joueur',
-        avatar: p?.avatar ?? '🦅',
-        netGainTotal: r.net_gain_total ?? 0,
-        totalRoundsWon: r.total_rounds_won ?? 0,
-        gamesWon: r.games_won ?? 0,
-      }
-    }),
-    error: null,
-  }
+  const mapped = rows.map(r => {
+    const p = byId.get(r.user_id as string)
+    const rawCombos = (r.combo_counts as Record<string, number> | null) ?? {}
+    const comboCounts = {
+      simple: Number(rawCombos.simple) || 0,
+      kora: Number(rawCombos.kora) || 0,
+      '33': Number(rawCombos['33']) || 0,
+      trinity: Number(rawCombos.trinity) || 0,
+      kmt: Number(rawCombos.kmt) || 0,
+    }
+    const base = {
+      userId: r.user_id as string,
+      username: p?.username ?? 'Joueur',
+      avatar: p?.avatar ?? 'bird',
+      netGainTotal: Number(r.net_gain_total) || 0,
+      totalRoundsWon: Number(r.total_rounds_won) || 0,
+      totalTricksWon: Number(r.total_tricks_won) || 0,
+      gamesWon: Number(r.games_won) || 0,
+      gamesPlayed: Number(r.games_played) || 0,
+      eloOnline: Number((r as { elo_rating?: number }).elo_rating) || 1000,
+      comboCounts,
+    }
+    return { ...base, score: metricValue(base, metric) }
+  })
+
+  mapped.sort((a, b) => b.score - a.score)
+  return { entries: mapped.slice(0, limit), error: null }
 }
 
 export function tableInviteCode(tableId: string): string {

@@ -5,13 +5,15 @@ import type { CSSProperties, ReactNode } from 'react'
 // ==========================================================================
 
 export type SectionCardVariant = 'default' | 'gold' | 'green' | 'danger' | 'success' | 'dashed'
+export type SectionCardPadding = 'sm' | 'md' | 'lg'
 
 type SectionCardProps = {
   children: ReactNode
   variant?: SectionCardVariant
   className?: string
   style?: CSSProperties
-  padding?: number | string
+  /** Padding preset (CSS classes). Prefer over inline padding. */
+  padding?: SectionCardPadding | number | string
   onClick?: () => void
 }
 
@@ -24,6 +26,16 @@ const VARIANT_CLASS: Record<SectionCardVariant, string> = {
   dashed: 'section-card section-card--dashed',
 }
 
+const PAD_CLASS: Record<SectionCardPadding, string> = {
+  sm: 'section-card--pad-sm',
+  md: 'section-card--pad-md',
+  lg: 'section-card--pad-lg',
+}
+
+function isPadPreset(p: unknown): p is SectionCardPadding {
+  return p === 'sm' || p === 'md' || p === 'lg'
+}
+
 export default function SectionCard({
   children,
   variant = 'default',
@@ -33,13 +45,18 @@ export default function SectionCard({
   onClick,
 }: SectionCardProps) {
   const Tag = onClick ? 'button' : 'div'
+  const padClass = isPadPreset(padding) ? PAD_CLASS[padding] : ''
+  const inlinePad =
+    padding !== undefined && !isPadPreset(padding)
+      ? { padding: typeof padding === 'number' ? `${padding}px` : padding }
+      : null
+
   return (
     <Tag
       type={onClick ? 'button' : undefined}
-      className={`${VARIANT_CLASS[variant]} ${className}`.trim()}
+      className={`${VARIANT_CLASS[variant]} ${onClick ? 'section-card--clickable' : ''} ${padClass} ${className}`.trim().replace(/\s+/g, ' ')}
       style={{
-        ...(padding !== undefined ? { padding } : null),
-        ...(onClick ? { cursor: 'pointer', width: '100%', textAlign: 'left' as const } : null),
+        ...inlinePad,
         ...style,
       }}
       onClick={onClick}

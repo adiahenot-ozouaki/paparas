@@ -1,5 +1,6 @@
 import { SEAT_NAMES } from '../../game/GameContext'
 import { IconButton } from '../ui'
+import { Pause, Landmark, Eye, EyeOff } from 'lucide-react'
 
 interface GameTableHudProps {
   roundNumber: number
@@ -32,7 +33,7 @@ export function GameTableHud({
     <header className="table-hud">
       <div className="table-hud-left">
         <IconButton size="sm" aria-label="Mettre la partie en pause" title="Pause" onClick={onPause}>
-          ⏸
+          <Pause size={16} strokeWidth={2} className="kora-icon" aria-hidden />
         </IconButton>
         <IconButton size="sm" aria-label="Consulter les règles du jeu" title="Règles du jeu" onClick={onOpenRules}>
           ?
@@ -45,7 +46,7 @@ export function GameTableHud({
             title="Aller en banque (abandonner le round)"
             onClick={onRequestBank}
           >
-            🏦
+            <Landmark size={14} strokeWidth={2} className="kora-icon" aria-hidden />
           </IconButton>
         )}
       </div>
@@ -76,7 +77,11 @@ export function GameTableHud({
           title={compactMode ? 'Afficher les noms et gains' : 'Masquer les noms et gains (agrandit les cartes)'}
           onClick={onToggleCompact}
         >
-          {compactMode ? '🙈' : '👁️'}
+          {compactMode ? (
+            <EyeOff size={16} strokeWidth={2} className="kora-icon" aria-hidden />
+          ) : (
+            <Eye size={16} strokeWidth={2} className="kora-icon" aria-hidden />
+          )}
         </IconButton>
         <button type="button" className="table-hud-quit" onClick={onQuit}>
           Quitter

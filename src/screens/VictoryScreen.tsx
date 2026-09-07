@@ -1,10 +1,18 @@
 import type { Screen } from '../types'
+import { motion } from 'framer-motion'
+import { Trophy } from 'lucide-react'
 import { useGame, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
 import { useAuth } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { gameOverReasonLabel } from '../game/payout'
 import { NewlyUnlockedAchievements, ShareScoreButton } from '../components/EndGameExtras'
-import { UiButton } from '../components/ui'
+import { SectionCard, UiButton } from '../components/ui'
+
+const fadeUp = (delay: number) => ({
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+  transition: { delay, duration: 0.45, ease: [0.16, 1, 0.3, 1] as const },
+})
 
 export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const {
@@ -40,57 +48,68 @@ export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) 
     onNavigate('lobby')
   }
 
+  const tag =
+    lastGameOver?.reason === 'max_rounds'
+      ? 'PLUS HAUT CAPITAL'
+      : lastGameOver?.reason === 'race_target'
+        ? 'OBJECTIF ATTEINT'
+        : 'DERNIER JOUEUR EN LICE'
+
   return (
     <div className="end-screen end-screen--victory">
       <div className="pattern-african end-screen-pattern" aria-hidden />
 
-      <div className="anim-scale-bounce end-hero-badge end-hero-badge--gold">🏆</div>
+      <motion.div
+        className="end-hero-badge end-hero-badge--gold"
+        initial={{ scale: 0.4, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 18 }}
+      >
+        <Trophy size={40} strokeWidth={1.75} className="kora-icon" aria-hidden />
+      </motion.div>
 
-      <div className="anim-fade-in-up end-headline" style={{ animationDelay: '0.2s' }}>
-        <h1 className="text-shimmer font-display end-title end-title--xl">VICTOIRE</h1>
-      </div>
+      <motion.div className="end-headline" {...fadeUp(0.15)}>
+        <h1 className="text-shimmer font-display end-title end-title--xl text-hero">VICTOIRE</h1>
+      </motion.div>
 
-      <div className="anim-fade-in-up end-player-block" style={{ animationDelay: '0.3s' }}>
+      <motion.div className="end-player-block" {...fadeUp(0.25)}>
         <div className="end-player-avatar">{avatar}</div>
-        <p className="font-display end-player-tag">
-          {lastGameOver?.reason === 'max_rounds'
-            ? 'PLUS HAUT CAPITAL'
-            : lastGameOver?.reason === 'race_target'
-              ? 'OBJECTIF ATTEINT'
-              : 'DERNIER JOUEUR EN LICE'}
-        </p>
-        <p className="end-muted">{reasonText}</p>
-      </div>
+        <p className="font-display end-player-tag text-sm">{tag}</p>
+        <p className="end-muted text-sm">{reasonText}</p>
+      </motion.div>
 
-      <div className="anim-scale-bounce end-net-card" style={{ animationDelay: '0.4s' }}>
-        <p className="end-net-kicker">GAINS NETS DE LA PARTIE</p>
-        <div className="text-gold font-display end-net-value">
-          {netGain >= 0 ? '+' : ''}
-          {netGain.toLocaleString('fr-FR')}
-        </div>
-        <div className="end-net-unit">FCFA</div>
-      </div>
-
-      <div className="anim-fade-in-up end-full" style={{ animationDelay: '0.45s' }}>
-        <NewlyUnlockedAchievements stats={lifetimeStats} />
-      </div>
-
-      <div className="anim-fade-in-up end-stat-list" style={{ animationDelay: '0.5s' }}>
-        {STATS.map((s, i) => (
-          <div key={s.label} className={`end-stat-row${i < STATS.length - 1 ? ' has-border' : ''}`}>
-            <span className="end-stat-label">{s.label}</span>
-            <span className="font-display end-stat-value">{s.value}</span>
+      <motion.div {...fadeUp(0.35)} className="end-full">
+        <SectionCard variant="green" className="end-net-card">
+          <p className="end-net-kicker text-xs">GAINS NETS DE LA PARTIE</p>
+          <div className="text-gold font-display end-net-value text-2xl">
+            {netGain >= 0 ? '+' : ''}
+            {netGain.toLocaleString('fr-FR')}
           </div>
-        ))}
-      </div>
+          <div className="end-net-unit text-sm">FCFA</div>
+        </SectionCard>
+      </motion.div>
 
-      <div className="end-actions">
-        <UiButton fullWidth onClick={handleReplay} className="anim-fade-in-up end-cta-primary" style={{ animationDelay: '0.6s' }}>
+      <motion.div className="end-full" {...fadeUp(0.4)}>
+        <NewlyUnlockedAchievements stats={lifetimeStats} />
+      </motion.div>
+
+      <motion.div {...fadeUp(0.48)} className="end-full">
+        <SectionCard className="end-stat-list" padding="md">
+          {STATS.map((s, i) => (
+            <div key={s.label} className={`end-stat-row${i < STATS.length - 1 ? ' has-border' : ''}`}>
+              <span className="end-stat-label text-sm">{s.label}</span>
+              <span className="font-display end-stat-value text-md">{s.value}</span>
+            </div>
+          ))}
+        </SectionCard>
+      </motion.div>
+
+      <motion.div className="end-actions" {...fadeUp(0.55)}>
+        <UiButton fullWidth onClick={handleReplay} className="end-cta-primary">
           REJOUER
         </UiButton>
         <ShareScoreButton
-          className="btn-secondary anim-fade-in-up end-cta-secondary"
-          style={{ animationDelay: '0.65s' }}
+          className="ui-btn ui-btn--full ui-btn--ghost end-cta-secondary"
           payload={{
             won: true,
             netGain,
@@ -101,16 +120,10 @@ export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) 
             username: profile?.username,
           }}
         />
-        <UiButton
-          variant="secondary"
-          fullWidth
-          onClick={() => onNavigate('home')}
-          className="anim-fade-in-up end-cta-secondary"
-          style={{ animationDelay: '0.7s' }}
-        >
+        <UiButton variant="secondary" fullWidth onClick={() => onNavigate('home')} className="end-cta-secondary">
           Accueil
         </UiButton>
-      </div>
+      </motion.div>
     </div>
   )
 }

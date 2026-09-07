@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import type { Session, User } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase/client'
 import type { KoraProfile } from '../lib/supabase/database.types'
+import { validateAvatarValue } from '../lib/avatar'
 
 // ==========================================================================
 // AuthContext — identité joueur (Supabase Auth + kora_profiles).
@@ -175,7 +176,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       if (patch.avatar !== undefined) {
         const avatar = patch.avatar.trim()
-        if (!avatar || [...avatar].length > 4) return { error: 'Avatar invalide.' }
+        const av = validateAvatarValue(avatar)
+        if (av) return { error: av }
+        // chaîne vide = image par défaut côté UI
         updates.avatar = avatar
       }
       if (Object.keys(updates).length === 0) return { error: null }

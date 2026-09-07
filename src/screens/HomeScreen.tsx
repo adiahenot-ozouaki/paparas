@@ -8,6 +8,7 @@ import { getPlayerProgress } from '../game/progression'
 import { fetchWallet } from '../lib/persistence/cloud'
 import { findMyActiveTables, type MyActiveTable } from '../lib/online/api'
 import { setActiveOnlineTableId } from '../lib/online/session'
+import { Zap, Trophy, BookOpen, Gamepad2, TrendingUp, Coins, ArrowRight, Undo2, Play, SpadeIcon, AvatarIcon, User } from '../components/icons'
 import {
   EmptyState,
   IconButton,
@@ -18,10 +19,10 @@ import {
   UiButton,
 } from '../components/ui'
 
-const QUICK_LINKS: { label: string; icon: string; screen: Screen }[] = [
-  { label: 'Partie rapide', icon: '⚡', screen: 'stakeConfig' },
-  { label: 'Classement', icon: '🏆', screen: 'leaderboard' },
-  { label: 'Règles', icon: '📖', screen: 'rules' },
+const QUICK_LINKS: { label: string; icon: typeof Zap; screen: Screen }[] = [
+  { label: 'Partie rapide', icon: Zap, screen: 'stakeConfig' },
+  { label: 'Classement', icon: Trophy, screen: 'leaderboard' },
+  { label: 'Règles', icon: BookOpen, screen: 'rules' },
 ]
 
 const PLAY_NAV_DELAY_MS = 280
@@ -131,7 +132,9 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
 
       <div className="home-layout">
         <header className="home-header">
-          <div className="home-avatar">{displayAvatar}</div>
+          <div className="home-avatar">
+            <AvatarIcon avatar={displayAvatar} size={28} />
+          </div>
           <div className="home-header-meta">
             <p className="home-header-status">{user ? 'Connecté' : 'Bienvenue'}</p>
             <div className="home-header-name-row">
@@ -142,7 +145,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
             </div>
           </div>
           <IconButton onClick={goProfile} aria-label="Profil">
-            👤
+            <User size={18} strokeWidth={2} className="kora-icon" aria-hidden />
           </IconButton>
         </header>
 
@@ -153,7 +156,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
               label="Capital solo"
               amount={capital}
               animateAmount={showMoneyAnim}
-              icon="🃏"
+              icon={<SpadeIcon size={18} className="kora-icon" />}
               subtitle={
                 <>
                   Net{' '}
@@ -170,7 +173,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
                 variant="gold"
                 label="Wallet compte"
                 amount={walletBalance}
-                icon="💰"
+                icon={<Coins size={18} className="kora-icon" />}
                 subtitle="Buy-in online · cash-out"
               />
             )}
@@ -184,7 +187,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
                 <div className="home-resume-row">
                   <div>
                     <p className="font-display home-resume-title">
-                      {primaryResume.status === 'playing' ? '▶ Reprendre la table' : '↩ Retour au lobby'}
+                      {primaryResume.status === 'playing' ? 'Reprendre la table' : 'Retour au lobby'}
                     </p>
                     <p className="home-resume-meta">
                       Code {primaryResume.code} · mise {primaryResume.baseStake.toLocaleString('fr-FR')} · siège{' '}
@@ -192,7 +195,9 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
                       {activeTables.length > 1 ? ` · +${activeTables.length - 1} autre(s)` : ''}
                     </p>
                   </div>
-                  <span className="home-resume-arrow">→</span>
+                  <span className="home-resume-arrow">
+                    <ArrowRight size={16} className="kora-icon" aria-hidden />
+                  </span>
                 </div>
               </SectionCard>
             )}
@@ -202,7 +207,9 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
             <div className="home-brand">
               <div className="home-brand-ornament">
                 <span className="home-brand-line home-brand-line--left" />
-                <span className="home-brand-suit">♠</span>
+                <span className="home-brand-suit">
+                  <SpadeIcon size={28} className="kora-icon" />
+                </span>
                 <span className="home-brand-line home-brand-line--right" />
               </div>
               <h1 className="text-shimmer font-display home-brand-title">GARAM</h1>
@@ -214,33 +221,38 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
             </UiButton>
 
             <div className="home-quick-links">
-              {QUICK_LINKS.map(item => (
-                <button
-                  key={item.screen}
-                  type="button"
-                  className="btn-secondary home-quick-link"
-                  onClick={() => onNavigate(item.screen)}
-                >
-                  <span className="home-quick-icon">{item.icon}</span>
-                  <span>{item.label}</span>
-                </button>
-              ))}
+              {QUICK_LINKS.map(item => {
+                const Icon = item.icon
+                return (
+                  <button
+                    key={item.screen}
+                    type="button"
+                    className="btn-secondary home-quick-link"
+                    onClick={() => onNavigate(item.screen)}
+                  >
+                    <span className="home-quick-icon">
+                      <Icon size={18} strokeWidth={2} className="kora-icon" aria-hidden />
+                    </span>
+                    <span>{item.label}</span>
+                  </button>
+                )
+              })}
             </div>
           </div>
         </div>
 
         <aside className="home-side">
           <div className="home-stats-row">
-            <StatTile icon="🎮" value={String(gamesPlayed)} label="Parties" />
-            <StatTile icon="🏆" value={String(gamesWon)} label="Victoires" />
-            <StatTile icon="📈" value={`${winRatio}%`} label="Ratio" />
+            <StatTile icon={<Gamepad2 size={18} className="kora-icon" />} value={String(gamesPlayed)} label="Parties" />
+            <StatTile icon={<Trophy size={18} className="kora-icon" />} value={String(gamesWon)} label="Victoires" />
+            <StatTile icon={<TrendingUp size={18} className="kora-icon" />} value={`${winRatio}%`} label="Ratio" />
           </div>
 
           <section className="home-activity">
             <div className="home-activity-head">
               <h3 className="font-display home-activity-title">Activité</h3>
               <UiButton variant="ghost" onClick={goStats}>
-                Stats →
+                Stats
               </UiButton>
             </div>
 

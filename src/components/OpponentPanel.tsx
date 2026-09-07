@@ -2,6 +2,7 @@ import PlayingCard from './PlayingCard'
 import { PlayedCardsStack } from './game/PlayedCardsStack'
 import type { Card as GameCard } from '../types'
 import type { ReactNode } from 'react'
+import { Skull, Landmark, Compass } from 'lucide-react'
 
 interface OpponentPanelProps {
   position: 'top' | 'left' | 'right'
@@ -38,7 +39,9 @@ export function OpponentPanel({
   if (isEliminated) {
     return (
       <div className="opp-panel opp-panel--out">
-        <div className="opp-out-icon">💀</div>
+        <div className="opp-out-icon">
+          <Skull size={28} className="kora-icon" aria-hidden />
+        </div>
         <span className="opp-out-label">Éliminé</span>
       </div>
     )
@@ -57,13 +60,19 @@ export function OpponentPanel({
         )}
 
         {isBanked ? (
-          <Badge tone="muted">🏦 BANQUE</Badge>
+          <Badge tone="muted">
+            <Landmark size={12} className="kora-icon" aria-hidden /> BANQUE
+          </Badge>
         ) : isActive ? (
           <Badge tone="gold" pulse>
             JOUE...
           </Badge>
         ) : (
-          isLeader && <Badge tone="green">🧭 A LA MAIN</Badge>
+          isLeader && (
+            <Badge tone="green">
+              <Compass size={12} className="kora-icon" aria-hidden /> À LA MAIN
+            </Badge>
+          )
         )}
       </div>
 

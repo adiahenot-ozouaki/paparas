@@ -8,6 +8,7 @@ import {
   type AchievementCategory,
 } from '../game/achievements'
 import { PageHeader, ScreenShell, SectionCard } from '../components/ui'
+import { AchievementGlyph, Lock, Check } from '../components/icons'
 
 const CATS: ('Tous' | AchievementCategory)[] = ['Tous', ...ACHIEVEMENT_CATEGORIES]
 
@@ -45,7 +46,7 @@ export default function AchievementsScreen({ onNavigate: _onNavigate }: { onNavi
             title="Achievements"
             subtitle={
               unlockedCount === ACHIEVEMENTS.length
-                ? `${unlockedCount}/${ACHIEVEMENTS.length} — collection complète ✨`
+                ? `${unlockedCount}/${ACHIEVEMENTS.length} — collection complète`
                 : `${unlockedCount}/${ACHIEVEMENTS.length} débloqués`
             }
           />
@@ -132,7 +133,11 @@ export default function AchievementsScreen({ onNavigate: _onNavigate }: { onNavi
                         : undefined
                     }
                   >
-                    {a.unlocked ? a.icon : '🔒'}
+                    {a.unlocked ? (
+                      <AchievementGlyph name={a.icon} size={22} />
+                    ) : (
+                      <Lock size={22} className="kora-icon" aria-hidden />
+                    )}
                   </div>
 
                   <div className="achv-body">
@@ -170,7 +175,11 @@ export default function AchievementsScreen({ onNavigate: _onNavigate }: { onNavi
                     )}
                   </div>
 
-                  {a.unlocked && <div className="achv-check">✓</div>}
+                  {a.unlocked && (
+                    <div className="achv-check">
+                      <Check size={14} className="kora-icon" aria-hidden />
+                    </div>
+                  )}
                 </div>
               )
             })}

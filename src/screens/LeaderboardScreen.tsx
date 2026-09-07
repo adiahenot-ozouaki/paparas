@@ -3,47 +3,78 @@ import type { Screen } from '../types'
 import { useGame, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
 import { useAuth } from '../auth/AuthContext'
 import { getPlayerProgress } from '../game/progression'
-import { fetchOnlineLeaderboard, type LeaderboardEntry } from '../lib/online/api'
-import { AlertBanner, EmptyState, PageHeader, ScreenShell, SectionCard, UiButton } from '../components/ui'
+import {
+  fetchOnlineLeaderboard,
+  formatLeaderboardScore,
+  LEADERBOARD_METRICS,
+  type LeaderboardEntry,
+  type LeaderboardMetric,
+} from '../lib/online/api'
+import { AlertBanner, EmptyState, PageHeader, ScreenShell, SectionCard, Segmented, UiButton } from '../components/ui'
+import { Medal } from 'lucide-react'
+import { AvatarIcon } from '../components/icons'
 
-const TABS = ['Local', 'En ligne'] as const
+type LbTab = 'local' | 'online'
+
+const LB_TAB_OPTIONS: { id: LbTab; label: string }[] = [
+  { id: 'local', label: 'Local' },
+  { id: 'online', label: 'En ligne' },
+]
+
+function metricSubline(e: LeaderboardEntry, metric: LeaderboardMetric): string {
+  if (metric === 'elo') return `${e.gamesWon} win · ${e.totalRoundsWon} rounds`
+  if (metric === 'net') return `Elo ${e.eloOnline} · ${e.totalRoundsWon} rounds`
+  if (metric === 'wins') return `${e.gamesPlayed} parties · Elo ${e.eloOnline}`
+  if (metric === 'rounds' || metric === 'tricks') return `Elo ${e.eloOnline} · ${e.gamesWon} wins`
+  return `${e.comboCounts.kora} Kora · ${e.comboCounts['33']}×33`
+}
 
 function OnlineRow({
   e,
   rank,
   isYou,
+  metric,
 }: {
   e: LeaderboardEntry
   rank: number
   isYou: boolean
+  metric: LeaderboardMetric
 }) {
-  const medal = rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}`
+  const medal = rank === 0 ? 'gold' : rank === 1 ? 'silver' : rank === 2 ? 'bronze' : `${rank + 1}`
   return (
     <SectionCard variant={isYou ? 'green' : 'default'} className="lb-row lb-row--tight">
-      <span className={`lb-medal lb-medal--rank${rank < 3 ? ' is-top' : ''}`}>{medal}</span>
-      <div className="lb-avatar lb-avatar--sm">{e.avatar}</div>
+      <span className={`lb-medal lb-medal--rank${rank < 3 ? ' is-top' : ''}`}>
+        {rank < 3 ? (
+          <Medal size={16} className={`kora-icon lb-medal-icon lb-medal-icon--${medal}`} aria-hidden />
+        ) : (
+          medal
+        )}
+      </span>
+      <div className="lb-avatar lb-avatar--sm">
+        <AvatarIcon avatar={e.avatar} size={28} />
+      </div>
       <div className="lb-meta">
         <p className={`font-display lb-name lb-name--plain${isYou ? ' lb-name--you' : ''}`}>
           {e.username}
           {isYou ? ' (vous)' : ''}
         </p>
-        <p className="lb-sub lb-sub--sm">
-          {e.totalRoundsWon} round{e.totalRoundsWon > 1 ? 's' : ''} gagné
-          {e.totalRoundsWon > 1 ? 's' : ''}
-        </p>
+        <p className="lb-sub lb-sub--sm">{metricSubline(e, metric)}</p>
       </div>
       <div className="lb-score">
         <p className="font-display lb-score-value lb-score-value--sm">
-          {e.netGainTotal.toLocaleString('fr-FR')}
+          {formatLeaderboardScore(metric, e.score)}
         </p>
-        <p className="lb-score-label lb-score-label--dim">net</p>
+        <p className="lb-score-label lb-score-label--dim">
+          {LEADERBOARD_METRICS.find(m => m.id === metric)?.short ?? metric}
+        </p>
       </div>
     </SectionCard>
   )
 }
 
 export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  const [activeTab, setActiveTab] = useState(0)
+  const [activeTab, setActiveTab] = useState<LbTab>('local')
+  const [metric, setMetric] = useState<LeaderboardMetric>('elo')
   const { lifetimeStats } = useGame()
   const { user, profile } = useAuth()
 
@@ -52,7 +83,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
   const [onlineError, setOnlineError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (activeTab !== 1) return
+    if (activeTab !== 'online') return
     if (!user) {
       setOnline([])
       setOnlineError(null)
@@ -61,7 +92,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
     let cancelled = false
     setLoadingOnline(true)
     setOnlineError(null)
-    void fetchOnlineLeaderboard(40).then(res => {
+    void fetchOnlineLeaderboard(40, metric).then(res => {
       if (cancelled) return
       setLoadingOnline(false)
       if (res.error) setOnlineError(res.error)
@@ -70,7 +101,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
     return () => {
       cancelled = true
     }
-  }, [activeTab, user])
+  }, [activeTab, user, metric])
 
   const youName = profile?.username ?? 'Vous'
   const youAvatar = profile?.avatar ?? SEAT_AVATARS[HUMAN_INDEX]
@@ -91,36 +122,47 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
     <ScreenShell className="lb-screen">
       <div className="lb-layout">
         <div className="lb-main">
-          <PageHeader title="Classement" subtitle="Local = votre score solo · En ligne = comptes réels" />
+          <PageHeader
+            title="Classement"
+            subtitle="Local = Elo solo · En ligne = Elo online + autres critères"
+          />
 
           <div className="lb-pad">
-            <div className="segmented">
-              {TABS.map((tab, i) => (
-                <button
-                  key={tab}
-                  type="button"
-                  className={`segmented-btn${activeTab === i ? ' is-active' : ''}`}
-                  onClick={() => setActiveTab(i)}
-                >
-                  {tab}
-                </button>
-              ))}
-            </div>
+            <Segmented
+              aria-label="Type de classement"
+              value={activeTab}
+              onChange={setActiveTab}
+              options={LB_TAB_OPTIONS}
+            />
           </div>
 
-          {activeTab === 0 && (
+          {activeTab === 'online' && user && (
+            <div className="lb-pad lb-metric-pad">
+              <Segmented
+                aria-label="Critère de classement"
+                value={metric}
+                onChange={setMetric}
+                options={LEADERBOARD_METRICS.map(m => ({ id: m.id, label: m.short }))}
+              />
+            </div>
+          )}
+
+          {activeTab === 'local' && (
             <SectionCard variant="green" className="lb-row lb-you-card">
-              <div className="lb-medal">🥇</div>
-              <div className="lb-avatar">{youAvatar}</div>
+              <div className="lb-medal">
+                <Medal size={20} className="kora-icon lb-medal-icon lb-medal-icon--gold" aria-hidden />
+              </div>
+              <div className="lb-avatar">
+                <AvatarIcon avatar={youAvatar} size={36} />
+              </div>
               <div className="lb-meta">
                 <div className="lb-name-row">
                   <p className="font-display lb-name">{youName}</p>
                   <span className="lb-you-pill">VOUS</span>
                 </div>
                 <p className="lb-sub">
-                  Niv. {progress.level} · {progress.title} · {lifetimeStats.gamesWon} victoire
-                  {lifetimeStats.gamesWon > 1 ? 's' : ''} · {lifetimeStats.gamesPlayed} partie
-                  {lifetimeStats.gamesPlayed > 1 ? 's' : ''}
+                  Elo solo {lifetimeStats.eloSolo ?? 1000} · Niv. {progress.level} ·{' '}
+                  {lifetimeStats.gamesWon} victoire{lifetimeStats.gamesWon > 1 ? 's' : ''}
                 </p>
               </div>
               <div className="lb-score">
@@ -132,28 +174,32 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
             </SectionCard>
           )}
 
-          {activeTab === 1 && user && top3.length >= 3 && (
+          {activeTab === 'online' && user && top3.length >= 3 && (
             <div className="lb-podium" aria-label="Podium">
               {podiumOrder.map(({ e, rank }) => {
                 const isYou = Boolean(user && e.userId === user.id)
-                const medal = rank === 0 ? '🥇' : rank === 1 ? '🥈' : '🥉'
+                const medal = rank === 0 ? 'gold' : rank === 1 ? 'silver' : 'bronze'
                 return (
                   <SectionCard
                     key={e.userId}
                     variant={isYou || rank === 0 ? 'green' : 'default'}
                     className={`lb-podium-card${rank === 0 ? ' is-first' : ''}`}
                   >
-                    <span className="lb-podium-rank">{medal}</span>
-                    <div className="lb-podium-avatar">{e.avatar}</div>
+                    <span className="lb-podium-rank">
+                      <Medal size={22} className={`kora-icon lb-medal-icon lb-medal-icon--${medal}`} aria-hidden />
+                    </span>
+                    <div className="lb-podium-avatar">
+                      <AvatarIcon avatar={e.avatar} size={32} />
+                    </div>
                     <p className="font-display lb-podium-name">
                       {e.username}
                       {isYou ? ' (vous)' : ''}
                     </p>
                     <p className="font-display lb-podium-score">
-                      {e.netGainTotal.toLocaleString('fr-FR')}
+                      {formatLeaderboardScore(metric, e.score)}
                     </p>
                     <p className="lb-podium-sub">
-                      {e.totalRoundsWon} round{e.totalRoundsWon > 1 ? 's' : ''}
+                      {LEADERBOARD_METRICS.find(m => m.id === metric)?.label}
                     </p>
                   </SectionCard>
                 )
@@ -164,10 +210,10 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
 
         <aside className="lb-side">
           <div className="anim-fade-in-up lb-body">
-            {activeTab === 0 && (
+            {activeTab === 'local' && (
               <>
                 <p className="lb-hint">
-                  Une seule ligne ici : le classement local ne compare que vous-même (appareil).
+                  Elo solo = parties vs IA · Elo online = parties en ligne (classement En ligne).
                 </p>
 
                 {lifetimeStats.gamesPlayed === 0 ? (
@@ -176,15 +222,41 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                     description="Terminez une partie pour faire progresser ce score."
                   />
                 ) : (
-                  <p className="lb-hint lb-hint--center">
-                    Pour vous comparer aux autres → onglet{' '}
-                    <strong style={{ color: '#A9B0B7' }}>En ligne</strong>
-                  </p>
+                  <div className="lb-local-metrics">
+                    <SectionCard className="lb-local-metric">
+                      <p className="font-display lb-local-value">{lifetimeStats.eloSolo ?? 1000}</p>
+                      <p className="lb-local-label">Elo solo</p>
+                    </SectionCard>
+                    <SectionCard className="lb-local-metric">
+                      <p className="font-display lb-local-value">{lifetimeStats.eloOnline ?? 1000}</p>
+                      <p className="lb-local-label">Elo online</p>
+                    </SectionCard>
+                    <SectionCard className="lb-local-metric">
+                      <p className="font-display lb-local-value">{lifetimeStats.gamesWon}</p>
+                      <p className="lb-local-label">Victoires</p>
+                    </SectionCard>
+                    <SectionCard className="lb-local-metric">
+                      <p className="font-display lb-local-value">{lifetimeStats.comboCounts.kora}</p>
+                      <p className="lb-local-label">Kora</p>
+                    </SectionCard>
+                    <SectionCard className="lb-local-metric">
+                      <p className="font-display lb-local-value">{lifetimeStats.comboCounts['33']}</p>
+                      <p className="lb-local-label">33</p>
+                    </SectionCard>
+                    <SectionCard className="lb-local-metric">
+                      <p className="font-display lb-local-value">{lifetimeStats.totalRoundsWon}</p>
+                      <p className="lb-local-label">Rounds</p>
+                    </SectionCard>
+                    <SectionCard className="lb-local-metric">
+                      <p className="font-display lb-local-value">{lifetimeStats.totalTricksWon}</p>
+                      <p className="lb-local-label">Plis</p>
+                    </SectionCard>
+                  </div>
                 )}
               </>
             )}
 
-            {activeTab === 1 && (
+            {activeTab === 'online' && (
               <>
                 {!user ? (
                   <EmptyState
@@ -207,7 +279,9 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                     {(top3.length >= 3 ? rest : online).map((e, i) => {
                       const rank = top3.length >= 3 ? i + 3 : i
                       const isYou = Boolean(user && e.userId === user.id)
-                      return <OnlineRow key={e.userId} e={e} rank={rank} isYou={isYou} />
+                      return (
+                        <OnlineRow key={e.userId} e={e} rank={rank} isYou={isYou} metric={metric} />
+                      )
                     })}
                   </div>
                 )}

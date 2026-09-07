@@ -64,8 +64,13 @@ export async function syncLifetimeStatsWithCloud(
 
   if (mergedRow) {
     const fromServer = lifetimeStatsFromDbRow(mergedRow as Parameters<typeof lifetimeStatsFromDbRow>[0])
-    saveLocalLifetimeStats(fromServer)
-    return { stats: fromServer, error: null }
+    // opponentStats is local-only for now — keep the higher of local/merged
+    const withOpponents: LifetimeStats = {
+      ...fromServer,
+      opponentStats: mergeLifetimeStats(local, fromServer).opponentStats,
+    }
+    saveLocalLifetimeStats(withOpponents)
+    return { stats: withOpponents, error: null }
   }
 
   return { stats: merged, error: null }
