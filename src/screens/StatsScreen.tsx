@@ -4,6 +4,8 @@ import { useGame } from '../game/GameContext'
 import { useAuth } from '../auth/AuthContext'
 import { COMBO_LABEL, COMBO_MULTIPLIER } from '../game/combo'
 import { loadGameHistory } from '../lib/persistence/gameHistory'
+import { OPPONENT_IDS, OPPONENT_META, normalizeOpponentStatsMap } from '../lib/persistence/stats'
+import { AvatarIcon } from '../components/icons'
 import { EmptyState, PageHeader, ScreenShell, SectionCard, Segmented } from '../components/ui'
 
 const COMBO_ORDER: ComboType[] = ['kmt', 'trinity', '33', 'kora', 'simple']
@@ -24,7 +26,7 @@ const SPECIAL_COLOR: Record<SpecialRuleType, string> = {
 }
 
 type Scope = 'global' | 'solo'
-type Section = 'perf' | 'finance' | 'combos'
+type Section = 'perf' | 'finance' | 'combos' | 'rivals'
 
 export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (s: Screen) => void }) {
   const [section, setSection] = useState<Section>('perf')
@@ -59,7 +61,8 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
     const netGainTotal = hist.reduce((s, h) => s + h.netGain, 0)
     const totalGains = hist.reduce((s, h) => s + Math.max(0, h.netGain), 0)
     const totalLosses = hist.reduce((s, h) => s + Math.max(0, -h.netGain), 0)
-    const maxCapitalEver = hist.reduce((m, h) => Math.max(m, h.finalCapital), 0)
+    const maxCapitalEver =
+      hist.length === 0 ? 0 : hist.reduce((m, h) => Math.max(m, h.finalCapital), hist[0].finalCapital)
     const minCapitalEver =
       hist.length === 0 ? 0 : hist.reduce((m, h) => Math.min(m, h.finalCapital), hist[0].finalCapital)
 
@@ -87,14 +90,14 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
       maxCapitalEver,
       minCapitalEver,
       comboCounts,
-      specialRuleCounts: { flush: 0, '21': 0, t7: 0 } as Record<SpecialRuleType, number>,
-      sourceNote: 'Solo récent = 30 dernières parties solo (historique local).',
+      specialRuleCounts: { flush: 0, '21': 0, t7: 0 },
+      sourceNote: 'Solo récent = 30 dernières parties solo (local).',
     }
   }, [scope, lifetimeStats, user])
 
   const winRatio = display.gamesPlayed > 0 ? (display.gamesWon / display.gamesPlayed) * 100 : 0
-  const maxComboCount = Math.max(1, ...COMBO_ORDER.map(c => display.comboCounts[c]))
   const hasAnyGame = display.gamesPlayed > 0
+  const maxComboCount = Math.max(1, ...COMBO_ORDER.map(c => display.comboCounts[c] ?? 0))
 
   return (
     <ScreenShell className="stats-screen">
@@ -125,6 +128,7 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
                 { id: 'perf', label: 'Performances' },
                 { id: 'finance', label: 'Finance' },
                 { id: 'combos', label: 'Combos' },
+                { id: 'rivals', label: 'Adversaires' },
               ]}
             />
           </div>
@@ -174,7 +178,7 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
 
         <aside className="stats-side">
           <div className="stats-body">
-            {!hasAnyGame && (
+            {!hasAnyGame && section !== 'rivals' && (
               <div className="stats-empty">
                 <EmptyState
                   title={scope === 'solo' ? 'Aucune partie solo récente' : 'Aucune partie jouée'}
@@ -187,7 +191,7 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
               </div>
             )}
 
-            {section === 'perf' && (
+            {section === 'perf' && hasAnyGame && (
               <div className="stats-perf-grid">
                 {[
                   { label: 'Parties jouées', value: String(display.gamesPlayed), tone: 'text' },
@@ -198,60 +202,53 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
                     value: scope === 'solo' ? '—' : display.totalTricksWon.toLocaleString('fr-FR'),
                     tone: 'purple',
                   },
-                ].map(s => (
-                  <SectionCard key={s.label} className="stats-metric">
-                    <p className={`font-display stats-metric-value tone-${s.tone}`}>{s.value}</p>
-                    <p className="stats-metric-label">{s.label}</p>
+                ].map(m => (
+                  <SectionCard key={m.label} className="stats-metric">
+                    <p className={`font-display stats-metric-value tone-${m.tone}`}>{m.value}</p>
+                    <p className="stats-metric-label">{m.label}</p>
                   </SectionCard>
                 ))}
               </div>
             )}
 
-            {section === 'finance' && (
+            {section === 'finance' && hasAnyGame && (
               <div className="stats-finance-list">
                 {[
                   {
-                    label: 'Gains totaux',
+                    label: 'Gains bruts',
                     value: `+${display.totalGains.toLocaleString('fr-FR')}`,
                     tone: 'success',
                   },
                   {
-                    label: 'Pertes totales',
-                    value: `-${display.totalLosses.toLocaleString('fr-FR')}`,
+                    label: 'Pertes brutes',
+                    value: `−${display.totalLosses.toLocaleString('fr-FR')}`,
                     tone: 'danger',
                   },
                   {
-                    label: 'Gain net',
-                    value: `${display.netGainTotal >= 0 ? '+' : ''}${display.netGainTotal.toLocaleString('fr-FR')}`,
+                    label: 'Capital max',
+                    value: display.maxCapitalEver.toLocaleString('fr-FR'),
                     tone: 'gold',
                   },
                   {
-                    label: 'Capital maximum',
-                    value: display.maxCapitalEver.toLocaleString('fr-FR'),
-                    tone: 'text',
-                  },
-                  {
-                    label: 'Capital minimum',
+                    label: 'Capital min',
                     value: display.minCapitalEver.toLocaleString('fr-FR'),
-                    tone: 'text',
+                    tone: 'muted',
                   },
-                ].map(s => (
-                  <SectionCard key={s.label} className="stats-finance-row">
-                    <span className="stats-finance-label">{s.label}</span>
-                    <span className={`font-display stats-finance-value tone-${s.tone}`}>{s.value} FCFA</span>
+                ].map(m => (
+                  <SectionCard key={m.label} className="stats-finance-row">
+                    <span className="stats-finance-label">{m.label}</span>
+                    <span className={`font-display stats-finance-value tone-${m.tone}`}>{m.value}</span>
                   </SectionCard>
                 ))}
               </div>
             )}
 
-            {section === 'combos' && (
+            {section === 'combos' && hasAnyGame && (
               <>
                 <SectionCard className="stats-combo-card">
-                  <h3 className="font-display stats-combo-title">
-                    {scope === 'solo' ? 'Meilleurs combos (parties solo)' : 'Combos réalisés'}
-                  </h3>
+                  <h3 className="font-display stats-combo-title">Combos réalisés</h3>
                   {COMBO_ORDER.map((c, i) => {
-                    const count = display.comboCounts[c]
+                    const count = display.comboCounts[c] ?? 0
                     const color = COMBO_COLOR[c]
                     return (
                       <div key={c} className={`stats-combo-row${i < COMBO_ORDER.length - 1 ? ' has-gap' : ''}`}>
@@ -304,6 +301,67 @@ export default function StatsScreen({ onNavigate: _onNavigate }: { onNavigate: (
                   </p>
                 )}
               </>
+            )}
+
+            {section === 'rivals' && (
+              <div className="stats-rivals">
+                <p className="stats-source-note" style={{ marginBottom: 12 }}>
+                  Face aux IA solo (Binu, Lebe, Goju). Compteurs depuis les parties terminées sur cet
+                  appareil.
+                </p>
+                {OPPONENT_IDS.map(id => {
+                  const meta = OPPONENT_META[id]
+                  const o = normalizeOpponentStatsMap(lifetimeStats.opponentStats)[id]
+                  const finished = o.timesFinishedAhead + o.timesFinishedBehind
+                  const edgePct =
+                    finished > 0 ? Math.round((o.timesFinishedBehind / finished) * 100) : null
+                  return (
+                    <SectionCard key={id} className="stats-rival-card">
+                      <div className="stats-rival-head">
+                        <div className="stats-rival-avatar">
+                          <AvatarIcon avatar={meta.avatar} size={28} />
+                        </div>
+                        <div className="stats-rival-meta">
+                          <p className="font-display stats-rival-name">{meta.name}</p>
+                          <p className="stats-rival-personality">{meta.personality}</p>
+                        </div>
+                        <div className="stats-rival-edge">
+                          {edgePct === null ? (
+                            <span className="stats-rival-edge-empty">—</span>
+                          ) : (
+                            <>
+                              <span className="font-display stats-rival-edge-value">{edgePct}%</span>
+                              <span className="stats-rival-edge-label">avantage</span>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="stats-rival-grid">
+                        <div className="stats-rival-stat">
+                          <span className="font-display stats-rival-stat-value">{o.gamesPlayed}</span>
+                          <span className="stats-rival-stat-label">Parties</span>
+                        </div>
+                        <div className="stats-rival-stat">
+                          <span className="font-display stats-rival-stat-value">{o.roundsWon}</span>
+                          <span className="stats-rival-stat-label">Rounds gagnés</span>
+                        </div>
+                        <div className="stats-rival-stat">
+                          <span className="font-display stats-rival-stat-value text-success">
+                            {o.timesFinishedBehind}
+                          </span>
+                          <span className="stats-rival-stat-label">Vous devant</span>
+                        </div>
+                        <div className="stats-rival-stat">
+                          <span className="font-display stats-rival-stat-value text-danger">
+                            {o.timesFinishedAhead}
+                          </span>
+                          <span className="stats-rival-stat-label">Lui devant</span>
+                        </div>
+                      </div>
+                    </SectionCard>
+                  )
+                })}
+              </div>
             )}
           </div>
         </aside>
