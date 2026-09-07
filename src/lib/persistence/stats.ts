@@ -7,6 +7,86 @@ import type { ComboType, SpecialRuleType } from '../../types'
 export const STORAGE_KEY_ACTIVE_GAME = 'kora:activeGame:v1'
 export const STORAGE_KEY_LIFETIME_STATS = 'kora:lifetimeStats:v1'
 
+/** Adversaires IA solo (sièges 1–3). */
+export const OPPONENT_IDS = ['binu', 'lebe', 'goju'] as const
+export type OpponentId = (typeof OPPONENT_IDS)[number]
+
+export const OPPONENT_META: Record<
+  OpponentId,
+  { name: string; seatIndex: number; avatar: string; personality: string }
+> = {
+  binu: { name: 'Binu', seatIndex: 1, avatar: 'cat', personality: 'Agressif' },
+  lebe: { name: 'Lebe', seatIndex: 2, avatar: 'cat', personality: 'Conservateur' },
+  goju: { name: 'Goju', seatIndex: 3, avatar: 'turtle', personality: 'Opportuniste' },
+}
+
+export interface OpponentStats {
+  /** Rounds remportés par cet adversaire. */
+  roundsWon: number
+  /** Parties terminées à la même table. */
+  gamesPlayed: number
+  /** Fin de partie : son capital > le vôtre. */
+  timesFinishedAhead: number
+  /** Fin de partie : son capital < le vôtre. */
+  timesFinishedBehind: number
+}
+
+export type OpponentStatsMap = Record<OpponentId, OpponentStats>
+
+export const DEFAULT_OPPONENT_STATS: OpponentStats = {
+  roundsWon: 0,
+  gamesPlayed: 0,
+  timesFinishedAhead: 0,
+  timesFinishedBehind: 0,
+}
+
+export function defaultOpponentStatsMap(): OpponentStatsMap {
+  return {
+    binu: { ...DEFAULT_OPPONENT_STATS },
+    lebe: { ...DEFAULT_OPPONENT_STATS },
+    goju: { ...DEFAULT_OPPONENT_STATS },
+  }
+}
+
+export function normalizeOpponentStatsMap(
+  raw: Partial<Record<string, Partial<OpponentStats>>> | null | undefined,
+): OpponentStatsMap {
+  const base = defaultOpponentStatsMap()
+  if (!raw) return base
+  for (const id of OPPONENT_IDS) {
+    const o = raw[id]
+    if (!o) continue
+    base[id] = {
+      roundsWon: Math.max(0, Number(o.roundsWon) || 0),
+      gamesPlayed: Math.max(0, Number(o.gamesPlayed) || 0),
+      timesFinishedAhead: Math.max(0, Number(o.timesFinishedAhead) || 0),
+      timesFinishedBehind: Math.max(0, Number(o.timesFinishedBehind) || 0),
+    }
+  }
+  return base
+}
+
+export function mergeOpponentStatsMap(a: OpponentStatsMap, b: OpponentStatsMap): OpponentStatsMap {
+  const out = defaultOpponentStatsMap()
+  for (const id of OPPONENT_IDS) {
+    out[id] = {
+      roundsWon: Math.max(a[id].roundsWon, b[id].roundsWon),
+      gamesPlayed: Math.max(a[id].gamesPlayed, b[id].gamesPlayed),
+      timesFinishedAhead: Math.max(a[id].timesFinishedAhead, b[id].timesFinishedAhead),
+      timesFinishedBehind: Math.max(a[id].timesFinishedBehind, b[id].timesFinishedBehind),
+    }
+  }
+  return out
+}
+
+/** seatIndex 1|2|3 → opponent id */
+export function opponentIdFromSeat(seatIndex: number): OpponentId | null {
+  for (const id of OPPONENT_IDS) {
+    if (OPPONENT_META[id].seatIndex === seatIndex) return id
+  }
+  return null
+}
+
 export interface LifetimeStats {
   gamesPlayed: number
   gamesWon: number
@@ -20,6 +100,8 @@ export interface LifetimeStats {
   minCapitalEver: number
   comboCounts: Record<ComboType, number>
   specialRuleCounts: Record<SpecialRuleType, number>
+  /** Stats H2H locales vs chaque IA (non synchronisées cloud pour l’instant). */
+  opponentStats: OpponentStatsMap
 }
 
 export const DEFAULT_LIFETIME_STATS: LifetimeStats = {
@@ -35,6 +117,7 @@ export const DEFAULT_LIFETIME_STATS: LifetimeStats = {
   minCapitalEver: 0,
   comboCounts: { simple: 0, kora: 0, '33': 0, trinity: 0, kmt: 0 },
   specialRuleCounts: { flush: 0, '21': 0, t7: 0 },
+  opponentStats: defaultOpponentStatsMap(),
 }
 
 function comboMultiplier(c: ComboType | null): number {
@@ -75,16 +158,31 @@ export function mergeLifetimeStats(a: LifetimeStats, b: LifetimeStats): Lifetime
     minCapitalEver,
     comboCounts,
     specialRuleCounts,
+    opponentStats: mergeOpponentStatsMap(
+      normalizeOpponentStatsMap(a.opponentStats),
+      normalizeOpponentStatsMap(b.opponentStats),
+    ),
   }
 }
 
 export function normalizeLifetimeStats(raw: Partial<LifetimeStats> | null | undefined): LifetimeStats {
-  if (!raw) return { ...DEFAULT_LIFETIME_STATS, comboCounts: { ...DEFAULT_LIFETIME_STATS.comboCounts }, specialRuleCounts: { ...DEFAULT_LIFETIME_STATS.specialRuleCounts } }
+  if (!raw) {
+    return {
+      ...DEFAULT_LIFETIME_STATS,
+      comboCounts: { ...DEFAULT_LIFETIME_STATS.comboCounts },
+      specialRuleCounts: { ...DEFAULT_LIFETIME_STATS.specialRuleCounts },
+      opponentStats: defaultOpponentStatsMap(),
+    }
+  }
   return {
     ...DEFAULT_LIFETIME_STATS,
     ...raw,
     comboCounts: { ...DEFAULT_LIFETIME_STATS.comboCounts, ...(raw.comboCounts ?? {}) },
-    specialRuleCounts: { ...DEFAULT_LIFETIME_STATS.specialRuleCounts, ...(raw.specialRuleCounts ?? {}) },
+    specialRuleCounts: {
+      ...DEFAULT_LIFETIME_STATS.specialRuleCounts,
+      ...(raw.specialRuleCounts ?? {}),
+    },
+    opponentStats: normalizeOpponentStatsMap(raw.opponentStats),
   }
 }
 
@@ -106,7 +204,7 @@ export function saveLocalLifetimeStats(stats: LifetimeStats): void {
   }
 }
 
-/** Forme snake_case attendue par kora_merge_lifetime_stats. */
+/** Forme snake_case attendue par kora_merge_lifetime_stats (opponent_stats local only). */
 export function lifetimeStatsToDbPayload(stats: LifetimeStats): Record<string, unknown> {
   return {
     games_played: stats.gamesPlayed,
@@ -138,6 +236,7 @@ export function lifetimeStatsFromDbRow(row: {
   combo_counts: Record<string, number> | null
   special_rule_counts: Record<string, number> | null
 }): LifetimeStats {
+  // opponentStats absents du cloud → conservés via merge local↔cloud côté sync
   return normalizeLifetimeStats({
     gamesPlayed: row.games_played,
     gamesWon: row.games_won,
