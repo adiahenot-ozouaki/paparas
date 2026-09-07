@@ -52,6 +52,7 @@ import {
   type LucideIcon,
   type LucideProps,
 } from 'lucide-react'
+import { DEFAULT_AVATAR_SRC, isAvatarImageUrl, resolveAvatarImageSrc } from '../../lib/avatar'
 
 export const ICON_STROKE = 2
 
@@ -126,12 +127,21 @@ for (const opt of AVATAR_OPTIONS) {
   for (const e of opt.legacy ?? []) legacyAvatarIndex[e] = opt.id
 }
 
-export function resolveAvatarId(stored: string | null | undefined): string {
-  if (!stored) return 'bird'
-  if (AVATAR_OPTIONS.some(o => o.id === stored)) return stored
-  return legacyAvatarIndex[stored] ?? 'bird'
+/** Preset Lucide id, ou null si image / défaut. */
+export function resolveAvatarId(stored: string | null | undefined): string | null {
+  if (!stored || !stored.trim()) return null
+  const v = stored.trim()
+  if (isAvatarImageUrl(v)) return null
+  if (AVATAR_OPTIONS.some(o => o.id === v)) return v
+  return legacyAvatarIndex[v] ?? null
 }
 
+/**
+ * Avatar unifié :
+ * - vide → image par défaut
+ * - URL → <img>
+ * - preset (bird…) → icône Lucide
+ */
 export function AvatarIcon({
   avatar,
   size = 22,
@@ -141,10 +151,43 @@ export function AvatarIcon({
   size?: number
   className?: string
 }) {
-  const id = resolveAvatarId(avatar)
+  const imageSrc = resolveAvatarImageSrc(avatar)
+  if (imageSrc) {
+    return (
+      <img
+        src={imageSrc}
+        alt=""
+        width={size}
+        height={size}
+        className={`kora-avatar-img ${className}`.trim()}
+        style={{
+          width: size,
+          height: size,
+          borderRadius: '50%',
+          objectFit: 'cover',
+          display: 'block',
+          flexShrink: 0,
+        }}
+        onError={e => {
+          const el = e.currentTarget
+          if (el.src.endsWith(DEFAULT_AVATAR_SRC) || el.src.includes('/avatars/default')) return
+          el.src = DEFAULT_AVATAR_SRC
+        }}
+      />
+    )
+  }
+
+  const id = resolveAvatarId(avatar) ?? 'bird'
   const opt = AVATAR_OPTIONS.find(o => o.id === id) ?? AVATAR_OPTIONS[0]
   const Icon = opt.icon
-  return <Icon size={size} strokeWidth={ICON_STROKE} className={`kora-icon kora-avatar-icon ${className}`.trim()} aria-hidden />
+  return (
+    <Icon
+      size={size}
+      strokeWidth={ICON_STROKE}
+      className={`kora-icon kora-avatar-icon ${className}`.trim()}
+      aria-hidden
+    />
+  )
 }
 
 export const ACHIEVEMENT_ICONS: Record<string, LucideIcon> = {
