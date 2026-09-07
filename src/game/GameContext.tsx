@@ -16,6 +16,10 @@ import {
   DEFAULT_LIFETIME_STATS,
   loadLocalLifetimeStats,
   saveLocalLifetimeStats,
+  opponentIdFromSeat,
+  normalizeOpponentStatsMap,
+  OPPONENT_IDS,
+  OPPONENT_META,
 } from '../lib/persistence/stats'
 import { syncLifetimeStatsWithCloud } from '../lib/persistence/cloud'
 import { appendGameHistory } from '../lib/persistence/gameHistory'
@@ -136,76 +140,69 @@ const GameContext = createContext<GameContextValue | null>(null)
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth()
-  const initialSnapshot = useRef<PersistedGameSnapshot | null>(loadPersistedGame()).current
-  const syncTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const lastSyncedUser = useRef<string | null>(null)
+  const persisted = useRef(loadPersistedGame()).current
 
   const [players, setPlayers] = useState<Player[]>(
-    () => initialSnapshot?.players ?? createInitialPlayers(DEFAULT_STAKE_CONFIG.startingCapital),
+    () => persisted?.players ?? createInitialPlayers(DEFAULT_STAKE_CONFIG.startingCapital),
   )
   const [roundState, setRoundStateInternal] = useState<RoundState>(
-    () => initialSnapshot?.roundState ?? buildFreshRoundState(0, [], DEFAULT_STAKE_CONFIG, DEFAULT_DECK_VARIANT),
+    () =>
+      persisted?.roundState ??
+      buildFreshRoundState(0, [], DEFAULT_STAKE_CONFIG, DEFAULT_DECK_VARIANT),
   )
-  const [roundNumber, setRoundNumber] = useState(initialSnapshot?.roundNumber ?? 1)
+  const [roundNumber, setRoundNumber] = useState(() => persisted?.roundNumber ?? 1)
   const [payoutApplied, setPayoutApplied] = useState(false)
-  const [roundsWon, setRoundsWon] = useState<number[]>(initialSnapshot?.roundsWon ?? [0, 0, 0, 0])
+  const [roundsWon, setRoundsWon] = useState<number[]>(() => persisted?.roundsWon ?? [0, 0, 0, 0])
   const [bestCombo, setBestCombo] = useState<(ComboType | null)[]>(
-    initialSnapshot?.bestCombo ?? [null, null, null, null],
+    () => persisted?.bestCombo ?? [null, null, null, null],
   )
-  const [gameStartedAt, setGameStartedAt] = useState<number>(() => initialSnapshot?.gameStartedAt ?? Date.now())
-  const [stakeConfig, setStakeConfig] = useState<GameStakeConfig>(initialSnapshot?.stakeConfig ?? DEFAULT_STAKE_CONFIG)
-  const [deckVariant, setDeckVariant] = useState<DeckVariant>(initialSnapshot?.deckVariant ?? DEFAULT_DECK_VARIANT)
-  const [started, setStarted] = useState(initialSnapshot?.started ?? false)
+  const [gameStartedAt, setGameStartedAt] = useState(() => persisted?.gameStartedAt ?? Date.now())
+  const [stakeConfig, setStakeConfig] = useState<GameStakeConfig>(
+    () => persisted?.stakeConfig ?? { ...DEFAULT_STAKE_CONFIG },
+  )
+  const [deckVariant, setDeckVariant] = useState<DeckVariant>(
+    () => persisted?.deckVariant ?? DEFAULT_DECK_VARIANT,
+  )
+  const [started, setStarted] = useState(() => persisted?.started ?? false)
   const [lifetimeStats, setLifetimeStats] = useState<LifetimeStats>(() => loadLocalLifetimeStats())
+  const [lastGameOver, setLastGameOver] = useState<GameOverCheck | null>(
+    () => persisted?.lastGameOver ?? null,
+  )
   const [statsSyncing, setStatsSyncing] = useState(false)
-  const [lastGameOver, setLastGameOver] = useState<GameOverCheck | null>(initialSnapshot?.lastGameOver ?? null)
 
   const persistStats = useCallback(
     (next: LifetimeStats) => {
       saveLocalLifetimeStats(next)
-      if (!user?.id) return
-      if (syncTimer.current) clearTimeout(syncTimer.current)
-      syncTimer.current = setTimeout(() => {
+      if (user) {
+        setStatsSyncing(true)
         void syncLifetimeStatsWithCloud(next).then(({ stats, error }) => {
-          if (error) console.warn('[GameContext] sync stats:', error)
+          if (error) console.warn('[stats] cloud sync:', error)
           else setLifetimeStats(stats)
+          setStatsSyncing(false)
         })
-      }, 700)
+      }
     },
-    [user?.id],
+    [user],
   )
 
   const refreshCloudStats = useCallback(async () => {
-    if (!user?.id) return
     setStatsSyncing(true)
     try {
       const { stats, error } = await syncLifetimeStatsWithCloud()
       setLifetimeStats(stats)
-      if (error) console.warn('[GameContext] refreshCloudStats:', error)
+      if (error) console.warn('[stats] refresh:', error)
     } finally {
       setStatsSyncing(false)
     }
-  }, [user?.id])
+  }, [])
 
   useEffect(() => {
-    if (!user?.id) {
-      lastSyncedUser.current = null
-      return
-    }
-    if (lastSyncedUser.current === user.id) return
-    lastSyncedUser.current = user.id
-    let cancelled = false
-    setStatsSyncing(true)
+    if (!user) return
     void syncLifetimeStatsWithCloud(loadLocalLifetimeStats()).then(({ stats, error }) => {
-      if (cancelled) return
+      if (error) console.warn('[stats] initial sync:', error)
       setLifetimeStats(stats)
-      setStatsSyncing(false)
-      if (error) console.warn('[GameContext] syncOnLogin:', error)
     })
-    return () => {
-      cancelled = true
-    }
-  }, [user?.id])
+  }, [user])
 
   const configureGame = useCallback(
     (
@@ -219,28 +216,31 @@ export function GameProvider({ children }: { children: ReactNode }) {
       }>,
     ) => {
       setStakeConfig(prev => ({
-        baseStake: config.baseStake ?? prev.baseStake,
-        startingCapital: config.startingCapital ?? prev.startingCapital,
-        eliminationThreshold: prev.eliminationThreshold,
-        endMode: config.endMode ?? prev.endMode,
-        maxRounds: config.maxRounds ?? prev.maxRounds,
-        targetCapital: config.targetCapital ?? prev.targetCapital,
+        ...prev,
+        ...(config.baseStake !== undefined ? { baseStake: config.baseStake } : {}),
+        ...(config.startingCapital !== undefined ? { startingCapital: config.startingCapital } : {}),
+        ...(config.endMode !== undefined ? { endMode: config.endMode } : {}),
+        ...(config.maxRounds !== undefined ? { maxRounds: config.maxRounds } : {}),
+        ...(config.targetCapital !== undefined ? { targetCapital: config.targetCapital } : {}),
       }))
-      if (config.deckVariant !== undefined) setDeckVariant(config.deckVariant)
+      if (config.deckVariant) setDeckVariant(config.deckVariant)
     },
     [],
   )
 
   const startNewGame = useCallback(() => {
-    setPlayers(createInitialPlayers(stakeConfig.startingCapital))
-    setRoundStateInternal(buildFreshRoundState(0, [], stakeConfig, deckVariant))
+    const fresh = createInitialPlayers(stakeConfig.startingCapital)
+    const rs = buildFreshRoundState(0, [], stakeConfig, deckVariant)
+    setPlayers(fresh)
+    setRoundStateInternal(rs)
     setRoundNumber(1)
     setPayoutApplied(false)
     setRoundsWon([0, 0, 0, 0])
     setBestCombo([null, null, null, null])
     setGameStartedAt(Date.now())
-    setStarted(true)
     setLastGameOver(null)
+    setStarted(true)
+    clearPersistedGame()
   }, [stakeConfig, deckVariant])
 
   const ensureGameStarted = useCallback(() => {
@@ -257,7 +257,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
     const outcome = roundState.outcome
     setPlayers(prev => applyRoundPayout(prev, outcome.payout, stakeConfig))
 
-    const winnerIndexes = outcome.kind === 'normal' ? [outcome.roundWinnerIndex] : outcome.winners.map(w => w.playerIndex)
+    const winnerIndexes =
+      outcome.kind === 'normal' ? [outcome.roundWinnerIndex] : outcome.winners.map(w => w.playerIndex)
     setRoundsWon(prev => prev.map((count, i) => (winnerIndexes.includes(i) ? count + 1 : count)))
 
     if (outcome.kind === 'normal') {
@@ -270,7 +271,9 @@ export function GameProvider({ children }: { children: ReactNode }) {
       )
     }
 
-    const humanPayoutLine = [...outcome.payout.winners, ...outcome.payout.losers].find(p => p.playerIndex === HUMAN_INDEX)
+    const humanPayoutLine = [...outcome.payout.winners, ...outcome.payout.losers].find(
+      p => p.playerIndex === HUMAN_INDEX,
+    )
     const humanDelta = humanPayoutLine?.amount ?? 0
     const newHumanCapital = players[HUMAN_INDEX].capital + humanDelta
     const humanTricksThisRound = roundState.trickWinners.filter(w => w === HUMAN_INDEX).length
@@ -290,15 +293,23 @@ export function GameProvider({ children }: { children: ReactNode }) {
           )
         : prev.specialRuleCounts
 
+      const opponentStats = normalizeOpponentStatsMap(prev.opponentStats)
+      for (const wi of winnerIndexes) {
+        const oid = opponentIdFromSeat(wi)
+        if (oid) opponentStats[oid] = { ...opponentStats[oid], roundsWon: opponentStats[oid].roundsWon + 1 }
+      }
+
       const next: LifetimeStats = {
         ...prev,
         totalTricksWon: prev.totalTricksWon + humanTricksThisRound,
         totalGains: prev.totalGains + Math.max(0, humanDelta),
         totalLosses: prev.totalLosses + Math.max(0, -humanDelta),
         maxCapitalEver: Math.max(prev.maxCapitalEver, newHumanCapital),
-        minCapitalEver: prev.minCapitalEver === 0 ? newHumanCapital : Math.min(prev.minCapitalEver, newHumanCapital),
+        minCapitalEver:
+          prev.minCapitalEver === 0 ? newHumanCapital : Math.min(prev.minCapitalEver, newHumanCapital),
         comboCounts,
         specialRuleCounts,
+        opponentStats,
       }
       persistStats(next)
       return next
@@ -308,21 +319,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
   }, [payoutApplied, roundState, stakeConfig, players, persistStats])
 
   const startNextRound = useCallback(() => {
-    if (!roundState.outcome) return
-    const winnerIndex =
-      roundState.outcome.kind === 'normal' ? roundState.outcome.roundWinnerIndex : roundState.outcome.winners[0].playerIndex
-    const nextStarter = (winnerIndex + 1) % 4
-    const eliminatedIndexes = players.reduce<number[]>((acc, p, i) => (p.isEliminated ? [...acc, i] : acc), [])
-    setRoundStateInternal(buildFreshRoundState(nextStarter, eliminatedIndexes, stakeConfig, deckVariant))
-    setPayoutApplied(false)
+    const eliminated = players
+      .map((p, i) => (p.capital <= 0 ? i : -1))
+      .filter(i => i >= 0)
+    const startPlayer = (roundState.currentPlayerIndex + 1) % 4
+    setRoundStateInternal(buildFreshRoundState(startPlayer, eliminated, stakeConfig, deckVariant))
     setRoundNumber(n => n + 1)
-  }, [roundState.outcome, players, stakeConfig, deckVariant])
+    setPayoutApplied(false)
+  }, [players, roundState.currentPlayerIndex, stakeConfig, deckVariant])
 
   const checkGameOverNow = useCallback(() => {
-    const result = checkGameOver(players, stakeConfig, roundNumber)
+    const result = checkGameOver(players, roundsWon, roundNumber, stakeConfig)
     setLastGameOver(result)
     return result
-  }, [players, stakeConfig, roundNumber])
+  }, [players, roundsWon, roundNumber, stakeConfig])
 
   const bankPlayerAction = useCallback(
     (playerIndex: number) => {
@@ -359,6 +369,20 @@ export function GameProvider({ children }: { children: ReactNode }) {
         const bestComboEver =
           comboMultiplierOf(humanBest) > comboMultiplierOf(prev.bestComboEver) ? humanBest : prev.bestComboEver
 
+        const humanCapital = players[HUMAN_INDEX].capital
+        const opponentStats = normalizeOpponentStatsMap(prev.opponentStats)
+        for (const oid of OPPONENT_IDS) {
+          const seat = OPPONENT_META[oid].seatIndex
+          const theirCapital = players[seat]?.capital ?? 0
+          const cur = opponentStats[oid]
+          opponentStats[oid] = {
+            ...cur,
+            gamesPlayed: cur.gamesPlayed + 1,
+            timesFinishedAhead: cur.timesFinishedAhead + (theirCapital > humanCapital ? 1 : 0),
+            timesFinishedBehind: cur.timesFinishedBehind + (theirCapital < humanCapital ? 1 : 0),
+          }
+        }
+
         const next: LifetimeStats = {
           ...prev,
           gamesPlayed: prev.gamesPlayed + 1,
@@ -366,6 +390,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           totalRoundsWon: prev.totalRoundsWon + roundsWon[HUMAN_INDEX],
           bestComboEver,
           netGainTotal: prev.netGainTotal + netGain,
+          opponentStats,
         }
         persistStats(next)
         return next
@@ -389,7 +414,18 @@ export function GameProvider({ children }: { children: ReactNode }) {
       started,
       lastGameOver,
     })
-  }, [players, roundState, roundNumber, roundsWon, bestCombo, gameStartedAt, stakeConfig, deckVariant, started, lastGameOver])
+  }, [
+    players,
+    roundState,
+    roundNumber,
+    roundsWon,
+    bestCombo,
+    gameStartedAt,
+    stakeConfig,
+    deckVariant,
+    started,
+    lastGameOver,
+  ])
 
   const value = useMemo<GameContextValue>(
     () => ({
@@ -449,6 +485,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
 export function useGame(): GameContextValue {
   const ctx = useContext(GameContext)
-  if (!ctx) throw new Error("useGame doit être utilisé à l'intérieur de <GameProvider>.")
+  if (!ctx) throw new Error('useGame must be used within GameProvider')
   return ctx
 }
