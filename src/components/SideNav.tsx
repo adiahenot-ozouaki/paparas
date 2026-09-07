@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Screen } from '../types'
 import { getActiveOnlineTableId } from '../lib/online/session'
-import { NAV_ITEMS, isNavItemActive } from './navItems'
+import { NAV_ITEMS, MORE_NAV_ITEMS, isNavItemActive } from './navItems'
 
 type SideNavProps = {
   active: Screen
@@ -75,22 +75,18 @@ export default function SideNav({ active, onNavigate }: SideNavProps) {
       </nav>
 
       <div className="side-nav-footer">
-        <button
-          type="button"
-          className="side-nav-item side-nav-item--muted"
-          onClick={() => onNavigate('rules')}
-        >
-          <span className="side-nav-item-icon">📖</span>
-          <span className="side-nav-item-label">Règles</span>
-        </button>
-        <button
-          type="button"
-          className="side-nav-item side-nav-item--muted"
-          onClick={() => onNavigate('achievements')}
-        >
-          <span className="side-nav-item-icon">✨</span>
-          <span className="side-nav-item-label">Hauts faits</span>
-        </button>
+        {MORE_NAV_ITEMS.map(item => (
+          <button
+            key={item.id}
+            type="button"
+            className={`side-nav-item side-nav-item--muted${active === item.id ? ' is-active' : ''}`}
+            onClick={() => onNavigate(item.id)}
+            aria-current={active === item.id ? 'page' : undefined}
+          >
+            <span className="side-nav-item-icon">{item.icon}</span>
+            <span className="side-nav-item-label">{item.label}</span>
+          </button>
+        ))}
       </div>
     </aside>
   )
