@@ -1,10 +1,17 @@
 import type { Screen } from '../types'
+import { motion } from 'framer-motion'
 import { useGame, SEAT_AVATARS, HUMAN_INDEX } from '../game/GameContext'
 import { useAuth } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
 import { gameOverReasonLabel } from '../game/payout'
 import { NewlyUnlockedAchievements, ShareScoreButton } from '../components/EndGameExtras'
 import { SectionCard, UiButton } from '../components/ui'
+
+const fadeUp = (delay: number) => ({
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+  transition: { delay, duration: 0.45, ease: [0.16, 1, 0.3, 1] as const },
+})
 
 export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const {
@@ -51,46 +58,57 @@ export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) 
     <div className="end-screen end-screen--victory">
       <div className="pattern-african end-screen-pattern" aria-hidden />
 
-      <div className="anim-scale-bounce end-hero-badge end-hero-badge--gold">🏆</div>
+      <motion.div
+        className="end-hero-badge end-hero-badge--gold"
+        initial={{ scale: 0.4, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: 'spring', stiffness: 380, damping: 18 }}
+      >
+        🏆
+      </motion.div>
 
-      <div className="anim-fade-in-up end-headline delay-2">
+      <motion.div className="end-headline" {...fadeUp(0.15)}>
         <h1 className="text-shimmer font-display end-title end-title--xl text-hero">VICTOIRE</h1>
-      </div>
+      </motion.div>
 
-      <div className="anim-fade-in-up end-player-block delay-3">
+      <motion.div className="end-player-block" {...fadeUp(0.25)}>
         <div className="end-player-avatar">{avatar}</div>
         <p className="font-display end-player-tag text-sm">{tag}</p>
         <p className="end-muted text-sm">{reasonText}</p>
-      </div>
+      </motion.div>
 
-      <SectionCard variant="green" className="anim-scale-bounce end-net-card delay-4">
-        <p className="end-net-kicker text-xs">GAINS NETS DE LA PARTIE</p>
-        <div className="text-gold font-display end-net-value text-2xl">
-          {netGain >= 0 ? '+' : ''}
-          {netGain.toLocaleString('fr-FR')}
-        </div>
-        <div className="end-net-unit text-sm">FCFA</div>
-      </SectionCard>
-
-      <div className="anim-fade-in-up end-full delay-45">
-        <NewlyUnlockedAchievements stats={lifetimeStats} />
-      </div>
-
-      <SectionCard className="anim-fade-in-up end-stat-list delay-5" padding="md">
-        {STATS.map((s, i) => (
-          <div key={s.label} className={`end-stat-row${i < STATS.length - 1 ? ' has-border' : ''}`}>
-            <span className="end-stat-label text-sm">{s.label}</span>
-            <span className="font-display end-stat-value text-md">{s.value}</span>
+      <motion.div {...fadeUp(0.35)} className="end-full">
+        <SectionCard variant="green" className="end-net-card">
+          <p className="end-net-kicker text-xs">GAINS NETS DE LA PARTIE</p>
+          <div className="text-gold font-display end-net-value text-2xl">
+            {netGain >= 0 ? '+' : ''}
+            {netGain.toLocaleString('fr-FR')}
           </div>
-        ))}
-      </SectionCard>
+          <div className="end-net-unit text-sm">FCFA</div>
+        </SectionCard>
+      </motion.div>
 
-      <div className="end-actions">
-        <UiButton fullWidth onClick={handleReplay} className="anim-fade-in-up end-cta-primary delay-6">
+      <motion.div className="end-full" {...fadeUp(0.4)}>
+        <NewlyUnlockedAchievements stats={lifetimeStats} />
+      </motion.div>
+
+      <motion.div {...fadeUp(0.48)} className="end-full">
+        <SectionCard className="end-stat-list" padding="md">
+          {STATS.map((s, i) => (
+            <div key={s.label} className={`end-stat-row${i < STATS.length - 1 ? ' has-border' : ''}`}>
+              <span className="end-stat-label text-sm">{s.label}</span>
+              <span className="font-display end-stat-value text-md">{s.value}</span>
+            </div>
+          ))}
+        </SectionCard>
+      </motion.div>
+
+      <motion.div className="end-actions" {...fadeUp(0.55)}>
+        <UiButton fullWidth onClick={handleReplay} className="end-cta-primary">
           REJOUER
         </UiButton>
         <ShareScoreButton
-          className="ui-btn ui-btn--full ui-btn--ghost anim-fade-in-up end-cta-secondary delay-65"
+          className="ui-btn ui-btn--full ui-btn--ghost end-cta-secondary"
           payload={{
             won: true,
             netGain,
@@ -105,11 +123,11 @@ export default function VictoryScreen({ onNavigate }: { onNavigate: (s: Screen) 
           variant="secondary"
           fullWidth
           onClick={() => onNavigate('home')}
-          className="anim-fade-in-up end-cta-secondary delay-7"
+          className="end-cta-secondary"
         >
           Accueil
         </UiButton>
-      </div>
+      </motion.div>
     </div>
   )
 }

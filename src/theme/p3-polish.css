@@ -166,3 +166,63 @@
   border-radius: 10px !important;
   min-height: 44px;
 }
+
+/* —— End-game achievements (ex-inline EndGameExtras) —— */
+.endgame-achievements {
+  width: 100%;
+  max-width: 360px;
+  margin: 0 auto 16px;
+  background: color-mix(in srgb, var(--kora-gold, #D6A84F) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--kora-gold, #D6A84F) 28%, transparent);
+  border-radius: 16px;
+  padding: 14px 14px 12px;
+}
+
+.endgame-achievements-kicker {
+  color: var(--kora-gold, #D6A84F);
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 700;
+  margin: 0 0 10px;
+  text-transform: uppercase;
+}
+
+.endgame-achievements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.endgame-achievement-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: color-mix(in srgb, var(--kora-void, #0B0D10) 55%, transparent);
+  border-radius: 12px;
+  padding: 10px 12px;
+  min-height: 44px;
+}
+
+.endgame-achievement-icon {
+  font-size: 22px;
+  line-height: 1;
+  flex-shrink: 0;
+  width: 28px;
+  text-align: center;
+}
+
+.endgame-achievement-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.endgame-achievement-name {
+  color: var(--kora-text, #fff);
+  font-weight: 700;
+  margin: 0;
+}
+
+.endgame-achievement-desc {
+  color: var(--kora-muted, #A9B0B7);
+  margin: 2px 0 0;
+  line-height: 1.35;
+}
