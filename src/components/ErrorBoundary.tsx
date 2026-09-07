@@ -8,7 +8,7 @@ import { AlertTriangle } from 'lucide-react'
 type Props = { children: ReactNode; fallbackTitle?: string }
 type State = { error: Error | null }
 
-export default class ErrorBoundary extends Component<Props, State> {
+export class ErrorBoundary extends Component<Props, State> {
   state: State = { error: null }
 
   static getDerivedStateFromError(error: Error): State {
@@ -80,3 +80,5 @@ export default class ErrorBoundary extends Component<Props, State> {
     )
   }
 }
+
+export default ErrorBoundary
