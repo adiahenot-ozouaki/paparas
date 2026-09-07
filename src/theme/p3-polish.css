@@ -238,3 +238,27 @@
 @media (max-width: 420px) {
   .stats-rival-grid { grid-template-columns: repeat(2, 1fr); }
 }
+
+/* —— Leaderboard local metrics —— */
+.lb-metric-pad { margin-top: 8px; }
+.lb-local-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+.lb-local-metric {
+  text-align: center;
+  padding: 12px 8px;
+}
+.lb-local-value {
+  margin: 0;
+  font-size: 18px;
+  color: var(--kora-gold, #D6A84F);
+}
+.lb-local-label {
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--kora-muted, #A9B0B7);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
