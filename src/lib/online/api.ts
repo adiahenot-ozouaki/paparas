@@ -53,7 +53,7 @@ export const LEADERBOARD_METRICS: {
   label: string
   short: string
 }[] = [
-  { id: 'elo', label: 'Elo', short: 'Elo' },
+  { id: 'elo', label: 'Elo en ligne', short: 'Elo' },
   { id: 'net', label: 'Gains nets', short: 'Net' },
   { id: 'wins', label: 'Victoires', short: 'Wins' },
   { id: 'rounds', label: 'Rounds', short: 'Rounds' },
@@ -73,7 +73,8 @@ export interface LeaderboardEntry {
   totalTricksWon: number
   gamesWon: number
   gamesPlayed: number
-  eloRating: number
+  /** Elo ONLINE only */
+  eloOnline: number
   comboCounts: { simple: number; kora: number; '33': number; trinity: number; kmt: number }
   /** Valeur affichée pour le critère actif */
   score: number
@@ -82,7 +83,7 @@ export interface LeaderboardEntry {
 function metricValue(e: Omit<LeaderboardEntry, 'score'>, metric: LeaderboardMetric): number {
   switch (metric) {
     case 'elo':
-      return e.eloRating
+      return e.eloOnline
     case 'net':
       return e.netGainTotal
     case 'wins':
@@ -448,7 +449,7 @@ export async function fetchOnlineLeaderboard(
       totalTricksWon: Number(r.total_tricks_won) || 0,
       gamesWon: Number(r.games_won) || 0,
       gamesPlayed: Number(r.games_played) || 0,
-      eloRating: Number((r as { elo_rating?: number }).elo_rating) || 1000,
+      eloOnline: Number((r as { elo_rating?: number }).elo_rating) || 1000,
       comboCounts,
     }
     return { ...base, score: metricValue(base, metric) }
