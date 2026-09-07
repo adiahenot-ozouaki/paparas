@@ -17,7 +17,6 @@
   letter-spacing: 0.06em;
 }
 
-/* Animation delay steps (replace inline style={{ animationDelay }}) */
 .delay-2  { animation-delay: 0.2s; }
 .delay-3  { animation-delay: 0.3s; }
 .delay-35 { animation-delay: 0.35s; }
@@ -29,7 +28,6 @@
 .delay-65 { animation-delay: 0.65s; }
 .delay-7  { animation-delay: 0.7s; }
 
-/* —— End screens on SectionCard —— */
 .end-screen .section-card.end-net-card,
 .end-screen .section-card.end-stat-list {
   width: 100%;
@@ -48,24 +46,16 @@
   padding: 4px 0;
 }
 
-.end-screen .end-stat-list .end-stat-row,
-.end-screen .end-stat-list .end-rank-row {
-  padding-left: 4px;
-  padding-right: 4px;
-}
-
 .end-net-value--loss {
   color: var(--kora-danger, #C94B4B);
 }
 
-/* Share via ui-btn ghost full */
 .end-actions .ui-btn--ghost {
   border: 1px solid var(--kora-card-border, rgba(255, 255, 255, 0.1));
   background: var(--kora-card-bg, rgba(255, 255, 255, 0.04));
   color: var(--kora-text, #fff);
 }
 
-/* —— Auth —— */
 .auth-title.text-2xl {
   margin: 0 0 8px;
   text-align: center;
@@ -95,46 +85,18 @@
   color: var(--kora-gold, #D6A84F);
 }
 
-/* —— Online lobby kit alignment —— */
-.online-lobby-title {
-  font-size: 28px;
-  font-weight: 800;
-}
-
-.online-lobby-sub {
-  font-size: 12px;
-}
-
-.online-lobby-card-title {
-  font-size: 14px;
-  font-weight: 700;
-}
-
+.online-lobby-title { font-size: 28px; font-weight: 800; }
+.online-lobby-sub { font-size: 12px; }
+.online-lobby-card-title { font-size: 14px; font-weight: 700; }
 .online-lobby-card-meta,
 .online-lobby-empty,
-.online-lobby-list-error-text {
-  font-size: 12px;
-}
-
+.online-lobby-list-error-text { font-size: 12px; }
 .online-lobby-invite-label,
-.online-lobby-open-meta {
-  font-size: 11px;
-}
-
-.online-lobby-invite-code {
-  font-size: 22px;
-  font-weight: 800;
-}
-
+.online-lobby-open-meta { font-size: 11px; }
+.online-lobby-invite-code { font-size: 22px; font-weight: 800; }
 .online-lobby-open-code,
-.online-lobby-seat-name {
-  font-size: 14px;
-  font-weight: 700;
-}
-
-.online-lobby-btn-block {
-  min-height: 44px;
-}
+.online-lobby-seat-name { font-size: 14px; font-weight: 700; }
+.online-lobby-btn-block { min-height: 44px; }
 
 .online-lobby-card,
 .online-lobby-table-panel,
@@ -167,7 +129,6 @@
   min-height: 44px;
 }
 
-/* —— End-game achievements (ex-inline EndGameExtras) —— */
 .endgame-achievements {
   width: 100%;
   max-width: 360px;
@@ -208,21 +169,44 @@
   flex-shrink: 0;
   width: 28px;
   text-align: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.endgame-achievement-meta {
-  flex: 1;
-  min-width: 0;
-}
+.endgame-achievement-meta { flex: 1; min-width: 0; }
+.endgame-achievement-name { color: var(--kora-text, #fff); font-weight: 700; margin: 0; }
+.endgame-achievement-desc { color: var(--kora-muted, #A9B0B7); margin: 2px 0 0; line-height: 1.35; }
 
-.endgame-achievement-name {
-  color: var(--kora-text, #fff);
-  font-weight: 700;
-  margin: 0;
+/* Lucide / kora icons */
+.kora-icon {
+  display: inline-block;
+  vertical-align: middle;
+  flex-shrink: 0;
+  color: inherit;
 }
-
-.endgame-achievement-desc {
-  color: var(--kora-muted, #A9B0B7);
-  margin: 2px 0 0;
-  line-height: 1.35;
+.bottom-nav-item-icon,
+.bottom-nav-play-icon,
+.bottom-nav-sheet-icon,
+.side-nav-item-icon,
+.side-nav-brand-suit,
+.home-brand-suit,
+.home-quick-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.theme-toggle-mode-icon { margin-right: 4px; }
+.kora-avatar-icon { color: var(--kora-gold, #D6A84F); }
+.end-hero-badge .kora-icon { color: inherit; }
+.error-boundary-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+  color: var(--kora-gold, #D6A84F);
+}
+.profile-avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
