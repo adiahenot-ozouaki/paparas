@@ -1,7 +1,8 @@
 // ==========================================================================
 // game/elo.ts — Rating Elo (départ 1000, K=24).
-// Online : 1 round = 1 match multi-joueurs.
-// Solo : partie terminée vs ratings IA fixes.
+// Deux classements indépendants :
+//   - Solo  : partie terminée vs ratings IA fixes → LifetimeStats.eloSolo
+//   - Online: 1 round = 1 match multi-joueurs → LifetimeStats.eloOnline (edge)
 // ==========================================================================
 
 export const ELO_DEFAULT = 1000
@@ -50,7 +51,7 @@ export function eloDeltas(
 /** Solo : vous (index 0) vs 3 IA. `won` = vous avez gagné la partie. */
 export function soloGameEloDelta(humanElo: number, won: boolean): number {
   const ratings = [humanElo, AI_ELO.binu, AI_ELO.lebe, AI_ELO.goju]
-  const winners = won ? [0] : [1, 2, 3] // si défaite, les 3 IA « partagent » la victoire
+  const winners = won ? [0] : [1, 2, 3]
   const deltas = eloDeltas(ratings, winners, ELO_K)
   return deltas[0]
 }
