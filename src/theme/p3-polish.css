@@ -60,7 +60,7 @@
 
 /* Share via ui-btn ghost full */
 .end-actions .ui-btn--ghost {
-  border: 1px solid var(--kora-card-border, rgba(255, 255, 255, 0.08));
+  border: 1px solid var(--kora-card-border, rgba(255, 255, 255, 0.1));
   background: var(--kora-card-bg, rgba(255, 255, 255, 0.04));
   color: var(--kora-text, #fff);
 }
@@ -158,4 +158,11 @@
   outline: none;
   border-color: var(--kora-border-gold, rgba(214, 168, 79, 0.45));
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--kora-gold, #D6A84F) 25%, transparent);
+}
+
+.online-lobby-list-error .btn-secondary {
+  padding: 8px 12px !important;
+  font-size: 12px !important;
+  border-radius: 10px !important;
+  min-height: 44px;
 }
