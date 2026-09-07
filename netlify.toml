@@ -1,0 +1,8 @@
+[build]
+  command = "pnpm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22"
+  # package.json added framer-motion + lucide-react before lockfile was updated
+  PNPM_FLAGS = "--no-frozen-lockfile"
