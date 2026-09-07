@@ -12,6 +12,7 @@ import './screens/screens-game.css'
 import './screens/screens-game-table.css'
 import './screens/screens-misc.css'
 import './screens/screens-layout.css'
+import './theme/p1-unified.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
