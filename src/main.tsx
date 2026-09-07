@@ -14,6 +14,7 @@ import './screens/screens-misc.css'
 import './screens/screens-layout.css'
 import './theme/p1-unified.css'
 import './theme/p2-a11y.css'
+import './theme/p3-polish.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

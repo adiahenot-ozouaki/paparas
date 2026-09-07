@@ -1,0 +1,161 @@
+/* ==========================================================================
+   P3 — Polish: type scale + end/auth/online-lobby kit alignment
+   Scale: 10 / 12 / 14 / 16 / 28–32 (+ hero 42 for end titles)
+   ========================================================================== */
+
+/* —— Type scale utilities —— */
+.text-xs  { font-size: 10px; line-height: 1.35; letter-spacing: 0.06em; }
+.text-sm  { font-size: 12px; line-height: 1.4; }
+.text-md  { font-size: 14px; line-height: 1.45; }
+.text-lg  { font-size: 16px; line-height: 1.45; }
+.text-xl  { font-size: 28px; line-height: 1.15; font-weight: 800; }
+.text-2xl { font-size: 32px; line-height: 1.1; font-weight: 800; }
+.text-hero {
+  font-size: clamp(36px, 8vw, 48px);
+  line-height: 1.05;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+}
+
+/* Animation delay steps (replace inline style={{ animationDelay }}) */
+.delay-2  { animation-delay: 0.2s; }
+.delay-3  { animation-delay: 0.3s; }
+.delay-35 { animation-delay: 0.35s; }
+.delay-4  { animation-delay: 0.4s; }
+.delay-45 { animation-delay: 0.45s; }
+.delay-5  { animation-delay: 0.5s; }
+.delay-55 { animation-delay: 0.55s; }
+.delay-6  { animation-delay: 0.6s; }
+.delay-65 { animation-delay: 0.65s; }
+.delay-7  { animation-delay: 0.7s; }
+
+/* —— End screens on SectionCard —— */
+.end-screen .section-card.end-net-card,
+.end-screen .section-card.end-stat-list {
+  width: 100%;
+  max-width: 360px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.end-screen .end-net-card {
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.end-screen .end-stat-list {
+  margin-bottom: 12px;
+  padding: 4px 0;
+}
+
+.end-screen .end-stat-list .end-stat-row,
+.end-screen .end-stat-list .end-rank-row {
+  padding-left: 4px;
+  padding-right: 4px;
+}
+
+.end-net-value--loss {
+  color: var(--kora-danger, #C94B4B);
+}
+
+/* Share via ui-btn ghost full */
+.end-actions .ui-btn--ghost {
+  border: 1px solid var(--kora-card-border, rgba(255, 255, 255, 0.08));
+  background: var(--kora-card-bg, rgba(255, 255, 255, 0.04));
+  color: var(--kora-text, #fff);
+}
+
+/* —— Auth —— */
+.auth-title.text-2xl {
+  margin: 0 0 8px;
+  text-align: center;
+}
+
+.auth-subtitle.text-sm {
+  text-align: center;
+  margin: 0 0 24px;
+}
+
+.auth-link {
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--kora-muted, #A9B0B7);
+  font-size: 13px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.auth-link:hover {
+  color: var(--kora-gold, #D6A84F);
+}
+
+/* —— Online lobby kit alignment —— */
+.online-lobby-title {
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.online-lobby-sub {
+  font-size: 12px;
+}
+
+.online-lobby-card-title {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.online-lobby-card-meta,
+.online-lobby-empty,
+.online-lobby-list-error-text {
+  font-size: 12px;
+}
+
+.online-lobby-invite-label,
+.online-lobby-open-meta {
+  font-size: 11px;
+}
+
+.online-lobby-invite-code {
+  font-size: 22px;
+  font-weight: 800;
+}
+
+.online-lobby-open-code,
+.online-lobby-seat-name {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.online-lobby-btn-block {
+  min-height: 44px;
+}
+
+.online-lobby-card,
+.online-lobby-table-panel,
+.online-lobby-seat {
+  background: var(--kora-card-bg, rgba(255, 255, 255, 0.04));
+  border-color: var(--kora-card-border, rgba(255, 255, 255, 0.08));
+}
+
+.online-lobby-input {
+  background: var(--kora-input-bg, rgba(0, 0, 0, 0.25));
+  border: 1px solid var(--kora-card-border, rgba(255, 255, 255, 0.1));
+  color: var(--kora-text, #fff);
+  min-height: 44px;
+  border-radius: 12px;
+  padding: 10px 14px;
+  font-size: 14px;
+  width: 100%;
+}
+
+.online-lobby-input:focus {
+  outline: none;
+  border-color: var(--kora-border-gold, rgba(214, 168, 79, 0.45));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--kora-gold, #D6A84F) 25%, transparent);
+}
