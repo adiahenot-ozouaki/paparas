@@ -23,6 +23,7 @@ import {
 } from '../lib/persistence/stats'
 import { syncLifetimeStatsWithCloud } from '../lib/persistence/cloud'
 import { appendGameHistory } from '../lib/persistence/gameHistory'
+import { applyEloDelta, soloGameEloDelta } from './elo'
 
 export type { LifetimeStats } from '../lib/persistence/stats'
 export { DEFAULT_LIFETIME_STATS } from '../lib/persistence/stats'
@@ -391,6 +392,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
           }
         }
 
+        const eloDelta = soloGameEloDelta(prev.eloRating ?? 1000, won)
         const next: LifetimeStats = {
           ...prev,
           gamesPlayed: prev.gamesPlayed + 1,
@@ -399,6 +401,8 @@ export function GameProvider({ children }: { children: ReactNode }) {
           bestComboEver,
           netGainTotal: prev.netGainTotal + netGain,
           opponentStats,
+          eloRating: applyEloDelta(prev.eloRating ?? 1000, eloDelta),
+          eloGames: (prev.eloGames ?? 0) + 1,
         }
         persistStats(next)
         return next
