@@ -21,13 +21,9 @@ export const OPPONENT_META: Record<
 }
 
 export interface OpponentStats {
-  /** Rounds remportés par cet adversaire. */
   roundsWon: number
-  /** Parties terminées à la même table. */
   gamesPlayed: number
-  /** Fin de partie : son capital > le vôtre. */
   timesFinishedAhead: number
-  /** Fin de partie : son capital < le vôtre. */
   timesFinishedBehind: number
 }
 
@@ -79,7 +75,6 @@ export function mergeOpponentStatsMap(a: OpponentStatsMap, b: OpponentStatsMap):
   return out
 }
 
-/** seatIndex 1|2|3 → opponent id */
 export function opponentIdFromSeat(seatIndex: number): OpponentId | null {
   for (const id of OPPONENT_IDS) {
     if (OPPONENT_META[id].seatIndex === seatIndex) return id
@@ -100,8 +95,9 @@ export interface LifetimeStats {
   minCapitalEver: number
   comboCounts: Record<ComboType, number>
   specialRuleCounts: Record<SpecialRuleType, number>
-  /** Stats H2H locales vs chaque IA (non synchronisées cloud pour l’instant). */
   opponentStats: OpponentStatsMap
+  eloRating: number
+  eloGames: number
 }
 
 export const DEFAULT_LIFETIME_STATS: LifetimeStats = {
@@ -118,6 +114,8 @@ export const DEFAULT_LIFETIME_STATS: LifetimeStats = {
   comboCounts: { simple: 0, kora: 0, '33': 0, trinity: 0, kmt: 0 },
   specialRuleCounts: { flush: 0, '21': 0, t7: 0 },
   opponentStats: defaultOpponentStatsMap(),
+  eloRating: 1000,
+  eloGames: 0,
 }
 
 function comboMultiplier(c: ComboType | null): number {
@@ -126,7 +124,6 @@ function comboMultiplier(c: ComboType | null): number {
   return map[c] ?? 0
 }
 
-/** Merge upward (max) — adapté reprise 1 appareil + cloud, pas addition multi-device. */
 export function mergeLifetimeStats(a: LifetimeStats, b: LifetimeStats): LifetimeStats {
   const comboCounts = { ...DEFAULT_LIFETIME_STATS.comboCounts }
   for (const k of Object.keys(comboCounts) as ComboType[]) {
@@ -162,6 +159,8 @@ export function mergeLifetimeStats(a: LifetimeStats, b: LifetimeStats): Lifetime
       normalizeOpponentStatsMap(a.opponentStats),
       normalizeOpponentStatsMap(b.opponentStats),
     ),
+    eloRating: Math.max(a.eloRating ?? 1000, b.eloRating ?? 1000),
+    eloGames: Math.max(a.eloGames ?? 0, b.eloGames ?? 0),
   }
 }
 
@@ -183,6 +182,8 @@ export function normalizeLifetimeStats(raw: Partial<LifetimeStats> | null | unde
       ...(raw.specialRuleCounts ?? {}),
     },
     opponentStats: normalizeOpponentStatsMap(raw.opponentStats),
+    eloRating: Math.max(100, Number(raw.eloRating) || 1000),
+    eloGames: Math.max(0, Number(raw.eloGames) || 0),
   }
 }
 
@@ -204,7 +205,6 @@ export function saveLocalLifetimeStats(stats: LifetimeStats): void {
   }
 }
 
-/** Forme snake_case attendue par kora_merge_lifetime_stats (opponent_stats local only). */
 export function lifetimeStatsToDbPayload(stats: LifetimeStats): Record<string, unknown> {
   return {
     games_played: stats.gamesPlayed,
@@ -219,6 +219,8 @@ export function lifetimeStatsToDbPayload(stats: LifetimeStats): Record<string, u
     min_capital_ever: stats.minCapitalEver,
     combo_counts: stats.comboCounts,
     special_rule_counts: stats.specialRuleCounts,
+    elo_rating: stats.eloRating,
+    elo_games: stats.eloGames,
   }
 }
 
@@ -235,8 +237,9 @@ export function lifetimeStatsFromDbRow(row: {
   min_capital_ever: number
   combo_counts: Record<string, number> | null
   special_rule_counts: Record<string, number> | null
+  elo_rating?: number | null
+  elo_games?: number | null
 }): LifetimeStats {
-  // opponentStats absents du cloud → conservés via merge local↔cloud côté sync
   return normalizeLifetimeStats({
     gamesPlayed: row.games_played,
     gamesWon: row.games_won,
@@ -250,5 +253,7 @@ export function lifetimeStatsFromDbRow(row: {
     minCapitalEver: row.min_capital_ever,
     comboCounts: row.combo_counts as LifetimeStats['comboCounts'] | undefined,
     specialRuleCounts: row.special_rule_counts as LifetimeStats['specialRuleCounts'] | undefined,
+    eloRating: row.elo_rating ?? 1000,
+    eloGames: row.elo_games ?? 0,
   })
 }
