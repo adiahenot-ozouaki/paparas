@@ -5,6 +5,8 @@ import { useAuth } from '../auth/AuthContext'
 import { getPlayerProgress } from '../game/progression'
 import { fetchOnlineLeaderboard, type LeaderboardEntry } from '../lib/online/api'
 import { AlertBanner, EmptyState, PageHeader, ScreenShell, SectionCard, Segmented, UiButton } from '../components/ui'
+import { Medal } from 'lucide-react'
+import { AvatarIcon } from '../components/icons'
 
 type LbTab = 'local' | 'online'
 
@@ -22,11 +24,19 @@ function OnlineRow({
   rank: number
   isYou: boolean
 }) {
-  const medal = rank === 0 ? '🥇' : rank === 1 ? '🥈' : rank === 2 ? '🥉' : `${rank + 1}`
+  const medal = rank === 0 ? 'gold' : rank === 1 ? 'silver' : rank === 2 ? 'bronze' : `${rank + 1}`
   return (
     <SectionCard variant={isYou ? 'green' : 'default'} className="lb-row lb-row--tight">
-      <span className={`lb-medal lb-medal--rank${rank < 3 ? ' is-top' : ''}`}>{medal}</span>
-      <div className="lb-avatar lb-avatar--sm">{e.avatar}</div>
+      <span className={`lb-medal lb-medal--rank${rank < 3 ? ' is-top' : ''}`}>
+        {rank < 3 ? (
+          <Medal size={16} className={`kora-icon lb-medal-icon lb-medal-icon--${medal}`} aria-hidden />
+        ) : (
+          medal
+        )}
+      </span>
+      <div className="lb-avatar lb-avatar--sm">
+        <AvatarIcon avatar={e.avatar} size={28} />
+      </div>
       <div className="lb-meta">
         <p className={`font-display lb-name lb-name--plain${isYou ? ' lb-name--you' : ''}`}>
           {e.username}
@@ -109,8 +119,12 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
 
           {activeTab === 'local' && (
             <SectionCard variant="green" className="lb-row lb-you-card">
-              <div className="lb-medal">🥇</div>
-              <div className="lb-avatar">{youAvatar}</div>
+              <div className="lb-medal">
+                <Medal size={20} className="kora-icon lb-medal-icon lb-medal-icon--gold" aria-hidden />
+              </div>
+              <div className="lb-avatar">
+                <AvatarIcon avatar={youAvatar} size={36} />
+              </div>
               <div className="lb-meta">
                 <div className="lb-name-row">
                   <p className="font-display lb-name">{youName}</p>
@@ -135,15 +149,19 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
             <div className="lb-podium" aria-label="Podium">
               {podiumOrder.map(({ e, rank }) => {
                 const isYou = Boolean(user && e.userId === user.id)
-                const medal = rank === 0 ? '🥇' : rank === 1 ? '🥈' : '🥉'
+                const medal = rank === 0 ? 'gold' : rank === 1 ? 'silver' : 'bronze'
                 return (
                   <SectionCard
                     key={e.userId}
                     variant={isYou || rank === 0 ? 'green' : 'default'}
                     className={`lb-podium-card${rank === 0 ? ' is-first' : ''}`}
                   >
-                    <span className="lb-podium-rank">{medal}</span>
-                    <div className="lb-podium-avatar">{e.avatar}</div>
+                    <span className="lb-podium-rank">
+                      <Medal size={22} className={`kora-icon lb-medal-icon lb-medal-icon--${medal}`} aria-hidden />
+                    </span>
+                    <div className="lb-podium-avatar">
+                      <AvatarIcon avatar={e.avatar} size={32} />
+                    </div>
                     <p className="font-display lb-podium-name">
                       {e.username}
                       {isYou ? ' (vous)' : ''}
@@ -176,7 +194,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                   />
                 ) : (
                   <p className="lb-hint lb-hint--center">
-                    Pour vous comparer aux autres → onglet{' '}
+                    Pour vous comparer aux autres, onglet{' '}
                     <strong style={{ color: '#A9B0B7' }}>En ligne</strong>
                   </p>
                 )}
