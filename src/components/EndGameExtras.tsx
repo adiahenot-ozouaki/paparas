@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import type { LifetimeStats } from '../lib/persistence/stats'
 import {
   type AchievementDef,
@@ -8,88 +9,82 @@ import {
 } from '../game/achievements'
 import { shareScore, type ScoreSharePayload, type ShareResult } from '../lib/shareScore'
 
+const containerVariants = {
+  hidden: { opacity: 0, y: 10 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.35, ease: [0.16, 1, 0.3, 1], staggerChildren: 0.07, delayChildren: 0.05 },
+  },
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 12, scale: 0.96 },
+  show: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { type: 'spring' as const, stiffness: 420, damping: 28 },
+  },
+}
+
 /** Affiche les hauts faits nouvellement débloqués (ou les derniers débloqués). */
 export function NewlyUnlockedAchievements({ stats }: { stats: LifetimeStats }) {
   const unlocked = useMemo(() => getUnlockedAchievements(stats), [stats])
   const [fresh, setFresh] = useState<AchievementDef[]>([])
+  const [isNewBatch, setIsNewBatch] = useState(false)
 
   useEffect(() => {
     const seen = loadSeenAchievementIds()
     const news = unlocked.filter(a => !seen.has(a.id))
     if (news.length > 0) {
       setFresh(news)
+      setIsNewBatch(true)
       markAchievementsSeen(news.map(a => a.id))
     } else {
-      // rien de nouveau : montrer jusqu’à 3 derniers débloqués pour contexte
       setFresh(unlocked.slice(-3).reverse())
+      setIsNewBatch(false)
     }
   }, [unlocked])
 
   if (fresh.length === 0) return null
 
-  const isNewBatch = fresh.some(a => {
-    // approximate: if we just marked them, label as NEW when previously unseen
-    return true
-  })
-
   return (
-    <div
-      style={{
-        width: '100%',
-        background: 'rgba(214,168,79,0.08)',
-        border: '1px solid rgba(214,168,79,0.28)',
-        borderRadius: 16,
-        padding: '14px 14px 12px',
-        marginBottom: 16,
-      }}
-    >
-      <p
-        style={{
-          color: '#D6A84F',
-          fontSize: 11,
-          fontFamily: 'Plus Jakarta Sans',
-          letterSpacing: '0.1em',
-          fontWeight: 700,
-          margin: '0 0 10px',
-        }}
+    <AnimatePresence>
+      <motion.div
+        className="endgame-achievements"
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        exit={{ opacity: 0, y: 6 }}
       >
-        {isNewBatch ? 'HAUTS FAITS' : 'HAUTS FAITS'}
-      </p>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {fresh.map(a => (
-          <div
-            key={a.id}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: 10,
-              background: 'rgba(0,0,0,0.25)',
-              borderRadius: 12,
-              padding: '10px 12px',
-            }}
-          >
-            <span style={{ fontSize: 22, lineHeight: 1 }}>{a.icon}</span>
-            <div style={{ flex: 1, minWidth: 0 }}>
-              <p className="font-display" style={{ color: '#fff', fontSize: 14, fontWeight: 700, margin: 0 }}>
-                {a.name}
-              </p>
-              <p style={{ color: '#A9B0B7', fontSize: 11, margin: '2px 0 0', lineHeight: 1.35 }}>{a.desc}</p>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
+        <p className="endgame-achievements-kicker text-xs">
+          {isNewBatch ? 'NOUVEAUX HAUTS FAITS' : 'HAUTS FAITS'}
+        </p>
+        <div className="endgame-achievements-list">
+          {fresh.map(a => (
+            <motion.div key={a.id} className="endgame-achievement-row" variants={itemVariants}>
+              <span className="endgame-achievement-icon" aria-hidden>
+                {a.icon}
+              </span>
+              <div className="endgame-achievement-meta">
+                <p className="font-display endgame-achievement-name text-md">{a.name}</p>
+                <p className="endgame-achievement-desc text-xs">{a.desc}</p>
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      </motion.div>
+    </AnimatePresence>
   )
 }
 
 export function ShareScoreButton({
   payload,
-  className = 'btn-secondary',
-  style,
+  className = 'ui-btn ui-btn--full ui-btn--ghost',
 }: {
   payload: ScoreSharePayload
   className?: string
-  style?: React.CSSProperties
 }) {
   const [status, setStatus] = useState<ShareResult | null>(null)
   const [busy, setBusy] = useState(false)
@@ -117,8 +112,15 @@ export function ShareScoreButton({
             : 'Partager le score'
 
   return (
-    <button type="button" className={className} disabled={busy} onClick={() => void handleShare()} style={style}>
+    <motion.button
+      type="button"
+      className={className}
+      disabled={busy}
+      onClick={() => void handleShare()}
+      whileTap={{ scale: 0.97 }}
+      transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+    >
       {label}
-    </button>
+    </motion.button>
   )
 }
