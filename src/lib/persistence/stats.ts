@@ -96,8 +96,12 @@ export interface LifetimeStats {
   comboCounts: Record<ComboType, number>
   specialRuleCounts: Record<SpecialRuleType, number>
   opponentStats: OpponentStatsMap
-  eloRating: number
-  eloGames: number
+  /** Elo SOLO (vs IA). Indépendant de l’online. */
+  eloSolo: number
+  eloSoloGames: number
+  /** Elo ONLINE (classement en ligne). */
+  eloOnline: number
+  eloOnlineGames: number
 }
 
 export const DEFAULT_LIFETIME_STATS: LifetimeStats = {
@@ -114,8 +118,10 @@ export const DEFAULT_LIFETIME_STATS: LifetimeStats = {
   comboCounts: { simple: 0, kora: 0, '33': 0, trinity: 0, kmt: 0 },
   specialRuleCounts: { flush: 0, '21': 0, t7: 0 },
   opponentStats: defaultOpponentStatsMap(),
-  eloRating: 1000,
-  eloGames: 0,
+  eloSolo: 1000,
+  eloSoloGames: 0,
+  eloOnline: 1000,
+  eloOnlineGames: 0,
 }
 
 function comboMultiplier(c: ComboType | null): number {
@@ -159,8 +165,10 @@ export function mergeLifetimeStats(a: LifetimeStats, b: LifetimeStats): Lifetime
       normalizeOpponentStatsMap(a.opponentStats),
       normalizeOpponentStatsMap(b.opponentStats),
     ),
-    eloRating: Math.max(a.eloRating ?? 1000, b.eloRating ?? 1000),
-    eloGames: Math.max(a.eloGames ?? 0, b.eloGames ?? 0),
+    eloSolo: Math.max(a.eloSolo ?? 1000, b.eloSolo ?? 1000),
+    eloSoloGames: Math.max(a.eloSoloGames ?? 0, b.eloSoloGames ?? 0),
+    eloOnline: Math.max(a.eloOnline ?? 1000, b.eloOnline ?? 1000),
+    eloOnlineGames: Math.max(a.eloOnlineGames ?? 0, b.eloOnlineGames ?? 0),
   }
 }
 
@@ -182,8 +190,21 @@ export function normalizeLifetimeStats(raw: Partial<LifetimeStats> | null | unde
       ...(raw.specialRuleCounts ?? {}),
     },
     opponentStats: normalizeOpponentStatsMap(raw.opponentStats),
-    eloRating: Math.max(100, Number(raw.eloRating) || 1000),
-    eloGames: Math.max(0, Number(raw.eloGames) || 0),
+    // legacy eloRating → eloSolo si pré-split
+    eloSolo: Math.max(
+      100,
+      Number((raw as { eloSolo?: number; eloRating?: number }).eloSolo) ||
+        Number((raw as { eloRating?: number }).eloRating) ||
+        1000,
+    ),
+    eloSoloGames: Math.max(
+      0,
+      Number((raw as { eloSoloGames?: number; eloGames?: number }).eloSoloGames) ||
+        Number((raw as { eloGames?: number }).eloGames) ||
+        0,
+    ),
+    eloOnline: Math.max(100, Number((raw as { eloOnline?: number }).eloOnline) || 1000),
+    eloOnlineGames: Math.max(0, Number((raw as { eloOnlineGames?: number }).eloOnlineGames) || 0),
   }
 }
 
@@ -219,8 +240,10 @@ export function lifetimeStatsToDbPayload(stats: LifetimeStats): Record<string, u
     min_capital_ever: stats.minCapitalEver,
     combo_counts: stats.comboCounts,
     special_rule_counts: stats.specialRuleCounts,
-    elo_rating: stats.eloRating,
-    elo_games: stats.eloGames,
+    elo_rating: stats.eloOnline,
+    elo_games: stats.eloOnlineGames,
+    elo_solo: stats.eloSolo,
+    elo_solo_games: stats.eloSoloGames,
   }
 }
 
@@ -239,6 +262,8 @@ export function lifetimeStatsFromDbRow(row: {
   special_rule_counts: Record<string, number> | null
   elo_rating?: number | null
   elo_games?: number | null
+  elo_solo?: number | null
+  elo_solo_games?: number | null
 }): LifetimeStats {
   return normalizeLifetimeStats({
     gamesPlayed: row.games_played,
@@ -253,7 +278,9 @@ export function lifetimeStatsFromDbRow(row: {
     minCapitalEver: row.min_capital_ever,
     comboCounts: row.combo_counts as LifetimeStats['comboCounts'] | undefined,
     specialRuleCounts: row.special_rule_counts as LifetimeStats['specialRuleCounts'] | undefined,
-    eloRating: row.elo_rating ?? 1000,
-    eloGames: row.elo_games ?? 0,
+    eloOnline: row.elo_rating ?? 1000,
+    eloOnlineGames: row.elo_games ?? 0,
+    eloSolo: row.elo_solo ?? 1000,
+    eloSoloGames: row.elo_solo_games ?? 0,
   })
 }
