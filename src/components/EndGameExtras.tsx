@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { AchievementGlyph, Check } from './icons'
 import type { LifetimeStats } from '../lib/persistence/stats'
 import {
   type AchievementDef,
@@ -65,7 +66,7 @@ export function NewlyUnlockedAchievements({ stats }: { stats: LifetimeStats }) {
           {fresh.map(a => (
             <motion.div key={a.id} className="endgame-achievement-row" variants={itemVariants}>
               <span className="endgame-achievement-icon" aria-hidden>
-                {a.icon}
+                <AchievementGlyph name={a.icon} size={22} />
               </span>
               <div className="endgame-achievement-meta">
                 <p className="font-display endgame-achievement-name text-md">{a.name}</p>
@@ -102,9 +103,9 @@ export function ShareScoreButton({
 
   const label =
     status === 'copied'
-      ? '✓ Copié dans le presse-papiers'
+      ? 'Copié dans le presse-papiers'
       : status === 'shared'
-        ? '✓ Partagé'
+        ? 'Partagé'
         : status === 'failed'
           ? 'Partage impossible'
           : busy
