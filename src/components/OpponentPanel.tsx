@@ -51,7 +51,7 @@ export function OpponentPanel({
     <div className={`opp-panel${isActive ? ' is-active' : ''}`}>
       <div className="opp-panel-meta">
         {!compactMode && (
-          <div className={`opp-info${isActive ? ' is-active' : ''}`}>
+          <div className={`opp-info${isActive ? ' is-active' : ''`}>
             <p className="font-display opp-name">{name}</p>
             <p className="opp-stats">
               {capital.toLocaleString('fr-FR')} · {cardsLeft}c

@@ -109,7 +109,7 @@ export function PlayerHand({
   return (
     <div className="player-hand">
       {!compactMode && (
-        <div className={`player-hand-info${isHumanTurn ? ' is-turn' : ''`}>
+        <div className={`player-hand-info${isHumanTurn ? ' is-turn' : ''}`}>
           <div>
             <p className="font-display player-hand-you">
               Vous{' '}
