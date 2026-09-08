@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Screen } from '../types'
+import { useAuth } from '../auth/AuthContext'
+import { fetchWallet } from '../lib/persistence/cloud'
 import type { Tournament, TournamentStatus } from '../lib/tournaments/types'
 import {
   formatTournamentDate,
@@ -48,6 +50,9 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
   const [error, setError] = useState<string | null>(null)
   const [regs, setRegs] = useState<{ tournamentId: string; registeredAt: string }[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [walletBalance, setWalletBalance] = useState<number | null>(null)
+  const [info, setInfo] = useState<string | null>(null)
+  const { user, profile } = useAuth()
 
   const refresh = useCallback(async () => {
     setLoading(true)
@@ -56,12 +61,19 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
       const data = await listTournaments()
       setList(data)
       setRegs(await getMyRegistrations())
+      if (user) {
+        const w = await fetchWallet()
+        if (w.wallet) setWalletBalance(w.wallet.balance)
+        else if (typeof profile?.wallet_balance === 'number') setWalletBalance(profile.wallet_balance)
+      } else {
+        setWalletBalance(null)
+      }
     } catch {
       setError('Impossible de charger les tournois.')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [user, profile?.wallet_balance])
 
   useEffect(() => {
     void refresh()
@@ -72,10 +84,23 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
   async function handleRegister(id: string) {
     setBusyId(id)
     setError(null)
+    setInfo(null)
+    if (!user) {
+      setError('Connectez-vous pour vous inscrire')
+      setBusyId(null)
+      onNavigate('auth')
+      return
+    }
     const res = await registerForTournament(id)
     if (!res.ok) {
       setError(res.error ?? 'Inscription impossible')
     } else {
+      if (typeof res.walletBalance === 'number') setWalletBalance(res.walletBalance)
+      if (res.feePaidFcfa && res.feePaidFcfa > 0) {
+        setInfo('Inscrit — ' + res.feePaidFcfa.toLocaleString('fr-FR') + ' FCFA debits')
+      } else {
+        setInfo('Inscription confirmee')
+      }
       setRegs(await getMyRegistrations())
       await refresh()
     }
@@ -85,10 +110,17 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
   async function handleUnregister(id: string) {
     setBusyId(id)
     setError(null)
+    setInfo(null)
     const res = await unregisterFromTournament(id)
     if (!res.ok) {
       setError(res.error ?? 'Desinscription impossible')
     } else {
+      if (typeof res.walletBalance === 'number') setWalletBalance(res.walletBalance)
+      if (res.refundedFcfa && res.refundedFcfa > 0) {
+        setInfo('Desinscrit — ' + res.refundedFcfa.toLocaleString('fr-FR') + ' FCFA rembourses')
+      } else {
+        setInfo('Desinscription confirmee')
+      }
       setRegs(await getMyRegistrations())
       await refresh()
     }
@@ -107,6 +139,12 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
 
       <AdSlot placement="tournaments-banner" className="tourney-ad" />
 
+      {user && walletBalance !== null && (
+        <p className="tourney-wallet">
+          Wallet : <strong>{walletBalance.toLocaleString('fr-FR')} FCFA</strong>
+        </p>
+      )}
+
       <Segmented
         value={filter}
         onChange={v => setFilter(v as Filter)}
@@ -115,6 +153,7 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
       />
 
       {error && <AlertBanner tone="error">{error}</AlertBanner>}
+      {info && <AlertBanner tone="success">{info}</AlertBanner>}
 
       {loading ? (
         <p className="tourney-loading">Chargement...</p>
