@@ -2,17 +2,25 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Screen } from '../types'
 import { useAuth } from '../auth/AuthContext'
 import { fetchWallet } from '../lib/persistence/cloud'
-import type { Tournament, TournamentStatus } from '../lib/tournaments/types'
+import type {
+  Tournament,
+  TournamentStatus,
+  TournamentEntrant,
+  TournamentMatchTable,
+} from '../lib/tournaments/types'
 import {
   formatTournamentDate,
   getMyRegistrations,
   listTournaments,
+  listTournamentEntrants,
+  listTournamentTables,
   registerForTournament,
   unregisterFromTournament,
   statusLabel,
 } from '../lib/tournaments/service'
+import { setActiveOnlineTableId, setOnlineSpectate } from '../lib/online/session'
 import AdSlot from '../components/ads/AdSlot'
-import { Trophy, Users, Coins, Calendar } from 'lucide-react'
+import { Trophy, Users, Coins, Calendar, Eye, ChevronDown, ChevronUp } from 'lucide-react'
 import {
   AlertBanner,
   BackButton,
@@ -52,6 +60,10 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
   const [busyId, setBusyId] = useState<string | null>(null)
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
   const [info, setInfo] = useState<string | null>(null)
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [entrantsById, setEntrantsById] = useState<Record<string, TournamentEntrant[]>>({})
+  const [tablesById, setTablesById] = useState<Record<string, TournamentMatchTable[]>>({})
+  const [detailLoading, setDetailLoading] = useState<string | null>(null)
   const { user, profile } = useAuth()
 
   const refresh = useCallback(async () => {
@@ -80,6 +92,27 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
   }, [refresh])
 
   const visible = useMemo(() => list.filter(t => matchesFilter(t, filter)), [list, filter])
+  const registeredIds = useMemo(() => new Set(regs.map(r => r.tournamentId)), [regs])
+
+  async function loadDetails(tournamentId: string) {
+    setDetailLoading(tournamentId)
+    const [ent, tabs] = await Promise.all([
+      listTournamentEntrants(tournamentId),
+      listTournamentTables(tournamentId),
+    ])
+    setEntrantsById(prev => ({ ...prev, [tournamentId]: ent.entrants }))
+    setTablesById(prev => ({ ...prev, [tournamentId]: tabs.tables }))
+    setDetailLoading(null)
+  }
+
+  function toggleExpand(id: string) {
+    if (expandedId === id) {
+      setExpandedId(null)
+      return
+    }
+    setExpandedId(id)
+    void loadDetails(id)
+  }
 
   async function handleRegister(id: string) {
     setBusyId(id)
@@ -103,6 +136,7 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
       }
       setRegs(await getMyRegistrations())
       await refresh()
+      await loadDetails(id)
     }
     setBusyId(null)
   }
@@ -123,17 +157,22 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
       }
       setRegs(await getMyRegistrations())
       await refresh()
+      await loadDetails(id)
     }
     setBusyId(null)
   }
 
-  const registeredIds = useMemo(() => new Set(regs.map(r => r.tournamentId)), [regs])
+  function observeTable(tableId: string) {
+    setOnlineSpectate(true)
+    setActiveOnlineTableId(tableId)
+    onNavigate('onlineGameTable')
+  }
 
   return (
     <ScreenShell bottomPad={28} className="tourney-screen">
       <PageHeader
         title="Tournois"
-        subtitle="Competitions classees - lots en FCFA"
+        subtitle="Competitions · inscrits · lots · spectate"
         left={<BackButton onClick={() => onNavigate('gameMode')} />}
       />
 
@@ -165,6 +204,11 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
             const mine = registeredIds.has(t.id)
             const canJoin = (t.status === 'open' || t.status === 'upcoming') && !mine
             const full = t.registeredCount >= t.maxPlayers
+            const open = expandedId === t.id
+            const entrants = entrantsById[t.id] ?? []
+            const matchTables = tablesById[t.id] ?? []
+            const prizes = [...(t.prizes ?? [])].sort((a, b) => a.rank - b.rank)
+
             return (
               <SectionCard key={t.id} className="tourney-card" padding="md">
                 <div className="tourney-card-top">
@@ -192,6 +236,23 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
                   </span>
                 </div>
 
+                {prizes.length > 0 && (
+                  <div className="tourney-prizes">
+                    <p className="tourney-section-label">Lots</p>
+                    <ul className="tourney-prizes-list">
+                      {prizes.map(p => (
+                        <li key={p.rank}>
+                          <span className="tourney-prize-rank">#{p.rank}</span>
+                          <span className="tourney-prize-label">{p.label}</span>
+                          <span className="tourney-prize-amount">
+                            {p.amountFcfa.toLocaleString('fr-FR')} FCFA
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
                 <div className="tourney-card-actions">
                   {mine && (
                     <>
@@ -217,12 +278,78 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
                       {full ? 'Complet' : busyId === t.id ? '...' : "S'inscrire"}
                     </UiButton>
                   )}
-                  {t.status === 'live' && (
-                    <UiButton size="sm" variant="secondary" onClick={() => onNavigate('onlineLobby')}>
-                      Voir tables
-                    </UiButton>
-                  )}
+                  <UiButton size="sm" variant="ghost" onClick={() => toggleExpand(t.id)}>
+                    {open ? (
+                      <>
+                        <ChevronUp size={14} className="kora-icon" aria-hidden /> Details
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown size={14} className="kora-icon" aria-hidden /> Inscrits & tables
+                      </>
+                    )}
+                  </UiButton>
                 </div>
+
+                {open && (
+                  <div className="tourney-details">
+                    {detailLoading === t.id && <p className="tourney-loading">Chargement details...</p>}
+
+                    <div className="tourney-detail-block">
+                      <p className="tourney-section-label">
+                        Inscrits ({entrants.length || t.registeredCount})
+                      </p>
+                      {entrants.length === 0 && detailLoading !== t.id ? (
+                        <p className="tourney-empty-hint">Personne encore inscrit.</p>
+                      ) : (
+                        <ul className="tourney-entrants">
+                          {entrants.map(e => (
+                            <li key={e.userId} className="tourney-entrant">
+                              <span className="tourney-entrant-avatar" aria-hidden>
+                                {e.avatar?.startsWith('http') || e.avatar?.startsWith('/') ? 'J' : e.avatar || '?'}
+                              </span>
+                              <span className="tourney-entrant-name">{e.username}</span>
+                              {e.feePaidFcfa > 0 && (
+                                <span className="tourney-entrant-fee">
+                                  {e.feePaidFcfa.toLocaleString('fr-FR')} FCFA
+                                </span>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div className="tourney-detail-block">
+                      <p className="tourney-section-label">Tables / matchs</p>
+                      {matchTables.length === 0 && detailLoading !== t.id ? (
+                        <p className="tourney-empty-hint">
+                          Aucune table liee pour l'instant. Les matchs apparaitront ici une fois le
+                          tournoi en cours.
+                        </p>
+                      ) : (
+                        <ul className="tourney-matches">
+                          {matchTables.map(m => (
+                            <li key={m.tableId} className="tourney-match">
+                              <div>
+                                <span className="font-display tourney-match-code">{m.code}</span>
+                                <span className="tourney-match-meta">
+                                  {m.status === 'playing' ? 'En jeu' : 'Lobby'} · {m.seatCount}/4 · mise{' '}
+                                  {m.baseStake.toLocaleString('fr-FR')}
+                                </span>
+                              </div>
+                              {(m.status === 'playing' || m.status === 'lobby') && (
+                                <UiButton size="sm" variant="secondary" onClick={() => observeTable(m.tableId)}>
+                                  <Eye size={14} className="kora-icon" aria-hidden /> Observer
+                                </UiButton>
+                              )}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+                  </div>
+                )}
               </SectionCard>
             )
           })}
