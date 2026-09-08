@@ -17,6 +17,7 @@ import {
   registerForTournament,
   unregisterFromTournament,
   spawnTournamentTables,
+  replayTournamentTable,
   statusLabel,
 } from '../lib/tournaments/service'
 import { setActiveOnlineTableId, setOnlineSpectate } from '../lib/online/session'
@@ -191,6 +192,30 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
       await refresh()
       await loadDetails(id)
       setExpandedId(id)
+    }
+    setBusyId(null)
+  }
+
+  async function handleReplayTable(tableId: string, tournamentId: string) {
+    setBusyId(tableId)
+    setError(null)
+    setInfo(null)
+    if (!user) {
+      setError('Connectez-vous pour rejouer')
+      setBusyId(null)
+      onNavigate('auth')
+      return
+    }
+    const res = await replayTournamentTable(tableId)
+    if (!res.ok) {
+      setError(res.error ?? 'Rejeu impossible')
+    } else {
+      setInfo(
+        'Nouvelle table creee' +
+          (res.playerCount ? ' · ' + res.playerCount + ' joueurs' : ''),
+      )
+      await loadDetails(tournamentId)
+      setExpandedId(tournamentId)
     }
     setBusyId(null)
   }
@@ -393,15 +418,31 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
                               <div>
                                 <span className="font-display tourney-match-code">{m.code}</span>
                                 <span className="tourney-match-meta">
-                                  {m.status === 'playing' ? 'En jeu' : 'Lobby'} · {m.seatCount}/4 · mise{' '}
-                                  {m.baseStake.toLocaleString('fr-FR')}
+                                  {m.status === 'playing'
+                                    ? 'En jeu'
+                                    : m.status === 'finished'
+                                      ? 'Terminee'
+                                      : 'Lobby'}{' '}
+                                  · {m.seatCount}/4 · mise {m.baseStake.toLocaleString('fr-FR')}
                                 </span>
                               </div>
-                              {(m.status === 'playing' || m.status === 'lobby') && (
-                                <UiButton size="sm" variant="secondary" onClick={() => observeTable(m.tableId)}>
-                                  <Eye size={14} className="kora-icon" aria-hidden /> Observer
-                                </UiButton>
-                              )}
+                              <div className="tourney-match-actions">
+                                {(m.status === 'playing' || m.status === 'lobby') && (
+                                  <UiButton size="sm" variant="secondary" onClick={() => observeTable(m.tableId)}>
+                                    <Eye size={14} className="kora-icon" aria-hidden /> Observer
+                                  </UiButton>
+                                )}
+                                {(m.status === 'finished' || m.status === 'playing') && (
+                                  <UiButton
+                                    size="sm"
+                                    variant="secondary"
+                                    disabled={busyId === m.tableId}
+                                    onClick={() => void handleReplayTable(m.tableId, t.id)}
+                                  >
+                                    Rejouer
+                                  </UiButton>
+                                )}
+                              </div>
                             </li>
                           ))}
                         </ul>
