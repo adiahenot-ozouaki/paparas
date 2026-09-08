@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import type { Card as GameCard } from '../../types'
 import { HUMAN_INDEX } from '../../game/GameContext'
 import PlayingCard from '../PlayingCard'
@@ -55,6 +56,7 @@ export function PlayerHand({
   onPlayCard,
   onClaimVictory,
 }: PlayerHandProps) {
+  const reduceMotion = useReducedMotion()
   const lastTapRef = useRef<{ index: number; time: number } | null>(null)
   const dragStartRef = useRef<{ x: number; y: number } | null>(null)
   const [drag, setDrag] = useState<DragInfo | null>(null)
@@ -198,11 +200,23 @@ export function PlayerHand({
       </div>
 
       <div className="player-hand-actions">
-        {selectedCardIndex !== null && isHumanTurn && (
-          <button className="btn-primary glow-gold anim-scale-bounce player-hand-play-btn" onClick={onPlayCard}>
-            JOUER CETTE CARTE
-          </button>
-        )}
+        <AnimatePresence mode="wait">
+          {selectedCardIndex !== null && isHumanTurn && (
+            <motion.button
+              key="play"
+              type="button"
+              className="btn-primary glow-gold player-hand-play-btn"
+              onClick={onPlayCard}
+              initial={reduceMotion ? false : { opacity: 0, y: 10, scale: 0.94 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={reduceMotion ? undefined : { opacity: 0, y: 6, scale: 0.96 }}
+              transition={{ type: 'spring', stiffness: 460, damping: 26 }}
+              whileTap={reduceMotion ? undefined : { scale: 0.96 }}
+            >
+              JOUER CETTE CARTE
+            </motion.button>
+          )}
+        </AnimatePresence>
 
         {isHumanTurn && selectedCardIndex === null && !canClaim && (
           <p className="player-hand-hint">
@@ -210,11 +224,23 @@ export function PlayerHand({
           </p>
         )}
 
-        {canClaim && (
-          <button className="btn-primary anim-scale-bounce player-hand-claim-btn" onClick={onClaimVictory}>
-            👑 RÉCLAMER LA VICTOIRE
-          </button>
-        )}
+        <AnimatePresence>
+          {canClaim && (
+            <motion.button
+              key="claim"
+              type="button"
+              className="btn-primary player-hand-claim-btn"
+              onClick={onClaimVictory}
+              initial={reduceMotion ? false : { opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: 'spring', stiffness: 400, damping: 24 }}
+              whileTap={reduceMotion ? undefined : { scale: 0.97 }}
+            >
+              👑 RÉCLAMER LA VICTOIRE
+            </motion.button>
+          )}
+        </AnimatePresence>
       </div>
     </div>
   )
