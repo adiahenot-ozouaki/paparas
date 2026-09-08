@@ -165,7 +165,7 @@ export default function GameTableScreen({
         })
         return playCard(prev, index, card)
       })
-    }, 950)
+    }, 900)
 
     return () => clearTimeout(timer)
   }, [roundState, currentPlayerIndex, setRoundState, stakeConfig, isPaused, players])
@@ -299,7 +299,6 @@ export default function GameTableScreen({
           roundState={roundState}
           currentPlayerIndex={currentPlayerIndex}
           compactMode={compactMode}
-          dealId={roundNumber}
         />
 
         <PlayerHand
@@ -313,7 +312,6 @@ export default function GameTableScreen({
           isCardPlayable={isCardPlayable}
           isPlaying={roundState.phase === 'playing'}
           compactMode={compactMode}
-          dealId={roundNumber}
           onCardSelect={handleCardSelect}
           onAttemptPlay={attemptPlayCard}
           onPlayCard={handlePlayCard}
