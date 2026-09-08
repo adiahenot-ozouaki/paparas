@@ -290,7 +290,7 @@ export async function listTournamentTables(
       .from('kora_tables')
       .select('id, status, base_stake')
       .eq('tournament_id', tournamentId)
-      .in('status', ['lobby', 'playing'])
+      .in('status', ['lobby', 'playing', 'finished'])
       .order('created_at', { ascending: false })
       .limit(24)
 
@@ -324,6 +324,11 @@ export async function listTournamentTables(
         code: short,
       }
     })
+    const statusOrder = { playing: 0, lobby: 1, finished: 2 } as const
+    tables.sort(
+      (a, b) =>
+        (statusOrder[a.status] ?? 9) - (statusOrder[b.status] ?? 9),
+    )
     return { tables, error: null }
   } catch {
     return { tables: [], error: null }
@@ -382,6 +387,55 @@ export async function spawnTournamentTables(
       playerCount: result.player_count,
       tableIds: result.table_ids,
       status: result.status,
+    }
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : 'Erreur reseau' }
+  }
+}
+
+export type ReplayTableResult = {
+  ok: boolean
+  error?: string
+  oldTableId?: string
+  newTableId?: string
+  playerCount?: number
+}
+
+/** Cloture une table tournoi et recree un lobby avec les memes joueurs. */
+export async function replayTournamentTable(
+  tableId: string,
+): Promise<ReplayTableResult> {
+  try {
+    const { data: sessionData } = await supabase.auth.getSession()
+    if (!sessionData.session?.user) {
+      return { ok: false, error: 'Connectez-vous pour rejouer' }
+    }
+
+    const { data, error } = await supabase.rpc('kora_tournament_replay_table', {
+      p_table_id: tableId,
+    })
+
+    if (error) {
+      return { ok: false, error: error.message }
+    }
+
+    const result = data as {
+      ok?: boolean
+      error?: string
+      old_table_id?: string
+      new_table_id?: string
+      player_count?: number
+    } | null
+
+    if (!result?.ok) {
+      return { ok: false, error: result?.error ?? 'Rejeu impossible' }
+    }
+
+    return {
+      ok: true,
+      oldTableId: result.old_table_id,
+      newTableId: result.new_table_id,
+      playerCount: result.player_count,
     }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erreur reseau' }
