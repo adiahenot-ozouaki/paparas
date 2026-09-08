@@ -1,3 +1,4 @@
+import { motion, useReducedMotion } from 'framer-motion'
 import type { Player } from '../../types'
 import type { RoundState } from '../../game/round'
 import { OpponentPanel } from '../OpponentPanel'
@@ -16,6 +17,7 @@ export function GameTableArea({
   currentPlayerIndex,
   compactMode,
 }: GameTableAreaProps) {
+  const reduceMotion = useReducedMotion()
   const stackSize = compactMode ? 'md' : 'sm'
   const sideColumnWidth = compactMode ? 88 : 78
 
@@ -97,7 +99,21 @@ export function GameTableArea({
       </div>
 
       <div className="table-area-center">
-        <div className="table-oval table-area-oval" />
+        <motion.div
+          className="table-oval table-area-oval"
+          animate={
+            reduceMotion
+              ? undefined
+              : currentPlayerIndex !== null
+                ? { opacity: [0.55, 0.85, 0.55], scale: [1, 1.015, 1] }
+                : { opacity: 0.55, scale: 1 }
+          }
+          transition={
+            currentPlayerIndex !== null && !reduceMotion
+              ? { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }
+              : { duration: 0.3 }
+          }
+        />
       </div>
 
       <div className="table-area-south">

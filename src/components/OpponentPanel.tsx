@@ -1,3 +1,4 @@
+import { motion, useReducedMotion } from 'framer-motion'
 import PlayingCard from './PlayingCard'
 import { PlayedCardsStack } from './game/PlayedCardsStack'
 import type { Card as GameCard } from '../types'
@@ -34,21 +35,37 @@ export function OpponentPanel({
   playedCardsHighlightLast,
   stackSize,
 }: OpponentPanelProps) {
+  const reduceMotion = useReducedMotion()
   const isVertical = position !== 'top'
 
   if (isEliminated) {
     return (
-      <div className="opp-panel opp-panel--out">
+      <motion.div
+        className="opp-panel opp-panel--out"
+        initial={reduceMotion ? false : { opacity: 0, scale: 0.92 }}
+        animate={{ opacity: 0.3, scale: 1 }}
+        transition={{ duration: 0.35 }}
+      >
         <div className="opp-out-icon">
           <Skull size={28} className="kora-icon" aria-hidden />
         </div>
         <span className="opp-out-label">Éliminé</span>
-      </div>
+      </motion.div>
     )
   }
 
   return (
-    <div className={`opp-panel${isActive ? ' is-active' : ''}`}>
+    <motion.div
+      className={`opp-panel${isActive ? ' is-active' : ''}`}
+      animate={
+        reduceMotion
+          ? undefined
+          : isActive
+            ? { scale: 1.03, filter: 'drop-shadow(0 0 14px rgba(214, 168, 79, 0.4))' }
+            : { scale: 1, filter: 'drop-shadow(0 0 0 rgba(0,0,0,0))' }
+      }
+      transition={{ type: 'spring', stiffness: 380, damping: 24 }}
+    >
       <div className="opp-panel-meta">
         {!compactMode && (
           <div className={`opp-info${isActive ? ' is-active' : ''}`}>
@@ -78,19 +95,35 @@ export function OpponentPanel({
 
       <div className={`opp-backs opp-backs--${position}`}>
         {Array.from({ length: cardsLeft }).map((_, i) => (
-          <PlayingCard
+          <motion.div
             key={i}
-            suit="♠"
-            value="A"
-            state="back"
-            size="xs"
-            rotated={isVertical}
-            style={
-              position === 'top'
-                ? { transform: `rotate(${(i - 1.5) * 3}deg)` }
-                : { marginTop: i > 0 ? -20 : 0 }
+            initial={false}
+            animate={
+              reduceMotion
+                ? undefined
+                : isActive
+                  ? { y: isVertical ? 0 : -2, rotate: isVertical ? 0 : (i - cardsLeft / 2) * 2.2 }
+                  : { y: 0, rotate: 0 }
             }
-          />
+            transition={{ type: 'spring', stiffness: 300, damping: 20, delay: i * 0.02 }}
+            style={{
+              display: 'inline-flex',
+              marginTop: isVertical && i > 0 ? -20 : 0,
+            }}
+          >
+            <PlayingCard
+              suit="♠"
+              value="A"
+              state="back"
+              size="xs"
+              rotated={isVertical}
+              style={
+                position === 'top'
+                  ? { transform: `rotate(${(i - Math.max(cardsLeft - 1, 1) / 2) * 3}deg)` }
+                  : undefined
+              }
+            />
+          </motion.div>
         ))}
       </div>
 
@@ -101,7 +134,7 @@ export function OpponentPanel({
         highlightLast={playedCardsHighlightLast}
         showLeadIndicator={isLeader}
       />
-    </div>
+    </motion.div>
   )
 }
 
