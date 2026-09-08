@@ -8,7 +8,7 @@ export type Screen =
   | 'gameMode'
   | 'stakeConfig'
   | 'lobby'
-  | 'online  | 'onlineLobby'
+  | 'onlineLobby'
   | 'onlineGameTable'
   | 'auth'
   | 'gameTable'
