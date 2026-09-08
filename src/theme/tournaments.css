@@ -111,21 +111,17 @@
   font-weight: 700;
 }
 
-.tourney-prizes {
-  margin: 0 0 12px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(214, 168, 79, 0.08);
-  border: 1px solid rgba(214, 168, 79, 0.2);
-}
-
 .tourney-section-label {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(240, 213, 138, 0.85);
+  color: #a9b0b7;
   margin: 0 0 8px;
+}
+
+.tourney-prizes {
+  margin: 0 0 12px;
 }
 
 .tourney-prizes-list {
@@ -134,15 +130,14 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
 .tourney-prizes-list li {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 13px;
-  color: #e8eaed;
+  font-size: 12px;
 }
 
 .tourney-prize-rank {
@@ -153,12 +148,12 @@
 
 .tourney-prize-label {
   flex: 1;
-  color: #a9b0b7;
+  color: #fff;
 }
 
 .tourney-prize-amount {
-  font-weight: 600;
-  color: #fff;
+  color: #a9b0b7;
+  font-variant-numeric: tabular-nums;
 }
 
 .tourney-details {
@@ -167,11 +162,13 @@
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .tourney-detail-block {
-  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .tourney-empty-hint {
@@ -187,7 +184,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .tourney-entrant,
@@ -197,12 +194,20 @@
   justify-content: space-between;
   gap: 10px;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
 .tourney-entrant-avatar {
-  font-size: 18px;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(214, 168, 79, 0.15);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
   line-height: 1;
   margin-right: 4px;
 }
@@ -230,4 +235,22 @@
   font-size: 11px;
   color: #a9b0b7;
   margin-top: 2px;
+}
+
+.tourney-winners {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.tourney-winner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 8px;
+  border-radius: 8px;
+  background: rgba(214, 168, 79, 0.08);
+  border: 1px solid rgba(214, 168, 79, 0.2);
 }
