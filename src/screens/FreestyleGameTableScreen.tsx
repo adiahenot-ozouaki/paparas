@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { motion, useReducedMotion } from 'framer-motion'
 import type { Screen, Card as GameCard } from '../types'
 import {
   playCard,
@@ -32,6 +33,7 @@ export default function FreestyleGameTableScreen({
     startNewGame,
   } = useGame()
 
+  const reduceMotion = useReducedMotion()
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null)
 
   const currentPlayerIndex = getCurrentPlayerIndex(roundState)
@@ -130,7 +132,12 @@ export default function FreestyleGameTableScreen({
   }
 
   return (
-    <div className="felt-bg table-screen freestyle-table">
+    <motion.div
+      className="felt-bg table-screen freestyle-table"
+      initial={reduceMotion ? false : { opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+    >
       <div className="table-screen-pattern" aria-hidden />
 
       <header className="freestyle-hud">
@@ -168,6 +175,6 @@ export default function FreestyleGameTableScreen({
           onClaimVictory={() => undefined}
         />
       </div>
-    </div>
+    </motion.div>
   )
 }
