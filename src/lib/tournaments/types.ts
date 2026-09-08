@@ -21,11 +21,19 @@ export interface Tournament {
   startsAt: string
   tagline: string
   rulesPreset: 'standard' | 'training' | 'high_stakes'
+  winners?: TournamentWinner[]
 }
 
 export interface TournamentRegistration {
   tournamentId: string
   registeredAt: string
+}
+
+export interface TournamentWinner {
+  rank: number
+  userId: string
+  username: string
+  amountFcfa: number
 }
 
 export interface TournamentEntrant {
