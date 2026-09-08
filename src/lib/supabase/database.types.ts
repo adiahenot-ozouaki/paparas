@@ -191,11 +191,13 @@ export interface Database {
           tournament_id: string
           user_id: string
           registered_at: string
+          fee_paid_fcfa: number
         }
         Insert: {
           tournament_id: string
           user_id: string
           registered_at?: string
+          fee_paid_fcfa?: number
         }
         Update: Partial<Database['public']['Tables']['kora_tournament_registrations']['Row']>
       }
