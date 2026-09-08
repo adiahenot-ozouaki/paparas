@@ -18,6 +18,16 @@ function mapPrizes(raw: unknown): TournamentPrize[] {
   }))
 }
 
+function mapWinners(raw: unknown): import('./types').TournamentWinner[] {
+  if (!Array.isArray(raw)) return []
+  return raw.map((w: Record<string, unknown>) => ({
+    rank: Number(w.rank ?? 0),
+    userId: String(w.userId ?? w.user_id ?? ''),
+    username: String(w.username ?? 'Joueur'),
+    amountFcfa: Number(w.amountFcfa ?? w.amount_fcfa ?? 0),
+  }))
+}
+
 function mapRow(
   row: KoraTournament & { registered_count?: number },
   registeredCount: number,
@@ -35,6 +45,7 @@ function mapRow(
     startsAt: row.starts_at,
     tagline: row.tagline,
     rulesPreset: row.rules_preset,
+    winners: mapWinners((row as { winners?: unknown }).winners),
   }
 }
 
