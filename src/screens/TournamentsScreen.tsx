@@ -320,6 +320,23 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
                       )}
                     </div>
 
+                    {t.status === 'completed' && (t.winners?.length ?? 0) > 0 && (
+                      <div className="tourney-detail-block">
+                        <p className="tourney-section-label">Podium / winners</p>
+                        <ul className="tourney-winners">
+                          {(t.winners ?? []).map(w => (
+                            <li key={w.rank + w.userId} className="tourney-winner">
+                              <span className="tourney-prize-rank">#{w.rank}</span>
+                              <span className="tourney-entrant-name">{w.username}</span>
+                              <span className="tourney-prize-amount">
+                                {w.amountFcfa.toLocaleString('fr-FR')} FCFA
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
                     <div className="tourney-detail-block">
                       <p className="tourney-section-label">Tables / matchs</p>
                       {matchTables.length === 0 && detailLoading !== t.id ? (
