@@ -6,6 +6,7 @@ import {
   getMyRegistrations,
   listTournaments,
   registerForTournament,
+  unregisterFromTournament,
   statusLabel,
 } from '../lib/tournaments/service'
 import AdSlot from '../components/ads/AdSlot'
@@ -27,7 +28,7 @@ const FILTERS: { id: Filter; label: string }[] = [
   { id: 'all', label: 'Tous' },
   { id: 'open', label: 'Ouverts' },
   { id: 'live', label: 'Live' },
-  { id: 'completed', label: 'Passés' },
+  { id: 'completed', label: 'Passes' },
 ]
 
 function matchesFilter(t: Tournament, f: Filter): boolean {
@@ -45,7 +46,7 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState<Filter>('all')
   const [error, setError] = useState<string | null>(null)
-  const [regs, setRegs] = useState(() => getMyRegistrations())
+  const [regs, setRegs] = useState<{ tournamentId: string; registeredAt: string }[]>([])
   const [busyId, setBusyId] = useState<string | null>(null)
 
   const refresh = useCallback(async () => {
@@ -54,7 +55,7 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
     try {
       const data = await listTournaments()
       setList(data)
-      setRegs(getMyRegistrations())
+      setRegs(await getMyRegistrations())
     } catch {
       setError('Impossible de charger les tournois.')
     } finally {
@@ -68,15 +69,28 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
 
   const visible = useMemo(() => list.filter(t => matchesFilter(t, filter)), [list, filter])
 
-  function handleRegister(id: string) {
+  async function handleRegister(id: string) {
     setBusyId(id)
     setError(null)
-    const res = registerForTournament(id)
+    const res = await registerForTournament(id)
     if (!res.ok) {
       setError(res.error ?? 'Inscription impossible')
     } else {
-      setRegs(getMyRegistrations())
-      void refresh()
+      setRegs(await getMyRegistrations())
+      await refresh()
+    }
+    setBusyId(null)
+  }
+
+  async function handleUnregister(id: string) {
+    setBusyId(id)
+    setError(null)
+    const res = await unregisterFromTournament(id)
+    if (!res.ok) {
+      setError(res.error ?? 'Desinscription impossible')
+    } else {
+      setRegs(await getMyRegistrations())
+      await refresh()
     }
     setBusyId(null)
   }
@@ -87,7 +101,7 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
     <ScreenShell bottomPad={28} className="tourney-screen">
       <PageHeader
         title="Tournois"
-        subtitle="Compétitions classées \u00b7 lots en FCFA"
+        subtitle="Competitions classees - lots en FCFA"
         left={<BackButton onClick={() => onNavigate('gameMode')} />}
       />
 
@@ -103,7 +117,7 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
       {error && <AlertBanner tone="error">{error}</AlertBanner>}
 
       {loading ? (
-        <p className="tourney-loading">Chargement\u2026</p>
+        <p className="tourney-loading">Chargement...</p>
       ) : visible.length === 0 ? (
         <EmptyState title="Aucun tournoi" description="Revenez plus tard ou changez de filtre." />
       ) : (
@@ -140,14 +154,28 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
                 </div>
 
                 <div className="tourney-card-actions">
-                  {mine && <span className="tourney-registered">Inscrit</span>}
+                  {mine && (
+                    <>
+                      <span className="tourney-registered">Inscrit</span>
+                      {(t.status === 'open' || t.status === 'upcoming') && (
+                        <UiButton
+                          size="sm"
+                          variant="secondary"
+                          disabled={busyId === t.id}
+                          onClick={() => void handleUnregister(t.id)}
+                        >
+                          Se desinscrire
+                        </UiButton>
+                      )}
+                    </>
+                  )}
                   {canJoin && (
                     <UiButton
                       size="sm"
                       disabled={full || busyId === t.id}
-                      onClick={() => handleRegister(t.id)}
+                      onClick={() => void handleRegister(t.id)}
                     >
-                      {full ? 'Complet' : busyId === t.id ? '\u2026' : "S'inscrire"}
+                      {full ? 'Complet' : busyId === t.id ? '...' : "S'inscrire"}
                     </UiButton>
                   )}
                   {t.status === 'live' && (
