@@ -16,7 +16,6 @@
   contain-intrinsic-size: auto 180px;
 }
 
-/* Avoid animating layout properties; keep GPU-friendly transforms/opacity */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -35,7 +34,6 @@
   }
 }
 
-/* Disable expensive continuous shimmer on low-end / data-saver */
 @media (prefers-reduced-data: reduce) {
   .text-shimmer,
   .pattern-african,
@@ -46,7 +44,6 @@
   }
 }
 
-/* Pattern layers: cheaper when scrolled off-screen */
 .pattern-african,
 .screen-shell-pattern,
 .app-root-pattern,
@@ -55,7 +52,6 @@
   pointer-events: none;
 }
 
-/* Buttons: no layout thrash on press */
 .btn-primary:active,
 .btn-secondary:active,
 .ui-btn:active,
@@ -64,13 +60,11 @@
   transform: scale(0.98);
 }
 
-/* Scrollbars only when needed — thinner paints */
 .rules-tabs,
 .stats-section-tabs {
   scrollbar-width: none;
 }
 
-/* Limit backdrop-filter usage cost (already rare) */
 .glass,
 .glass-green {
   -webkit-backdrop-filter: blur(8px);
@@ -83,8 +77,6 @@
     background: rgba(16, 21, 26, 0.92);
   }
 }
-
-/* —— Table / freestyle render cost —— */
 
 .table-screen,
 .table-screen-body,
@@ -128,7 +120,6 @@
   to { transform: scale(1); opacity: 1; }
 }
 
-/* Ovale live: CSS only (no JS interval / framer loop) */
 .table-oval.table-area-oval.is-live {
   animation: ovalLive 2.6s ease-in-out infinite;
 }
@@ -144,7 +135,6 @@
   transition: transform 0.25s cubic-bezier(0.22, 1, 0.36, 1), filter 0.25s ease;
 }
 
-/* Avoid will-change permanent (memory) — only while interacting */
 .player-hand-card.is-dragging,
 .player-hand-card.is-playable:active {
   will-change: transform;
@@ -166,6 +156,70 @@
 @media (prefers-reduced-data: reduce) {
   .table-oval.table-area-oval.is-live,
   .player-hand-card.is-playable {
+    animation: none !important;
+  }
+}
+
+/* —— Deal animation (début de manche) —— */
+
+@keyframes dealHandCard {
+  0% {
+    opacity: 0;
+    transform: translateY(-100px) scale(0.55) rotate(-8deg);
+  }
+  65% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1) rotate(0deg);
+  }
+}
+
+@keyframes dealToOpponent {
+  0% {
+    opacity: 0;
+    transform: scale(0.4) translateY(28px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.deal-inner {
+  display: flex;
+  transform-origin: center bottom;
+}
+
+.deal-inner.is-dealing {
+  animation: dealHandCard 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--deal-i, 0) * 58ms);
+  will-change: transform, opacity;
+}
+
+.player-hand-fan.is-dealing .player-hand-card {
+  pointer-events: none;
+}
+
+.opp-deal-card {
+  display: inline-flex;
+  transform-origin: center center;
+}
+
+.opp-deal-card.is-dealing {
+  animation: dealToOpponent 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: calc(var(--deal-i, 0) * 50ms + 70ms);
+  will-change: transform, opacity;
+}
+
+.opp-backs.is-dealing {
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .deal-inner.is-dealing,
+  .opp-deal-card.is-dealing {
     animation: none !important;
   }
 }
