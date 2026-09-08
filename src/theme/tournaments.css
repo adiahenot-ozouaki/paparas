@@ -254,3 +254,11 @@
   background: rgba(214, 168, 79, 0.08);
   border: 1px solid rgba(214, 168, 79, 0.2);
 }
+
+.tourney-match-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  flex-shrink: 0;
+}
