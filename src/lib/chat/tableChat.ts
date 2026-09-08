@@ -129,3 +129,37 @@ export function subscribeTableMessages(
     void supabase.removeChannel(channel)
   }
 }
+
+const MUTE_KEY = 'kora_chat_mutes'
+
+/** Mutes locaux (par table) — stockes dans localStorage. */
+export function getMutedUserIds(tableId: string): string[] {
+  try {
+    const raw = localStorage.getItem(MUTE_KEY)
+    if (!raw) return []
+    const all = JSON.parse(raw) as Record<string, string[]>
+    return Array.isArray(all[tableId]) ? all[tableId] : []
+  } catch {
+    return []
+  }
+}
+
+export function setMutedUserIds(tableId: string, userIds: string[]): void {
+  try {
+    const raw = localStorage.getItem(MUTE_KEY)
+    const all = raw ? (JSON.parse(raw) as Record<string, string[]>) : {}
+    all[tableId] = [...new Set(userIds)]
+    localStorage.setItem(MUTE_KEY, JSON.stringify(all))
+  } catch {
+    // ignore
+  }
+}
+
+export function toggleMuteUser(tableId: string, userId: string): string[] {
+  const cur = getMutedUserIds(tableId)
+  const next = cur.includes(userId) ? cur.filter(id => id !== userId) : [...cur, userId]
+  setMutedUserIds(tableId, next)
+  return next
+}
+
+export const QUICK_REACTIONS = ['GG', '🔥', '👍', '😂', '👀', 'Bonne chance'] as const

@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { MessageCircle, Send, X } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { MessageCircle, Send, X, VolumeX, Volume2 } from 'lucide-react'
 import {
   fetchTableMessages,
   sendTableMessage,
   subscribeTableMessages,
+  getMutedUserIds,
+  setMutedUserIds,
+  toggleMuteUser,
+  QUICK_REACTIONS,
   type TableChatMessage,
 } from '../../lib/chat/tableChat'
 import { supabase } from '../../lib/supabase/client'
@@ -12,18 +16,34 @@ type Props = {
   tableId: string
   myUserId: string | null
   defaultOpen?: boolean
+  title?: string
 }
 
-export function TableChat({ tableId, myUserId, defaultOpen = false }: Props) {
+export function TableChat({
+  tableId,
+  myUserId,
+  defaultOpen = false,
+  title = 'Discussion',
+}: Props) {
   const [open, setOpen] = useState(defaultOpen)
   const [messages, setMessages] = useState<TableChatMessage[]>([])
   const [draft, setDraft] = useState('')
   const [sending, setSending] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [unread, setUnread] = useState(0)
+  const [mutedIds, setMutedIds] = useState<string[]>(() => getMutedUserIds(tableId))
   const listRef = useRef<HTMLDivElement>(null)
   const openRef = useRef(open)
   openRef.current = open
+
+  useEffect(() => {
+    setMutedIds(getMutedUserIds(tableId))
+  }, [tableId])
+
+  const visibleMessages = useMemo(
+    () => messages.filter(m => !mutedIds.includes(m.userId)),
+    [messages, mutedIds],
+  )
 
   const scrollBottom = useCallback(() => {
     requestAnimationFrame(() => {
@@ -80,7 +100,12 @@ export function TableChat({ tableId, myUserId, defaultOpen = false }: Props) {
           )
         }
       })()
-      if (!openRef.current && row.user_id !== myUserId) {
+      const muted = getMutedUserIds(tableId)
+      if (
+        !openRef.current &&
+        row.user_id !== myUserId &&
+        !muted.includes(row.user_id)
+      ) {
         setUnread(u => u + 1)
       }
       scrollBottom()
@@ -95,22 +120,26 @@ export function TableChat({ tableId, myUserId, defaultOpen = false }: Props) {
     }
   }, [open, scrollBottom])
 
-  async function handleSend(e?: React.FormEvent) {
-    e?.preventDefault()
-    if (!draft.trim() || sending) return
+  async function handleSend(text?: string) {
+    const body = (text ?? draft).trim()
+    if (!body || sending) return
     setSending(true)
     setError(null)
-    const text = draft
-    setDraft('')
-    const { message, error: err } = await sendTableMessage(tableId, text)
+    if (!text) setDraft('')
+    const { message, error: err } = await sendTableMessage(tableId, body)
     if (err) {
       setError(err)
-      setDraft(text)
+      if (!text) setDraft(body)
     } else if (message) {
       setMessages(prev => (prev.some(m => m.id === message.id) ? prev : [...prev, message]))
       scrollBottom()
     }
     setSending(false)
+  }
+
+  function handleMute(userId: string) {
+    const next = toggleMuteUser(tableId, userId)
+    setMutedIds(next)
   }
 
   return (
@@ -123,14 +152,16 @@ export function TableChat({ tableId, myUserId, defaultOpen = false }: Props) {
           onClick={() => setOpen(true)}
         >
           <MessageCircle size={20} aria-hidden />
-          {unread > 0 && <span className="table-chat-badge">{unread > 9 ? '9+' : unread}</span>}
+          {unread > 0 && (
+            <span className="table-chat-badge">{unread > 9 ? '9+' : unread}</span>
+          )}
         </button>
       )}
 
       {open && (
         <div className="table-chat-panel" role="dialog" aria-label="Discussion table">
           <header className="table-chat-header">
-            <span className="table-chat-title">Discussion</span>
+            <span className="table-chat-title">{title}</span>
             <button
               type="button"
               className="table-chat-close"
@@ -142,15 +173,30 @@ export function TableChat({ tableId, myUserId, defaultOpen = false }: Props) {
           </header>
 
           <div className="table-chat-list" ref={listRef}>
-            {messages.length === 0 ? (
-              <p className="table-chat-empty">Aucun message. Dis bonjour !</p>
+            {visibleMessages.length === 0 ? (
+              <p className="table-chat-empty">
+                {messages.length > 0 && mutedIds.length > 0
+                  ? 'Messages masques (mutes).'
+                  : 'Aucun message. Dis bonjour !'}
+              </p>
             ) : (
-              messages.map(m => {
+              visibleMessages.map(m => {
                 const mine = myUserId != null && m.userId === myUserId
                 return (
                   <div key={m.id} className={'table-chat-msg' + (mine ? ' is-mine' : '')}>
                     {!mine && (
-                      <span className="table-chat-author">{m.username ?? 'Joueur'}</span>
+                      <div className="table-chat-msg-meta">
+                        <span className="table-chat-author">{m.username ?? 'Joueur'}</span>
+                        <button
+                          type="button"
+                          className="table-chat-mute"
+                          title="Mute cet utilisateur"
+                          aria-label={'Mute ' + (m.username ?? 'joueur')}
+                          onClick={() => handleMute(m.userId)}
+                        >
+                          <VolumeX size={12} aria-hidden />
+                        </button>
+                      </div>
                     )}
                     <p className="table-chat-body">{m.body}</p>
                   </div>
@@ -159,9 +205,47 @@ export function TableChat({ tableId, myUserId, defaultOpen = false }: Props) {
             )}
           </div>
 
+          {mutedIds.length > 0 && (
+            <div className="table-chat-mutes">
+              <span className="table-chat-mutes-label">
+                <VolumeX size={12} aria-hidden /> {mutedIds.length} mute(s)
+              </span>
+              <button
+                type="button"
+                className="table-chat-unmute-all"
+                onClick={() => {
+                  setMutedUserIds(tableId, [])
+                  setMutedIds([])
+                }}
+              >
+                <Volume2 size={12} aria-hidden /> Tout reactiver
+              </button>
+            </div>
+          )}
+
           {error && <p className="table-chat-error">{error}</p>}
 
-          <form className="table-chat-form" onSubmit={e => void handleSend(e)}>
+          <div className="table-chat-reactions" role="group" aria-label="Reactions rapides">
+            {QUICK_REACTIONS.map(r => (
+              <button
+                key={r}
+                type="button"
+                className="table-chat-reaction"
+                disabled={sending}
+                onClick={() => void handleSend(r)}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+
+          <form
+            className="table-chat-form"
+            onSubmit={e => {
+              e.preventDefault()
+              void handleSend()
+            }}
+          >
             <input
               className="table-chat-input"
               type="text"
