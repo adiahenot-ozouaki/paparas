@@ -15,6 +15,10 @@ import { PlayerHand } from '../components/game/PlayerHand'
 import { IconButton } from '../components/ui'
 import { X, RotateCcw } from 'lucide-react'
 
+/**
+ * Table freestyle — bac à sable UI sans aucun texte visible.
+ * Cartes + 4 sièges uniquement. Jouer : double-tap ou glisser vers le haut.
+ */
 export default function FreestyleGameTableScreen({
   onNavigate,
 }: {
@@ -115,13 +119,14 @@ export default function FreestyleGameTableScreen({
     [humanHand, setRoundState],
   )
 
+  /** Sélection = joue immédiatement (pas de bouton texte). */
   const handleCardSelect = useCallback(
     (index: number) => {
       if (!isHumanTurn) return
       if (!isCardPlayable(humanHand[index])) return
-      setSelectedCardIndex(prev => (prev === index ? null : index))
+      playCardAtIndex(index)
     },
-    [isHumanTurn, isCardPlayable, humanHand],
+    [isHumanTurn, isCardPlayable, humanHand, playCardAtIndex],
   )
 
   const handlePlayCard = useCallback(() => {
@@ -155,11 +160,11 @@ export default function FreestyleGameTableScreen({
       <div className="table-screen-pattern" aria-hidden />
 
       <header className="freestyle-hud">
-        <IconButton size="sm" aria-label="Quitter le freestyle" title="Quitter" onClick={handleQuit}>
+        <IconButton size="sm" aria-label="Quitter" onClick={handleQuit}>
           <X size={16} strokeWidth={2} className="kora-icon" aria-hidden />
         </IconButton>
-        <span className="freestyle-hud-label font-display">FREESTYLE</span>
-        <IconButton size="sm" aria-label="Nouvelle donne" title="Nouvelle donne" onClick={handleRedeal}>
+        <span className="freestyle-hud-spacer" aria-hidden />
+        <IconButton size="sm" aria-label="Nouvelle donne" onClick={handleRedeal}>
           <RotateCcw size={16} strokeWidth={2} className="kora-icon" aria-hidden />
         </IconButton>
       </header>

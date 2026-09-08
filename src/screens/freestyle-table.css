@@ -1,13 +1,23 @@
-/* Freestyle table — chrome minimal + fluid motion */
+/* Freestyle table — zero text : cartes + 4 sièges uniquement */
 
 .freestyle-table .table-hud,
 .freestyle-table .player-hand-info,
 .freestyle-table .player-hand-hint,
 .freestyle-table .player-hand-bank-banner,
-.freestyle-table .player-hand-claim-btn {
+.freestyle-table .player-hand-claim-btn,
+.freestyle-table .player-hand-play-btn,
+.freestyle-table .player-hand-actions,
+.freestyle-table .opp-info,
+.freestyle-table .opp-badge,
+.freestyle-table .opp-out-label,
+.freestyle-table .opp-out-icon,
+.freestyle-table .opp-panel-meta,
+.freestyle-table .played-stack-lead,
+.freestyle-table .freestyle-hud-label {
   display: none !important;
 }
 
+/* HUD minimal : icônes seules */
 .freestyle-hud {
   position: absolute;
   top: 0;
@@ -27,20 +37,11 @@
   pointer-events: auto;
 }
 
-.freestyle-hud-label {
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  color: rgba(240, 213, 138, 0.75);
-  opacity: 0.85;
-}
-
-.freestyle-table .player-hand-actions {
-  min-height: 48px;
-}
-
-.freestyle-table .player-hand-play-btn {
-  font-size: 12px;
-  padding: 10px 18px;
+/* Placeholders invisibles pour équilibrer le flex (X | vide | redeal) */
+.freestyle-hud-spacer {
+  flex: 1;
+  min-width: 0;
+  pointer-events: none;
 }
 
 /* —— Fluid table motion —— */
@@ -78,15 +79,6 @@
   will-change: transform, filter;
 }
 
-.opp-badge.is-pulse {
-  animation: freestyleBadgePulse 1.4s ease-in-out infinite;
-}
-
-@keyframes freestyleBadgePulse {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.82; transform: scale(1.04); }
-}
-
 .table-oval.table-area-oval {
   will-change: transform, opacity;
 }
@@ -103,8 +95,7 @@
     animation: none !important;
   }
 
-  .player-hand-card.is-playable,
-  .opp-badge.is-pulse {
+  .player-hand-card.is-playable {
     animation: none !important;
   }
 }
