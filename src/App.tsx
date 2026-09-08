@@ -6,6 +6,7 @@ import { GameProvider } from './game/GameContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
 import BottomNav from './components/BottomNav'
 import SideNav from './components/SideNav'
+import TopBar from './components/TopBar'
 import AchievementToast from './components/AchievementToast'
 import SplashScreen from './screens/SplashScreen'
 import HomeScreen from './screens/HomeScreen'
@@ -25,6 +26,7 @@ import StatsScreen from './screens/StatsScreen'
 import AchievementsScreen from './screens/AchievementsScreen'
 import RulesScreen from './screens/RulesScreen'
 
+/** Screens without chrome (no topbar / sidenav / bottomnav). */
 const NO_NAV_SCREENS: Screen[] = [
   'splash',
   'gameTable',
@@ -68,9 +70,15 @@ export default function App() {
             <AuthProvider>
               <GameProvider>
                 <AchievementToast />
+                {/*
+                  Layout chrome:
+                  - large: SideNav (left) + main content (center) + optional page rail (right, page-owned)
+                  - small: TopBar (top) + content + BottomNav (bottom)
+                */}
                 <div className={`app-layout${showNav ? ' app-layout--with-nav' : ''}`}>
                   {showNav && <SideNav active={screen} onNavigate={navigate} />}
                   <div className="app-main">
+                    {showNav && <TopBar active={screen} onNavigate={navigate} />}
                     <div key={screen} className="anim-fade-in app-screen">
                       {screen === 'splash' && <SplashScreen onNavigate={navigate} />}
                       {screen === 'home' && <HomeScreen onNavigate={navigate} />}
