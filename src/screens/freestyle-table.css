@@ -1,4 +1,4 @@
-/* Freestyle table — chrome minimal */
+/* Freestyle table — chrome minimal + fluid motion */
 
 .freestyle-table .table-hud,
 .freestyle-table .player-hand-info,
@@ -41,4 +41,70 @@
 .freestyle-table .player-hand-play-btn {
   font-size: 12px;
   padding: 10px 18px;
+}
+
+/* —— Fluid table motion —— */
+
+.played-stack-card {
+  will-change: transform, opacity;
+  transform-origin: center bottom;
+}
+
+.player-hand-card {
+  transition:
+    bottom 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+    filter 0.22s ease,
+    opacity 0.2s ease;
+  will-change: transform, bottom;
+}
+
+.player-hand-card.is-playable {
+  animation: freestylePlayableGlow 2.2s ease-in-out infinite;
+}
+
+.player-hand-card.is-dragging {
+  transition: none;
+  animation: none;
+}
+
+@keyframes freestylePlayableGlow {
+  0%, 100% { filter: drop-shadow(0 4px 10px rgba(214, 168, 79, 0.22)); }
+  50% { filter: drop-shadow(0 6px 16px rgba(214, 168, 79, 0.42)); }
+}
+
+.opp-panel {
+  transition: filter 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, filter;
+}
+
+.opp-badge.is-pulse {
+  animation: freestyleBadgePulse 1.4s ease-in-out infinite;
+}
+
+@keyframes freestyleBadgePulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.82; transform: scale(1.04); }
+}
+
+.table-oval.table-area-oval {
+  will-change: transform, opacity;
+}
+
+.table-screen {
+  transition: opacity 0.3s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .player-hand-card,
+  .opp-panel,
+  .played-stack-card {
+    transition: none !important;
+    animation: none !important;
+  }
+
+  .player-hand-card.is-playable,
+  .opp-badge.is-pulse {
+    animation: none !important;
+  }
 }
