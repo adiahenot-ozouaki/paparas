@@ -423,7 +423,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
       )}
 
       {tableId && (
-        <TableChat tableId={tableId} myUserId={user?.id ?? null} />
+        <TableChat tableId={tableId} myUserId={user?.id ?? null} title="Discussion table" />
       )}
     </div>
   )
