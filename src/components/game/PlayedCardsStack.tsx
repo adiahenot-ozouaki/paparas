@@ -1,6 +1,8 @@
-import PlayingCard from '../PlayingCard'
+import PlayingCard from "../PlayingCard"
 import type { Card as GameCard } from '../../types'
 
+// Dimensions alignées sur les tailles réelles de PlayingCard (après
+// réduction de 10%) pour que le calcul d'empilement reste cohérent.
 const DIMENSIONS = {
   sm: { width: 43, height: 61, offset: 20 },
   md: { width: 65, height: 92, offset: 28 },
@@ -16,7 +18,9 @@ export function PlayedCardsStack({
   cards: GameCard[]
   highlightLast: boolean
   orientation: 'horizontal' | 'vertical'
+  /** 'md' en mode compact (bulles nom/gains masquées) pour profiter de l'espace libéré. */
   size?: 'sm' | 'md'
+  /** Petit curseur sur la carte la plus récente : c'est elle qui a fixé la couleur demandée de ce pli. */
   showLeadIndicator?: boolean
 }) {
   const { width, height, offset: OFFSET } = DIMENSIONS[size]
