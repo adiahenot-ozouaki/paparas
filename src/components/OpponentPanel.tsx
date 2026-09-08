@@ -1,7 +1,7 @@
-import { memo, useEffect, useState, type ReactNode } from 'react'
 import PlayingCard from './PlayingCard'
 import { PlayedCardsStack } from './game/PlayedCardsStack'
 import type { Card as GameCard } from '../types'
+import type { ReactNode } from 'react'
 import { Skull, Landmark, Compass } from 'lucide-react'
 
 interface OpponentPanelProps {
@@ -18,10 +18,9 @@ interface OpponentPanelProps {
   playedCards: GameCard[]
   playedCardsHighlightLast: boolean
   stackSize: 'sm' | 'md'
-  dealId?: number
 }
 
-function OpponentPanel({
+export function OpponentPanel({
   position,
   name,
   capital,
@@ -34,21 +33,8 @@ function OpponentPanel({
   playedCards,
   playedCardsHighlightLast,
   stackSize,
-  dealId = 0,
 }: OpponentPanelProps) {
   const isVertical = position !== 'top'
-  const [isDealing, setIsDealing] = useState(false)
-
-  useEffect(() => {
-    if (cardsLeft <= 0) {
-      setIsDealing(false)
-      return
-    }
-    setIsDealing(true)
-    const ms = 380 + cardsLeft * 50
-    const t = window.setTimeout(() => setIsDealing(false), ms)
-    return () => window.clearTimeout(t)
-  }, [dealId, cardsLeft])
 
   if (isEliminated) {
     return (
@@ -90,15 +76,21 @@ function OpponentPanel({
         )}
       </div>
 
-      <div className={`opp-backs opp-backs--${position}${isDealing ? ' is-dealing' : ''}`}>
+      <div className={`opp-backs opp-backs--${position}`}>
         {Array.from({ length: cardsLeft }).map((_, i) => (
-          <div
-            key={`${dealId}-${i}`}
-            className={isDealing ? 'opp-deal-card is-dealing' : 'opp-deal-card'}
-            style={{ ['--deal-i' as string]: i }}
-          >
-            <PlayingCard suit="♠" value="A" state="back" size="xs" rotated={isVertical} />
-          </div>
+          <PlayingCard
+            key={i}
+            suit="♠"
+            value="A"
+            state="back"
+            size="xs"
+            rotated={isVertical}
+            style={
+              position === 'top'
+                ? { transform: `rotate(${(i - 1.5) * 3}deg)` }
+                : { marginTop: i > 0 ? -20 : 0 }
+            }
+          />
         ))}
       </div>
 
@@ -128,6 +120,3 @@ function Badge({
     </div>
   )
 }
-
-export default memo(OpponentPanel)
-export { OpponentPanel }

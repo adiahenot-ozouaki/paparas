@@ -1,5 +1,3 @@
-import { memo } from 'react'
-import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import PlayingCard from '../PlayingCard'
 import type { Card as GameCard } from '../../types'
 
@@ -8,29 +6,24 @@ const DIMENSIONS = {
   md: { width: 65, height: 92, offset: 28 },
 } as const
 
-type Props = {
-  cards: GameCard[]
-  highlightLast: boolean
-  orientation: 'horizontal' | 'vertical'
-  size?: 'sm' | 'md'
-  showLeadIndicator?: boolean
-}
-
-function PlayedCardsStack({
+export function PlayedCardsStack({
   cards,
   highlightLast,
   orientation,
   size = 'sm',
   showLeadIndicator = false,
-}: Props) {
-  const reduceMotion = useReducedMotion()
+}: {
+  cards: GameCard[]
+  highlightLast: boolean
+  orientation: 'horizontal' | 'vertical'
+  size?: 'sm' | 'md'
+  showLeadIndicator?: boolean
+}) {
   const { width, height, offset: OFFSET } = DIMENSIONS[size]
-  const isHorizontal = orientation === 'horizontal'
 
   if (cards.length === 0) {
     return (
       <div
-        className="played-stack played-stack--empty"
         style={{
           width,
           height,
@@ -42,9 +35,10 @@ function PlayedCardsStack({
     )
   }
 
+  const isHorizontal = orientation === 'horizontal'
+
   return (
     <div
-      className="played-stack"
       style={{
         position: 'relative',
         flexShrink: 0,
@@ -52,63 +46,52 @@ function PlayedCardsStack({
         height: isHorizontal ? height : height + (cards.length - 1) * OFFSET,
       }}
     >
-      <AnimatePresence initial={false}>
-        {cards.map((card, i) => {
-          const isLast = i === cards.length - 1
-          const key = `${i}-${card.suit}-${card.value}`
-          return (
-            <motion.div
-              key={key}
-              className={`played-stack-card${isLast && highlightLast ? ' is-winner' : ''}${isLast ? '' : ' is-dim'}`}
-              initial={
-                reduceMotion || !isLast
-                  ? false
-                  : {
-                      opacity: 0,
-                      scale: 0.78,
-                      y: isHorizontal ? -22 : -14,
-                      rotate: isHorizontal ? -6 : 4,
-                    }
-              }
-              animate={{
-                opacity: 1,
-                scale: isLast && highlightLast ? 1.04 : 1,
-                y: 0,
-                rotate: 0,
-              }}
-              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
-              transition={
-                reduceMotion
-                  ? { duration: 0 }
-                  : isLast
-                    ? { type: 'spring', stiffness: 420, damping: 24, mass: 0.65 }
-                    : { duration: 0.15 }
-              }
-              style={{
-                position: 'absolute',
-                top: isHorizontal ? 0 : i * OFFSET,
-                left: isHorizontal ? i * OFFSET : 0,
-                zIndex: i + 1,
-              }}
-            >
-              <PlayingCard
-                suit={card.suit}
-                value={card.value}
-                state={isLast && highlightLast ? 'winner' : 'played'}
-                size={size}
-              />
-              {isLast && showLeadIndicator && (
-                <div className="played-stack-lead" title="A fixé la couleur demandée de ce pli" aria-hidden>
-                  🧭
-                </div>
-              )}
-            </motion.div>
-          )
-        })}
-      </AnimatePresence>
+      {cards.map((card, i) => {
+        const isLast = i === cards.length - 1
+        return (
+          <div
+            key={i}
+            className={isLast ? 'anim-deal-in' : undefined}
+            style={{
+              position: 'absolute',
+              top: isHorizontal ? 0 : i * OFFSET,
+              left: isHorizontal ? i * OFFSET : 0,
+              zIndex: i,
+              opacity: isLast ? 1 : 0.85,
+              filter: isLast ? 'none' : 'brightness(0.85)',
+            }}
+          >
+            <PlayingCard
+              suit={card.suit}
+              value={card.value}
+              state={isLast && highlightLast ? 'winner' : 'played'}
+              size={size}
+            />
+            {isLast && showLeadIndicator && (
+              <div
+                title="A fixé la couleur demandée de ce pli"
+                style={{
+                  position: 'absolute',
+                  top: -6,
+                  right: -6,
+                  width: 15,
+                  height: 15,
+                  borderRadius: '50%',
+                  background: '#4CAF76',
+                  border: '1.5px solid #0B0D10',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: 8,
+                  boxShadow: '0 0 6px rgba(76,175,118,0.7)',
+                }}
+              >
+                🧭
+              </div>
+            )}
+          </div>
+        )
+      })}
     </div>
   )
 }
-
-export default memo(PlayedCardsStack)
-export { PlayedCardsStack }
