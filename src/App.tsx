@@ -25,6 +25,7 @@ import LeaderboardScreen from './screens/LeaderboardScreen'
 import StatsScreen from './screens/StatsScreen'
 import AchievementsScreen from './screens/AchievementsScreen'
 import RulesScreen from './screens/RulesScreen'
+import FreestyleGameTableScreen from './screens/FreestyleGameTableScreen'
 
 /** Screens without chrome (no topbar / sidenav / bottomnav). */
 const NO_NAV_SCREENS: Screen[] = [
@@ -40,6 +41,7 @@ const NO_NAV_SCREENS: Screen[] = [
   'gameMode',
   'stakeConfig',
   'rules',
+  'freestyleTable',
 ]
 
 export default function App() {
@@ -97,6 +99,7 @@ export default function App() {
                       {screen === 'stats' && <StatsScreen onNavigate={navigate} />}
                       {screen === 'achievements' && <AchievementsScreen onNavigate={navigate} />}
                       {screen === 'rules' && <RulesScreen onNavigate={navigate} />}
+                      {screen === 'freestyleTable' && <FreestyleGameTableScreen onNavigate={navigate} />}
                     </div>
                     {showNav && <BottomNav active={screen} onNavigate={navigate} />}
                   </div>
