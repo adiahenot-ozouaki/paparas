@@ -27,20 +27,17 @@ import AchievementsScreen from './screens/AchievementsScreen'
 import RulesScreen from './screens/RulesScreen'
 import FreestyleGameTableScreen from './screens/FreestyleGameTableScreen'
 
-/** Screens without chrome (no topbar / sidenav / bottomnav). */
+/**
+ * Écrans sans chrome (pas de SideNav / TopBar / BottomNav).
+ * Immersifs uniquement : splash, auth, résultats, freestyle sandbox.
+ * Mode de jeu, config, lobbies, tables et règles ont le chrome comme l'accueil.
+ */
 const NO_NAV_SCREENS: Screen[] = [
   'splash',
-  'gameTable',
-  'onlineGameTable',
+  'auth',
   'roundResult',
   'victory',
   'defeat',
-  'lobby',
-  'onlineLobby',
-  'auth',
-  'gameMode',
-  'stakeConfig',
-  'rules',
   'freestyleTable',
 ]
 
@@ -77,7 +74,7 @@ export default function App() {
                   - large: SideNav (left) + main content (center) + optional page rail (right, page-owned)
                   - small: TopBar (top) + content + BottomNav (bottom)
                 */}
-                <div className={`app-layout${showNav ? ' app-layout--with-nav' : ''}`}>
+                <div className={'app-layout' + (showNav ? ' app-layout--with-nav' : '')}>
                   {showNav && <SideNav active={screen} onNavigate={navigate} />}
                   <div className="app-main">
                     {showNav && <TopBar active={screen} onNavigate={navigate} />}
