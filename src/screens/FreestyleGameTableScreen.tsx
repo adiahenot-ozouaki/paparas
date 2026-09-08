@@ -15,9 +15,6 @@ import { PlayerHand } from '../components/game/PlayerHand'
 import { IconButton } from '../components/ui'
 import { X, RotateCcw } from 'lucide-react'
 
-/**
- * Table freestyle — bac à sable UI (perf-tuned).
- */
 export default function FreestyleGameTableScreen({
   onNavigate,
 }: {
@@ -26,6 +23,7 @@ export default function FreestyleGameTableScreen({
   const {
     players,
     roundState,
+    roundNumber,
     stakeConfig,
     setRoundState,
     startNextRound,
@@ -84,7 +82,7 @@ export default function FreestyleGameTableScreen({
         })
         return playCard(prev, index, card)
       })
-    }, 700)
+    }, 950)
 
     return () => window.clearTimeout(timer)
   }, [phase, currentPlayerIndex, setRoundState])
@@ -172,6 +170,7 @@ export default function FreestyleGameTableScreen({
           roundState={roundState}
           currentPlayerIndex={currentPlayerIndex}
           compactMode
+          dealId={roundNumber}
         />
 
         <PlayerHand
@@ -185,6 +184,7 @@ export default function FreestyleGameTableScreen({
           isCardPlayable={isCardPlayable}
           isPlaying={phase === 'playing'}
           compactMode
+          dealId={roundNumber}
           onCardSelect={handleCardSelect}
           onAttemptPlay={attemptPlayCard}
           onPlayCard={handlePlayCard}
