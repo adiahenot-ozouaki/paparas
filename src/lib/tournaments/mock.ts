@@ -1,6 +1,6 @@
 import type { Tournament } from './types'
 
-/** Données de démo — à remplacer par Supabase (kora_tournaments). */
+/** Donnees de demo — a remplacer par Supabase (kora_tournaments). */
 export const MOCK_TOURNAMENTS: Tournament[] = [
   {
     id: 't-weekend-kora',
@@ -17,7 +17,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
     maxPlayers: 16,
     registeredCount: 9,
     startsAt: new Date(Date.now() + 1000 * 60 * 60 * 6).toISOString(),
-    tagline: 'Élimination directe · 16 places · mise 500',
+    tagline: 'Elimination directe \u00b7 16 places \u00b7 mise 500',
     rulesPreset: 'standard',
   },
   {
@@ -35,7 +35,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
     maxPlayers: 32,
     registeredCount: 18,
     startsAt: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(),
-    tagline: 'Sans buy-in · course aux rounds · sponsored',
+    tagline: 'Sans buy-in \u00b7 course aux rounds \u00b7 sponsored',
     rulesPreset: 'training',
   },
   {
@@ -53,7 +53,7 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
     maxPlayers: 12,
     registeredCount: 12,
     startsAt: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    tagline: 'En cours · format suisse · buy-in 1 000',
+    tagline: 'En cours \u00b7 format suisse \u00b7 buy-in 1 000',
     rulesPreset: 'high_stakes',
   },
   {
@@ -67,7 +67,10 @@ export const MOCK_TOURNAMENTS: Tournament[] = [
     maxPlayers: 8,
     registeredCount: 8,
     startsAt: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    tagline: 'Terminé · archives',
+    tagline: 'Termine \u00b7 archives',
     rulesPreset: 'standard',
+    winners: [
+      { rank: 1, userId: 'mock-1', username: 'ChampionKora', amountFcfa: 20000 },
+    ],
   },
 ]
