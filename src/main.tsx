@@ -20,6 +20,7 @@ import './theme/clean-bridge.css'
 import './screens/freestyle-table.css'
 import './theme/ads.css'
 import './theme/tournaments.css'
+import './theme/table-chat.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
