@@ -27,3 +27,19 @@ export interface TournamentRegistration {
   tournamentId: string
   registeredAt: string
 }
+
+export interface TournamentEntrant {
+  userId: string
+  username: string
+  avatar: string
+  registeredAt: string
+  feePaidFcfa: number
+}
+
+export interface TournamentMatchTable {
+  tableId: string
+  status: 'lobby' | 'playing' | 'finished'
+  baseStake: number
+  seatCount: number
+  code: string
+}
