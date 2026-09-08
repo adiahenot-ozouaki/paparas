@@ -109,7 +109,7 @@ export function PlayerHand({
   return (
     <div className="player-hand">
       {!compactMode && (
-        <div className={`player-hand-info${isHumanTurn ? ' is-turn' : ''}`}>
+        <div className={'player-hand-info' + (isHumanTurn ? ' is-turn' : '')}>
           <div>
             <p className="font-display player-hand-you">
               Vous{' '}
@@ -128,7 +128,7 @@ export function PlayerHand({
         </div>
       )}
 
-      <div className={`player-hand-fan${compactMode ? ' is-compact' : ''`}>
+      <div className={'player-hand-fan' + (compactMode ? ' is-compact' : '')}>
         {hand.map((card, index) => {
           const total = hand.length
           const center = (total - 1) / 2
@@ -149,10 +149,10 @@ export function PlayerHand({
 
           return (
             <div
-              key={`${card.suit}-${card.value}-${index}`}
+              key={card.suit + '-' + card.value + '-' + index}
               role="button"
               tabIndex={playable ? 0 : -1}
-              aria-label={`${card.value} de ${SUIT_NAME[card.suit]}${playable ? '' : ' — non jouable'}`}
+              aria-label={card.value + ' de ' + SUIT_NAME[card.suit] + (playable ? '' : ' — non jouable')}
               aria-pressed={isSelected}
               aria-disabled={!playable}
               onPointerDown={e => handlePointerDown(index, playable, e)}
@@ -180,9 +180,9 @@ export function PlayerHand({
                 .filter(Boolean)
                 .join(' ')}
               style={{
-                left: `calc(50% + ${translateX}px - 36px)`,
+                left: 'calc(50% + ' + translateX + 'px - 36px)',
                 bottom: isSelected ? 28 : playable ? 12 : 6,
-                transform: `translate(${dragDx}px, ${dragDy}px) rotate(${isDragging ? 0 : rotate}deg) translateY(${isDragging ? 0 : translateY}px) scale(${liftedByDrag ? 1.08 : playable && !isSelected ? 1.02 : 1})`,
+                transform: 'translate(' + dragDx + 'px, ' + dragDy + 'px) rotate(' + (isDragging ? 0 : rotate) + 'deg) translateY(' + (isDragging ? 0 : translateY) + 'px) scale(' + (liftedByDrag ? 1.08 : playable && !isSelected ? 1.02 : 1) + ')',
                 zIndex: isDragging ? 30 : isSelected ? 20 : index + 1,
               }}
             >
