@@ -1,0 +1,77 @@
+.ad-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  border-radius: 12px;
+  border: 1px dashed rgba(169, 176, 183, 0.28);
+  background: rgba(16, 21, 26, 0.45);
+  color: #a9b0b7;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.ad-slot-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 8px 12px;
+  text-align: center;
+  width: 100%;
+}
+
+.ad-slot-badge {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(169, 176, 183, 0.75);
+  border: 1px solid rgba(169, 176, 183, 0.25);
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.ad-slot-placeholder {
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.ad-slot-hint {
+  font-size: 10px;
+  color: rgba(169, 176, 183, 0.55);
+}
+
+.ad-slot--banner {
+  min-height: 56px;
+  max-height: 72px;
+}
+
+.ad-slot--leaderboard {
+  min-height: 72px;
+  max-height: 90px;
+}
+
+.ad-slot--rectangle {
+  min-height: 120px;
+  max-width: 320px;
+  margin-inline: auto;
+}
+
+.ad-slot--rail {
+  min-height: 200px;
+  width: 100%;
+}
+
+.app-rail .ad-slot--rail {
+  min-height: 240px;
+  margin: 12px;
+}
+
+@media (prefers-reduced-data: reduce) {
+  .ad-slot {
+    display: none !important;
+  }
+}

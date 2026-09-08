@@ -1,0 +1,102 @@
+.tourney-screen .tourney-ad {
+  margin-bottom: 14px;
+}
+
+.tourney-filters {
+  margin-bottom: 14px;
+}
+
+.tourney-loading {
+  color: #a9b0b7;
+  font-size: 14px;
+  padding: 24px 8px;
+}
+
+.tourney-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.tourney-card-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.tourney-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 4px;
+}
+
+.tourney-card-tagline {
+  font-size: 12px;
+  color: #a9b0b7;
+  margin: 0;
+}
+
+.tourney-status {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 4px 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+}
+
+.tourney-status--open,
+.tourney-status--upcoming {
+  color: #f0d58a;
+  background: rgba(214, 168, 79, 0.12);
+  border-color: rgba(214, 168, 79, 0.35);
+}
+
+.tourney-status--live {
+  color: #4caf76;
+  background: rgba(76, 175, 118, 0.12);
+  border-color: rgba(76, 175, 118, 0.35);
+}
+
+.tourney-status--completed {
+  color: #a9b0b7;
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.tourney-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 14px;
+  font-size: 12px;
+  color: #a9b0b7;
+  margin-bottom: 12px;
+}
+
+.tourney-card-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tourney-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tourney-registered {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4caf76;
+}
+
+.home-tourney-teaser {
+  margin-top: 4px;
+}
