@@ -47,7 +47,6 @@ async function countsByTournament(ids: string[]): Promise<Map<string, number>> {
   return map
 }
 
-/** Liste les tournois (Supabase). Fallback mock si erreur / offline. */
 export async function listTournaments(): Promise<Tournament[]> {
   try {
     const { data, error } = await supabase
@@ -109,9 +108,17 @@ export async function isRegistered(tournamentId: string): Promise<boolean> {
   return regs.some(r => r.tournamentId === tournamentId)
 }
 
+export type TournamentActionResult = {
+  ok: boolean
+  error?: string
+  walletBalance?: number
+  feePaidFcfa?: number
+  refundedFcfa?: number
+}
+
 export async function registerForTournament(
   tournamentId: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<TournamentActionResult> {
   try {
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session?.user) {
@@ -123,14 +130,27 @@ export async function registerForTournament(
     })
 
     if (error) {
-      return { ok: false, error: error.message }
+      const msg = error.message || ''
+      if (msg.includes('WALLET') || msg.toLowerCase().includes('insuffisant')) {
+        return { ok: false, error: 'Solde insuffisant' }
+      }
+      return { ok: false, error: msg }
     }
 
-    const result = data as { ok?: boolean; error?: string } | null
+    const result = data as {
+      ok?: boolean
+      error?: string
+      wallet_balance?: number
+      fee_paid_fcfa?: number
+    } | null
     if (!result?.ok) {
       return { ok: false, error: result?.error ?? 'Inscription impossible' }
     }
-    return { ok: true }
+    return {
+      ok: true,
+      walletBalance: result.wallet_balance,
+      feePaidFcfa: result.fee_paid_fcfa,
+    }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erreur reseau' }
   }
@@ -138,7 +158,7 @@ export async function registerForTournament(
 
 export async function unregisterFromTournament(
   tournamentId: string,
-): Promise<{ ok: boolean; error?: string }> {
+): Promise<TournamentActionResult> {
   try {
     const { data: sessionData } = await supabase.auth.getSession()
     if (!sessionData.session?.user) {
@@ -153,11 +173,20 @@ export async function unregisterFromTournament(
       return { ok: false, error: error.message }
     }
 
-    const result = data as { ok?: boolean; error?: string } | null
+    const result = data as {
+      ok?: boolean
+      error?: string
+      wallet_balance?: number
+      refunded_fcfa?: number
+    } | null
     if (!result?.ok) {
       return { ok: false, error: result?.error ?? 'Desinscription impossible' }
     }
-    return { ok: true }
+    return {
+      ok: true,
+      walletBalance: result.wallet_balance,
+      refundedFcfa: result.refunded_fcfa,
+    }
   } catch (e) {
     return { ok: false, error: e instanceof Error ? e.message : 'Erreur reseau' }
   }

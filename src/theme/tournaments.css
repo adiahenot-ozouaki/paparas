@@ -100,3 +100,13 @@
 .home-tourney-teaser {
   margin-top: 4px;
 }
+
+.tourney-wallet {
+  font-size: 13px;
+  color: #a9b0b7;
+  margin: 0 0 12px;
+}
+.tourney-wallet strong {
+  color: #f0d58a;
+  font-weight: 700;
+}
