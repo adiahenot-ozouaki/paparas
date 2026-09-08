@@ -27,6 +27,7 @@ import StatsScreen from './screens/StatsScreen'
 import AchievementsScreen from './screens/AchievementsScreen'
 import RulesScreen from './screens/RulesScreen'
 import FreestyleGameTableScreen from './screens/FreestyleGameTableScreen'
+import TournamentsScreen from './screens/TournamentsScreen'
 
 const SplashPage = screenPage(SplashScreen)
 const HomePage = screenPage(HomeScreen)
@@ -45,6 +46,7 @@ const StatsPage = screenPage(StatsScreen)
 const AchievementsPage = screenPage(AchievementsScreen)
 const RulesPage = screenPage(RulesScreen)
 const FreestylePage = screenPage(FreestyleGameTableScreen)
+const TournamentsPage = screenPage(TournamentsScreen)
 
 export default function App() {
   return (
@@ -58,11 +60,6 @@ export default function App() {
               <GameProvider>
                 <AchievementToast />
                 <BrowserRouter>
-                  {/*
-                    Layout chrome:
-                    - BareLayout: splash, auth, fin de partie, freestyle
-                    - ChromeLayout: SideNav + TopBar + content + BottomNav
-                  */}
                   <Routes>
                     <Route element={<BareLayout />}>
                       <Route path={pathFor('splash')} element={<SplashPage />} />
@@ -86,6 +83,7 @@ export default function App() {
                       <Route path={pathFor('stats')} element={<StatsPage />} />
                       <Route path={pathFor('achievements')} element={<AchievementsPage />} />
                       <Route path={pathFor('rules')} element={<RulesPage />} />
+                      <Route path={pathFor('tournaments')} element={<TournamentsPage />} />
                     </Route>
 
                     <Route path="*" element={<Navigate to={pathFor('splash')} replace />} />
