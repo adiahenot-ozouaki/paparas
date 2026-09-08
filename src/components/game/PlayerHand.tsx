@@ -1,4 +1,4 @@
-import { memo, useRef, useState } from 'react'
+import { memo, useEffect, useRef, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import type { Card as GameCard } from '../../types'
 import { HUMAN_INDEX } from '../../game/GameContext'
@@ -19,6 +19,7 @@ interface PlayerHandProps {
   isCardPlayable: (card: GameCard) => boolean
   isPlaying: boolean
   compactMode: boolean
+  dealId?: number
   onCardSelect: (index: number) => void
   onAttemptPlay: (index: number) => void
   onPlayCard: () => void
@@ -51,6 +52,7 @@ function PlayerHand({
   canClaim,
   isCardPlayable,
   compactMode,
+  dealId = 0,
   onCardSelect,
   onAttemptPlay,
   onPlayCard,
@@ -60,9 +62,22 @@ function PlayerHand({
   const lastTapRef = useRef<{ index: number; time: number } | null>(null)
   const dragStartRef = useRef<{ x: number; y: number } | null>(null)
   const [drag, setDrag] = useState<DragInfo | null>(null)
+  const [isDealing, setIsDealing] = useState(false)
   const handCardSize = compactMode ? 'lg' : 'md'
 
+  useEffect(() => {
+    if (reduceMotion || hand.length === 0) {
+      setIsDealing(false)
+      return
+    }
+    setIsDealing(true)
+    const ms = 420 + hand.length * 55
+    const t = window.setTimeout(() => setIsDealing(false), ms)
+    return () => window.clearTimeout(t)
+  }, [dealId, hand.length, reduceMotion])
+
   function handleTap(index: number) {
+    if (isDealing) return
     const now = Date.now()
     const last = lastTapRef.current
 
@@ -77,7 +92,7 @@ function PlayerHand({
   }
 
   function handlePointerDown(index: number, playable: boolean, e: React.PointerEvent<HTMLDivElement>) {
-    if (!playable) return
+    if (isDealing || !playable) return
     e.currentTarget.setPointerCapture(e.pointerId)
     dragStartRef.current = { x: e.clientX, y: e.clientY }
     setDrag({ index, dx: 0, dy: 0 })
@@ -130,7 +145,7 @@ function PlayerHand({
         </div>
       )}
 
-      <div className={`player-hand-fan${compactMode ? ' is-compact' : ''}`}>
+      <div className={`player-hand-fan${compactMode ? ' is-compact' : ''}${isDealing ? ' is-dealing' : ''}`}>
         {hand.map((card, index) => {
           const total = hand.length
           const center = (total - 1) / 2
@@ -153,10 +168,10 @@ function PlayerHand({
             <div
               key={`${card.suit}-${card.value}-${index}`}
               role="button"
-              tabIndex={playable ? 0 : -1}
+              tabIndex={playable && !isDealing ? 0 : -1}
               aria-label={`${card.value} de ${SUIT_NAME[card.suit]}${playable ? '' : ' — non jouable'}`}
               aria-pressed={isSelected}
-              aria-disabled={!playable}
+              aria-disabled={!playable || isDealing}
               onPointerDown={e => handlePointerDown(index, playable, e)}
               onPointerMove={e => handlePointerMove(index, e)}
               onPointerUp={() => handlePointerUp(index)}
@@ -168,14 +183,14 @@ function PlayerHand({
                 if (!playable && !isDragging) handleTap(index)
               }}
               onKeyDown={e => {
-                if ((e.key === 'Enter' || e.key === ' ') && playable) {
+                if ((e.key === 'Enter' || e.key === ' ') && playable && !isDealing) {
                   e.preventDefault()
                   handleTap(index)
                 }
               }}
               className={[
                 'player-hand-card',
-                playable ? 'is-playable' : '',
+                playable && !isDealing ? 'is-playable' : '',
                 isDragging ? 'is-dragging' : '',
                 liftedByDrag ? 'is-lifted' : '',
               ]
@@ -188,12 +203,17 @@ function PlayerHand({
                 zIndex: isDragging ? 30 : isSelected ? 20 : index + 1,
               }}
             >
-              <PlayingCard
-                suit={card.suit}
-                value={card.value}
-                state={cardState}
-                size={handCardSize}
-              />
+              <div
+                className={isDealing ? 'deal-inner is-dealing' : 'deal-inner'}
+                style={{ ['--deal-i' as string]: index, ['--deal-n' as string]: total }}
+              >
+                <PlayingCard
+                  suit={card.suit}
+                  value={card.value}
+                  state={cardState}
+                  size={handCardSize}
+                />
+              </div>
             </div>
           )
         })}
@@ -201,7 +221,7 @@ function PlayerHand({
 
       <div className="player-hand-actions">
         <AnimatePresence mode="wait">
-          {selectedCardIndex !== null && isHumanTurn && (
+          {selectedCardIndex !== null && isHumanTurn && !isDealing && (
             <motion.button
               key="play"
               type="button"
@@ -218,14 +238,14 @@ function PlayerHand({
           )}
         </AnimatePresence>
 
-        {isHumanTurn && selectedCardIndex === null && !canClaim && (
+        {isHumanTurn && selectedCardIndex === null && !canClaim && !isDealing && (
           <p className="player-hand-hint">
             Tape une carte · double-tape ou glisse vers le haut pour jouer
           </p>
         )}
 
         <AnimatePresence>
-          {canClaim && (
+          {canClaim && !isDealing && (
             <motion.button
               key="claim"
               type="button"
