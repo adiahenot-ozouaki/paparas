@@ -1,5 +1,11 @@
 import { supabase } from '../supabase/client'
-import type { Tournament, TournamentPrize, TournamentRegistration } from './types'
+import type {
+  Tournament,
+  TournamentPrize,
+  TournamentRegistration,
+  TournamentEntrant,
+  TournamentMatchTable,
+} from './types'
 import { MOCK_TOURNAMENTS } from './mock'
 import type { KoraTournament } from '../supabase/database.types'
 
@@ -216,5 +222,99 @@ export function statusLabel(status: Tournament['status']): string {
       return 'En cours'
     case 'completed':
       return 'Termine'
+  }
+}
+
+export async function listTournamentEntrants(
+  tournamentId: string,
+): Promise<{ entrants: TournamentEntrant[]; error: string | null }> {
+  try {
+    let { data: regs, error } = await supabase
+      .from('kora_tournament_registrations')
+      .select('user_id, registered_at, fee_paid_fcfa')
+      .eq('tournament_id', tournamentId)
+      .order('registered_at', { ascending: true })
+
+    if (error) {
+      const retry = await supabase
+        .from('kora_tournament_registrations')
+        .select('user_id, registered_at')
+        .eq('tournament_id', tournamentId)
+        .order('registered_at', { ascending: true })
+      if (retry.error) return { entrants: [], error: retry.error.message }
+      regs = (retry.data ?? []).map(r => ({ ...r, fee_paid_fcfa: 0 }))
+      error = null
+    }
+    const rows = regs ?? []
+    if (rows.length === 0) return { entrants: [], error: null }
+
+    const ids = rows.map(r => r.user_id as string)
+    const { data: profiles } = await supabase
+      .from('kora_profiles')
+      .select('id, username, avatar')
+      .in('id', ids)
+
+    const byId = new Map((profiles ?? []).map(p => [p.id as string, p]))
+    const entrants: TournamentEntrant[] = rows.map(r => {
+      const p = byId.get(r.user_id as string)
+      return {
+        userId: r.user_id as string,
+        username: (p?.username as string) ?? 'Joueur',
+        avatar: (p?.avatar as string) ?? '',
+        registeredAt: r.registered_at as string,
+        feePaidFcfa: Number((r as { fee_paid_fcfa?: number }).fee_paid_fcfa ?? 0),
+      }
+    })
+    return { entrants, error: null }
+  } catch (e) {
+    return { entrants: [], error: e instanceof Error ? e.message : 'Erreur reseau' }
+  }
+}
+
+export async function listTournamentTables(
+  tournamentId: string,
+): Promise<{ tables: TournamentMatchTable[]; error: string | null }> {
+  try {
+    const { data, error } = await supabase
+      .from('kora_tables')
+      .select('id, status, base_stake')
+      .eq('tournament_id', tournamentId)
+      .in('status', ['lobby', 'playing'])
+      .order('created_at', { ascending: false })
+      .limit(24)
+
+    if (error) {
+      return { tables: [], error: null }
+    }
+
+    const tablesRaw = data ?? []
+    if (tablesRaw.length === 0) return { tables: [], error: null }
+
+    const ids = tablesRaw.map(t => t.id as string)
+    const { data: seats } = await supabase
+      .from('kora_table_players')
+      .select('table_id')
+      .in('table_id', ids)
+
+    const counts = new Map<string, number>()
+    for (const s of seats ?? []) {
+      const tid = s.table_id as string
+      counts.set(tid, (counts.get(tid) ?? 0) + 1)
+    }
+
+    const tables: TournamentMatchTable[] = tablesRaw.map(t => {
+      const id = t.id as string
+      const short = id.replace(/-/g, '').slice(0, 6).toUpperCase()
+      return {
+        tableId: id,
+        status: t.status as TournamentMatchTable['status'],
+        baseStake: Number(t.base_stake ?? 0),
+        seatCount: counts.get(id) ?? 0,
+        code: short,
+      }
+    })
+    return { tables, error: null }
+  } catch {
+    return { tables: [], error: null }
   }
 }
