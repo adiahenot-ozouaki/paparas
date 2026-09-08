@@ -17,6 +17,7 @@ import './theme/p2-a11y.css'
 import './theme/p3-polish.css'
 import './theme/clean-layout.css'
 import './theme/clean-bridge.css'
+import './screens/freestyle-table.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
