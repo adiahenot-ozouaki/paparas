@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import type { Suit, CardValue, CardState } from '../types'
 
 interface PlayingCardProps {
@@ -17,7 +18,6 @@ const SUIT_COLOR: Record<Suit, string> = {
   '♠': '#1a1a1a',
 }
 
-/** Nom complet de la couleur, pour les lecteurs d'écran (le symbole seul n'est pas annoncé de façon fiable). */
 const SUIT_NAME: Record<Suit, string> = {
   '♥': 'Cœur',
   '♦': 'Carreau',
@@ -25,8 +25,6 @@ const SUIT_NAME: Record<Suit, string> = {
   '♠': 'Pique',
 }
 
-// Tailles réduites de 10% par rapport à l'original (retour utilisateur :
-// "les cartes sont grandes, diminue d'un dixième la taille").
 const SIZE = {
   xs: { width: 29, height: 41, fontSize: 9, centerSize: 16 },
   sm: { width: 43, height: 61, fontSize: 12, centerSize: 22 },
@@ -34,7 +32,7 @@ const SIZE = {
   lg: { width: 86, height: 122, fontSize: 20, centerSize: 43 },
 }
 
-export default function PlayingCard({
+function PlayingCard({
   suit = '♥',
   value = 'A',
   state = 'default',
@@ -51,8 +49,6 @@ export default function PlayingCard({
     return (
       <div
         className="card-back pattern-african"
-        // Carte face cachée : purement décorative — le compte de cartes
-        // est annoncé ailleurs. Pas de tabIndex : évite focus + aria-hidden.
         aria-hidden="true"
         style={{
           width: s.width,
@@ -62,7 +58,6 @@ export default function PlayingCard({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          // Les clics passent au parent (OpponentPanel, etc.) si besoin.
           pointerEvents: onClick ? undefined : 'none',
           ...style,
         }}
@@ -86,8 +81,6 @@ export default function PlayingCard({
   const isSelected = state === 'selected'
   const isDisabled = state === 'disabled'
   const isWinner = state === 'winner'
-  // Interactive UNIQUEMENT si un onClick est fourni directement sur ce
-  // composant (PlayerHand gère l'interaction sur un wrapper parent).
   const isInteractive = !!onClick && !isDisabled
 
   return (
@@ -104,15 +97,11 @@ export default function PlayingCard({
         height: s.height,
         transform: rotated ? 'rotate(90deg)' : undefined,
         flexShrink: 0,
-        // Décoratif : ne prend jamais le focus (le wrapper parent est le bouton).
-        // Évite l'avertissement « aria-hidden on focused element ».
         pointerEvents: isInteractive ? undefined : 'none',
         ...style,
       }}
       onClick={isInteractive ? onClick : undefined}
       role={isInteractive ? 'button' : undefined}
-      // Pas de tabIndex={-1} : un élément avec tabIndex peut encore recevoir
-      // le focus programmatique / au clic, ce qui entre en conflit avec aria-hidden.
       tabIndex={isInteractive ? 0 : undefined}
       aria-hidden={isInteractive ? undefined : true}
       aria-label={isInteractive ? cardLabel : undefined}
@@ -128,7 +117,6 @@ export default function PlayingCard({
           : undefined
       }
     >
-      {/* Paper micro texture */}
       <div style={{
         position: 'absolute',
         inset: 0,
@@ -137,7 +125,6 @@ export default function PlayingCard({
         pointerEvents: 'none',
       }} />
 
-      {/* Top-left */}
       <div style={{
         position: 'absolute',
         top: 5,
@@ -154,7 +141,6 @@ export default function PlayingCard({
         <span style={{ fontSize: s.fontSize * 0.85, color, lineHeight: 1 }}>{suit}</span>
       </div>
 
-      {/* Center suit */}
       <div style={{
         position: 'absolute',
         inset: 0,
@@ -166,7 +152,6 @@ export default function PlayingCard({
         <span style={{ fontSize: s.centerSize, color, opacity: 0.85 }}>{suit}</span>
       </div>
 
-      {/* Bottom-right (rotated 180) */}
       <div style={{
         position: 'absolute',
         bottom: 5,
@@ -184,7 +169,6 @@ export default function PlayingCard({
         <span style={{ fontSize: s.fontSize * 0.85, color, lineHeight: 1 }}>{suit}</span>
       </div>
 
-      {/* Winner shimmer overlay */}
       {isWinner && (
         <div style={{
           position: 'absolute',
@@ -197,3 +181,5 @@ export default function PlayingCard({
     </div>
   )
 }
+
+export default memo(PlayingCard)
