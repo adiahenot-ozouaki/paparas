@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import type { Screen, Card as GameCard } from '../types'
 import {
@@ -16,8 +16,7 @@ import { IconButton } from '../components/ui'
 import { X, RotateCcw } from 'lucide-react'
 
 /**
- * Table freestyle — bac à sable UI.
- * Cartes + 4 sièges uniquement : pas de points, cash, banque, claim, ni textes de statut.
+ * Table freestyle — bac à sable UI (perf-tuned).
  */
 export default function FreestyleGameTableScreen({
   onNavigate,
@@ -36,9 +35,9 @@ export default function FreestyleGameTableScreen({
   const reduceMotion = useReducedMotion()
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null)
 
+  const phase = roundState.phase
   const currentPlayerIndex = getCurrentPlayerIndex(roundState)
-  const isHumanTurn =
-    roundState.phase === 'playing' && currentPlayerIndex === HUMAN_INDEX
+  const isHumanTurn = phase === 'playing' && currentPlayerIndex === HUMAN_INDEX
   const requestedSuit = roundState.currentTrick?.requestedSuit ?? null
   const humanHand = roundState.hands[HUMAN_INDEX] ?? []
   const humanIsBanked = roundState.bankedPlayers.includes(HUMAN_INDEX)
@@ -47,9 +46,15 @@ export default function FreestyleGameTableScreen({
     roundState.currentTrick.requestedSuit !== null &&
     roundState.currentTrick.starterIndex === HUMAN_INDEX
 
-  const playableCards = isHumanTurn ? getPlayableCards(humanHand, requestedSuit) : []
-  const isCardPlayable = (card: GameCard) =>
-    playableCards.some(c => c.suit === card.suit && c.value === card.value)
+  const playableCards = useMemo(
+    () => (isHumanTurn ? getPlayableCards(humanHand, requestedSuit) : []),
+    [isHumanTurn, humanHand, requestedSuit],
+  )
+
+  const isCardPlayable = useCallback(
+    (card: GameCard) => playableCards.some(c => c.suit === card.suit && c.value === card.value),
+    [playableCards],
+  )
 
   useEffect(() => {
     startNewGame()
@@ -58,10 +63,10 @@ export default function FreestyleGameTableScreen({
   }, [])
 
   useEffect(() => {
-    if (roundState.phase !== 'playing') return
+    if (phase !== 'playing') return
     if (currentPlayerIndex === null || currentPlayerIndex === HUMAN_INDEX) return
 
-    const timer = setTimeout(() => {
+    const timer = window.setTimeout(() => {
       setRoundState((prev: RoundState) => {
         if (prev.phase !== 'playing') return prev
         const index = getCurrentPlayerIndex(prev)
@@ -81,67 +86,78 @@ export default function FreestyleGameTableScreen({
       })
     }, 700)
 
-    return () => clearTimeout(timer)
-  }, [roundState, currentPlayerIndex, setRoundState])
+    return () => window.clearTimeout(timer)
+  }, [phase, currentPlayerIndex, setRoundState])
 
   useEffect(() => {
-    if (roundState.phase !== 'trickWon') return
-    const timer = setTimeout(() => {
+    if (phase !== 'trickWon') return
+    const timer = window.setTimeout(() => {
       setRoundState((prev: RoundState) =>
         prev.phase === 'trickWon' ? resolveTrick(prev, stakeConfig) : prev,
       )
     }, 900)
-    return () => clearTimeout(timer)
-  }, [roundState, setRoundState, stakeConfig])
+    return () => window.clearTimeout(timer)
+  }, [phase, setRoundState, stakeConfig])
 
   useEffect(() => {
-    if (roundState.phase !== 'roundEnd' && roundState.phase !== 'specialWin') return
-    const timer = setTimeout(() => {
+    if (phase !== 'roundEnd' && phase !== 'specialWin') return
+    const timer = window.setTimeout(() => {
       startNextRound()
       setSelectedCardIndex(null)
     }, 1100)
-    return () => clearTimeout(timer)
-  }, [roundState.phase, startNextRound])
+    return () => window.clearTimeout(timer)
+  }, [phase, startNextRound])
 
-  function playCardAtIndex(index: number) {
-    const card = humanHand[index]
-    setRoundState((prev: RoundState) => playCard(prev, HUMAN_INDEX, card))
-    setSelectedCardIndex(null)
-  }
+  const playCardAtIndex = useCallback(
+    (index: number) => {
+      const card = humanHand[index]
+      setRoundState((prev: RoundState) => playCard(prev, HUMAN_INDEX, card))
+      setSelectedCardIndex(null)
+    },
+    [humanHand, setRoundState],
+  )
 
-  function handleCardSelect(index: number) {
-    if (!isHumanTurn) return
-    if (!isCardPlayable(humanHand[index])) return
-    setSelectedCardIndex(prev => (prev === index ? null : index))
-  }
+  const handleCardSelect = useCallback(
+    (index: number) => {
+      if (!isHumanTurn) return
+      if (!isCardPlayable(humanHand[index])) return
+      setSelectedCardIndex(prev => (prev === index ? null : index))
+    },
+    [isHumanTurn, isCardPlayable, humanHand],
+  )
 
-  function handlePlayCard() {
+  const handlePlayCard = useCallback(() => {
     if (selectedCardIndex === null || !isHumanTurn) return
     playCardAtIndex(selectedCardIndex)
-  }
+  }, [selectedCardIndex, isHumanTurn, playCardAtIndex])
 
-  function attemptPlayCard(index: number) {
-    if (!isHumanTurn) return
-    if (!isCardPlayable(humanHand[index])) return
-    playCardAtIndex(index)
-  }
+  const attemptPlayCard = useCallback(
+    (index: number) => {
+      if (!isHumanTurn) return
+      if (!isCardPlayable(humanHand[index])) return
+      playCardAtIndex(index)
+    },
+    [isHumanTurn, isCardPlayable, humanHand, playCardAtIndex],
+  )
 
-  function handleRedeal() {
+  const handleRedeal = useCallback(() => {
     startNewGame()
     setSelectedCardIndex(null)
-  }
+  }, [startNewGame])
+
+  const handleQuit = useCallback(() => onNavigate('gameMode'), [onNavigate])
 
   return (
     <motion.div
       className="felt-bg table-screen freestyle-table"
       initial={reduceMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: 0.28, ease: [0.16, 1, 0.3, 1] }}
     >
       <div className="table-screen-pattern" aria-hidden />
 
       <header className="freestyle-hud">
-        <IconButton size="sm" aria-label="Quitter le freestyle" title="Quitter" onClick={() => onNavigate('gameMode')}>
+        <IconButton size="sm" aria-label="Quitter le freestyle" title="Quitter" onClick={handleQuit}>
           <X size={16} strokeWidth={2} className="kora-icon" aria-hidden />
         </IconButton>
         <span className="freestyle-hud-label font-display">FREESTYLE</span>
@@ -167,14 +183,16 @@ export default function FreestyleGameTableScreen({
           selectedCardIndex={selectedCardIndex}
           canClaim={false}
           isCardPlayable={isCardPlayable}
-          isPlaying={roundState.phase === 'playing'}
+          isPlaying={phase === 'playing'}
           compactMode
           onCardSelect={handleCardSelect}
           onAttemptPlay={attemptPlayCard}
           onPlayCard={handlePlayCard}
-          onClaimVictory={() => undefined}
+          onClaimVictory={noop}
         />
       </div>
     </motion.div>
   )
 }
+
+function noop() {}
