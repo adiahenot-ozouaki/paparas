@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { memo, useRef, useState } from 'react'
 import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
 import type { Card as GameCard } from '../../types'
 import { HUMAN_INDEX } from '../../game/GameContext'
@@ -42,7 +42,7 @@ interface DragInfo {
   dy: number
 }
 
-export function PlayerHand({
+function PlayerHand({
   players,
   hand,
   isHumanTurn,
@@ -245,3 +245,6 @@ export function PlayerHand({
     </div>
   )
 }
+
+export default memo(PlayerHand)
+export { PlayerHand }
