@@ -15,6 +15,8 @@ import './screens/screens-layout.css'
 import './theme/p1-unified.css'
 import './theme/p2-a11y.css'
 import './theme/p3-polish.css'
+import './theme/clean-layout.css'
+import './theme/clean-bridge.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

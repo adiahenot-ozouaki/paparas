@@ -1,0 +1,29 @@
+[data-theme='light'] .top-bar {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(243, 239, 230, 0.94) 100%);
+  border-bottom-color: var(--kora-card-border);
+}
+
+[data-theme='light'] .top-bar-brand-title {
+  color: var(--kora-text);
+}
+
+[data-theme='light'] .top-bar-brand-sub {
+  color: var(--kora-muted);
+}
+
+[data-theme='light'] .top-bar-icon-btn {
+  background: color-mix(in srgb, var(--kora-surface) 80%, transparent);
+  border-color: var(--kora-card-border);
+  color: var(--kora-muted);
+}
+
+[data-theme='light'] .top-bar-icon-btn.is-active {
+  background: color-mix(in srgb, var(--kora-gold) 14%, transparent);
+  border-color: var(--kora-border-gold);
+  color: var(--kora-gold-dark);
+}
+
+[data-theme='light'] .app-rail {
+  background: color-mix(in srgb, var(--kora-surface) 70%, transparent);
+  border-left-color: var(--kora-card-border);
+}
