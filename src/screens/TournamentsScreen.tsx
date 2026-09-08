@@ -16,6 +16,7 @@ import {
   listTournamentTables,
   registerForTournament,
   unregisterFromTournament,
+  spawnTournamentTables,
   statusLabel,
 } from '../lib/tournaments/service'
 import { setActiveOnlineTableId, setOnlineSpectate } from '../lib/online/session'
@@ -162,6 +163,38 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
     setBusyId(null)
   }
 
+  async function handleSpawnTables(id: string) {
+    setBusyId(id)
+    setError(null)
+    setInfo(null)
+    if (!user) {
+      setError('Connectez-vous pour lancer les tables')
+      setBusyId(null)
+      onNavigate('auth')
+      return
+    }
+    const res = await spawnTournamentTables(id)
+    if (!res.ok) {
+      setError(res.error ?? 'Generation des tables impossible')
+    } else if (res.already) {
+      setInfo((res.tablesExisting ?? 0) + ' table(s) deja en place — rafraichissement')
+      await refresh()
+      await loadDetails(id)
+      setExpandedId(id)
+    } else {
+      setInfo(
+        (res.tablesCreated ?? 0) +
+          ' table(s) creee(s) pour ' +
+          (res.playerCount ?? 0) +
+          ' joueur(s)',
+      )
+      await refresh()
+      await loadDetails(id)
+      setExpandedId(id)
+    }
+    setBusyId(null)
+  }
+
   function observeTable(tableId: string) {
     setOnlineSpectate(true)
     setActiveOnlineTableId(tableId)
@@ -278,6 +311,16 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
                       {full ? 'Complet' : busyId === t.id ? '...' : "S'inscrire"}
                     </UiButton>
                   )}
+                  {(t.status === 'open' || t.status === 'upcoming' || t.status === 'live') && (
+                    <UiButton
+                      size="sm"
+                      variant="secondary"
+                      disabled={busyId === t.id}
+                      onClick={() => void handleSpawnTables(t.id)}
+                    >
+                      {t.status === 'live' ? 'Tables' : 'Lancer tables'}
+                    </UiButton>
+                  )}
                   <UiButton size="sm" variant="ghost" onClick={() => toggleExpand(t.id)}>
                     {open ? (
                       <>
@@ -341,8 +384,7 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
                       <p className="tourney-section-label">Tables / matchs</p>
                       {matchTables.length === 0 && detailLoading !== t.id ? (
                         <p className="tourney-empty-hint">
-                          Aucune table liee pour l'instant. Les matchs apparaitront ici une fois le
-                          tournoi en cours.
+                          Aucune table liee. Cliquez « Lancer tables » (min. 2 inscrits).
                         </p>
                       ) : (
                         <ul className="tourney-matches">
