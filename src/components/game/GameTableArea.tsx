@@ -9,6 +9,7 @@ interface GameTableAreaProps {
   roundState: RoundState
   currentPlayerIndex: number | null
   compactMode: boolean
+  dealId?: number
 }
 
 function GameTableArea({
@@ -16,6 +17,7 @@ function GameTableArea({
   roundState,
   currentPlayerIndex,
   compactMode,
+  dealId = 0,
 }: GameTableAreaProps) {
   const stackSize = compactMode ? 'md' : 'sm'
   const sideColumnWidth = compactMode ? 88 : 78
@@ -67,6 +69,7 @@ function GameTableArea({
           playedCards={playLog[2] ?? []}
           playedCardsHighlightLast={phase === 'trickWon' && lastWinner === 2}
           stackSize={stackSize}
+          dealId={dealId}
         />
       </div>
 
@@ -85,6 +88,7 @@ function GameTableArea({
           playedCards={playLog[3] ?? []}
           playedCardsHighlightLast={phase === 'trickWon' && lastWinner === 3}
           stackSize={stackSize}
+          dealId={dealId}
         />
       </div>
 
@@ -103,6 +107,7 @@ function GameTableArea({
           playedCards={playLog[1] ?? []}
           playedCardsHighlightLast={phase === 'trickWon' && lastWinner === 1}
           stackSize={stackSize}
+          dealId={dealId}
         />
       </div>
 
