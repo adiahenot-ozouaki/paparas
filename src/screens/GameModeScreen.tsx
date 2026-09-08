@@ -9,7 +9,7 @@ import {
   setPendingJoinCode,
   setPendingJoinTableId,
 } from '../lib/online/session'
-import { Zap, Bot, Globe } from '../components/icons'
+import { Zap, Bot, Globe, Sparkles } from '../components/icons'
 import {
   AlertBanner,
   BackButton,
@@ -48,7 +48,7 @@ function humanizeListError(raw: string): string {
 
 export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const { user } = useAuth()
-  const { configureGame } = useGame()
+  const { configureGame, startNewGame } = useGame()
   const [myTables, setMyTables] = useState<MyActiveTable[]>([])
   const [openTables, setOpenTables] = useState<OpenLobbyTable[]>([])
   const [listError, setListError] = useState<string | null>(null)
@@ -95,6 +95,19 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
   function startTraining() {
     configureGame(TRAINING_PRESET)
     onNavigate('lobby')
+  }
+
+  function startFreestyle() {
+    configureGame({
+      baseStake: 100,
+      startingCapital: 5000,
+      deckVariant: 'as',
+      endMode: 'fixedRounds',
+      maxRounds: 99,
+      targetCapital: 99_999,
+    })
+    startNewGame()
+    onNavigate('freestyleTable')
   }
 
   function openOnlineCreate() {
@@ -177,6 +190,17 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
               desc="Paquet court (3–8), petites mises — idéal pour les règles."
               meta="Variante 8 · mise 100 · 5 rounds"
               onClick={startTraining}
+            />
+
+            <ModeCard
+              icon={<Sparkles size={22} className="kora-icon" />}
+              title="Table freestyle"
+              badge="TEST UI"
+              badgeTone="green"
+              accent="var(--kora-green)"
+              desc="Cartes et 4 joueurs seulement — sans points, cash ni textes. Bac à sable UI."
+              meta="As · pas de banque · donne auto"
+              onClick={startFreestyle}
             />
 
             <SectionCard variant="dashed" onClick={() => onNavigate('stakeConfig')}>
