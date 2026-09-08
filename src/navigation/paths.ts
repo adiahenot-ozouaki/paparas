@@ -20,6 +20,7 @@ export const SCREEN_PATH: Record<Screen, string> = {
   stats: '/stats',
   achievements: '/achievements',
   rules: '/rules',
+  tournaments: '/tournaments',
 }
 
 const PATH_SCREEN: Record<string, Screen> = Object.fromEntries(
