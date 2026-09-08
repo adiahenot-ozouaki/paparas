@@ -97,18 +97,7 @@ function OpponentPanel({
             className={isDealing ? 'opp-deal-card is-dealing' : 'opp-deal-card'}
             style={{ ['--deal-i' as string]: i }}
           >
-            <PlayingCard
-              suit="♠"
-              value="A"
-              state="back"
-              size="xs"
-              rotated={isVertical}
-              style={
-                position === 'top'
-                  ? { transform: `rotate(${(i - Math.max(cardsLeft - 1, 1) / 2) * 3}deg)` }
-                  : { marginTop: i > 0 ? -20 : 0 }
-              }
-            />
+            <PlayingCard suit="♠" value="A" state="back" size="xs" rotated={isVertical} />
           </div>
         ))}
       </div>
