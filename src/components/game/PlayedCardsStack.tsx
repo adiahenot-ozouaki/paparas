@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import PlayingCard from '../PlayingCard'
 import type { Card as GameCard } from '../../types'
@@ -7,19 +8,21 @@ const DIMENSIONS = {
   md: { width: 65, height: 92, offset: 28 },
 } as const
 
-export function PlayedCardsStack({
-  cards,
-  highlightLast,
-  orientation,
-  size = 'sm',
-  showLeadIndicator = false,
-}: {
+type Props = {
   cards: GameCard[]
   highlightLast: boolean
   orientation: 'horizontal' | 'vertical'
   size?: 'sm' | 'md'
   showLeadIndicator?: boolean
-}) {
+}
+
+function PlayedCardsStack({
+  cards,
+  highlightLast,
+  orientation,
+  size = 'sm',
+  showLeadIndicator = false,
+}: Props) {
   const reduceMotion = useReducedMotion()
   const { width, height, offset: OFFSET } = DIMENSIONS[size]
   const isHorizontal = orientation === 'horizontal'
@@ -52,43 +55,34 @@ export function PlayedCardsStack({
       <AnimatePresence initial={false}>
         {cards.map((card, i) => {
           const isLast = i === cards.length - 1
-          const key = `${card.suit}-${card.value}-${i}`
+          const key = `${i}-${card.suit}-${card.value}`
           return (
             <motion.div
               key={key}
-              className="played-stack-card"
+              className={`played-stack-card${isLast && highlightLast ? ' is-winner' : ''}${isLast ? '' : ' is-dim'}`}
               initial={
-                reduceMotion
+                reduceMotion || !isLast
                   ? false
-                  : isLast
-                    ? {
-                        opacity: 0,
-                        scale: 0.72,
-                        y: isHorizontal ? -28 : -18,
-                        x: isHorizontal ? 12 : 0,
-                        rotate: isHorizontal ? -8 : 6,
-                      }
-                    : false
+                  : {
+                      opacity: 0,
+                      scale: 0.78,
+                      y: isHorizontal ? -22 : -14,
+                      rotate: isHorizontal ? -6 : 4,
+                    }
               }
               animate={{
-                opacity: isLast ? 1 : 0.88,
+                opacity: 1,
                 scale: isLast && highlightLast ? 1.04 : 1,
                 y: 0,
-                x: 0,
                 rotate: 0,
-                filter: isLast ? 'brightness(1)' : 'brightness(0.88)',
               }}
-              exit={
-                reduceMotion
-                  ? { opacity: 0 }
-                  : { opacity: 0, scale: 0.85, y: -12, transition: { duration: 0.18 } }
-              }
+              exit={reduceMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9, transition: { duration: 0.15 } }}
               transition={
                 reduceMotion
                   ? { duration: 0 }
                   : isLast
-                    ? { type: 'spring', stiffness: 420, damping: 22, mass: 0.7 }
-                    : { duration: 0.2 }
+                    ? { type: 'spring', stiffness: 420, damping: 24, mass: 0.65 }
+                    : { duration: 0.15 }
               }
               style={{
                 position: 'absolute',
@@ -104,30 +98,9 @@ export function PlayedCardsStack({
                 size={size}
               />
               {isLast && showLeadIndicator && (
-                <motion.div
-                  className="played-stack-lead"
-                  title="A fixé la couleur demandée de ce pli"
-                  initial={reduceMotion ? false : { scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ type: 'spring', stiffness: 500, damping: 20, delay: 0.05 }}
-                  style={{
-                    position: 'absolute',
-                    top: -6,
-                    right: -6,
-                    width: 15,
-                    height: 15,
-                    borderRadius: '50%',
-                    background: '#4CAF76',
-                    border: '1.5px solid #0B0D10',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 8,
-                    boxShadow: '0 0 6px rgba(76,175,118,0.7)',
-                  }}
-                >
+                <div className="played-stack-lead" title="A fixé la couleur demandée de ce pli" aria-hidden>
                   🧭
-                </motion.div>
+                </div>
               )}
             </motion.div>
           )
@@ -136,3 +109,6 @@ export function PlayedCardsStack({
     </div>
   )
 }
+
+export default memo(PlayedCardsStack)
+export { PlayedCardsStack }
