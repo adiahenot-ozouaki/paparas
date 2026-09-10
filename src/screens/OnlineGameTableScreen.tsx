@@ -1,1 +1,1 @@
-SEE_ARTIFACTS
+/home/workdir/artifacts/leave-fix/OnlineGameTableScreen.tsx
