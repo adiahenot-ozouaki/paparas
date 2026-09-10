@@ -1,0 +1,44 @@
+/* Freestyle table — chrome minimal */
+
+.freestyle-table .table-hud,
+.freestyle-table .player-hand-info,
+.freestyle-table .player-hand-hint,
+.freestyle-table .player-hand-bank-banner,
+.freestyle-table .player-hand-claim-btn {
+  display: none !important;
+}
+
+.freestyle-hud {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  padding-top: max(10px, env(safe-area-inset-top, 0px));
+  pointer-events: none;
+}
+
+.freestyle-hud > * {
+  pointer-events: auto;
+}
+
+.freestyle-hud-label {
+  font-size: 11px;
+  letter-spacing: 0.18em;
+  color: rgba(240, 213, 138, 0.75);
+  opacity: 0.85;
+}
+
+.freestyle-table .player-hand-actions {
+  min-height: 48px;
+}
+
+.freestyle-table .player-hand-play-btn {
+  font-size: 12px;
+  padding: 10px 18px;
+}

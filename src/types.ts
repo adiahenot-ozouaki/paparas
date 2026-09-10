@@ -12,6 +12,7 @@ export type Screen =
   | 'onlineGameTable'
   | 'auth'
   | 'gameTable'
+  | 'freestyleTable'
   | 'roundResult'
   | 'victory'
   | 'defeat'
@@ -20,6 +21,7 @@ export type Screen =
   | 'stats'
   | 'achievements'
   | 'rules'
+  | 'tournaments'
 
 export type Suit = '♥' | '♦' | '♣' | '♠'
 

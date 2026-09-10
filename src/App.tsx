@@ -1,12 +1,14 @@
-import { useState } from 'react'
-import type { Screen } from './types'
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ThemeProvider } from './theme/ThemeContext'
 import { AuthProvider } from './auth/AuthContext'
 import { GameProvider } from './game/GameContext'
 import { ErrorBoundary } from './components/ErrorBoundary'
-import BottomNav from './components/BottomNav'
-import SideNav from './components/SideNav'
 import AchievementToast from './components/AchievementToast'
+import BareLayout from './layouts/BareLayout'
+import ChromeLayout from './layouts/ChromeLayout'
+import { AuthPage, screenPage } from './navigation/screenPage'
+import { pathFor } from './navigation/paths'
+
 import SplashScreen from './screens/SplashScreen'
 import HomeScreen from './screens/HomeScreen'
 import GameModeScreen from './screens/GameModeScreen'
@@ -24,40 +26,29 @@ import LeaderboardScreen from './screens/LeaderboardScreen'
 import StatsScreen from './screens/StatsScreen'
 import AchievementsScreen from './screens/AchievementsScreen'
 import RulesScreen from './screens/RulesScreen'
+import FreestyleGameTableScreen from './screens/FreestyleGameTableScreen'
+import TournamentsScreen from './screens/TournamentsScreen'
 
-const NO_NAV_SCREENS: Screen[] = [
-  'splash',
-  'gameTable',
-  'onlineGameTable',
-  'roundResult',
-  'victory',
-  'defeat',
-  'lobby',
-  'onlineLobby',
-  'auth',
-  'gameMode',
-  'stakeConfig',
-  'rules',
-]
+const SplashPage = screenPage(SplashScreen)
+const HomePage = screenPage(HomeScreen)
+const GameModePage = screenPage(GameModeScreen)
+const StakeConfigPage = screenPage(StakeConfigScreen)
+const LobbyPage = screenPage(LobbyScreen)
+const OnlineLobbyPage = screenPage(OnlineLobbyScreen)
+const OnlineGameTablePage = screenPage(OnlineGameTableScreen)
+const GameTablePage = screenPage(GameTableScreen)
+const RoundResultPage = screenPage(RoundResultScreen)
+const VictoryPage = screenPage(VictoryScreen)
+const DefeatPage = screenPage(DefeatScreen)
+const ProfilePage = screenPage(ProfileScreen)
+const LeaderboardPage = screenPage(LeaderboardScreen)
+const StatsPage = screenPage(StatsScreen)
+const AchievementsPage = screenPage(AchievementsScreen)
+const RulesPage = screenPage(RulesScreen)
+const FreestylePage = screenPage(FreestyleGameTableScreen)
+const TournamentsPage = screenPage(TournamentsScreen)
 
 export default function App() {
-  const [screen, setScreen] = useState<Screen>('splash')
-  const [authReturnTo, setAuthReturnTo] = useState<Screen>('home')
-
-  const navigate = (s: Screen) => {
-    if (s === 'auth') {
-      if (screen === 'gameMode' || screen === 'onlineLobby' || screen === 'onlineGameTable') {
-        setAuthReturnTo('onlineLobby')
-      } else if (screen === 'profile') {
-        setAuthReturnTo('profile')
-      } else {
-        setAuthReturnTo('home')
-      }
-    }
-    setScreen(s)
-  }
-  const showNav = !NO_NAV_SCREENS.includes(screen)
-
   return (
     <ThemeProvider>
       <div className="app-root">
@@ -68,31 +59,36 @@ export default function App() {
             <AuthProvider>
               <GameProvider>
                 <AchievementToast />
-                <div className={`app-layout${showNav ? ' app-layout--with-nav' : ''}`}>
-                  {showNav && <SideNav active={screen} onNavigate={navigate} />}
-                  <div className="app-main">
-                    <div key={screen} className="anim-fade-in app-screen">
-                      {screen === 'splash' && <SplashScreen onNavigate={navigate} />}
-                      {screen === 'home' && <HomeScreen onNavigate={navigate} />}
-                      {screen === 'gameMode' && <GameModeScreen onNavigate={navigate} />}
-                      {screen === 'stakeConfig' && <StakeConfigScreen onNavigate={navigate} />}
-                      {screen === 'lobby' && <LobbyScreen onNavigate={navigate} />}
-                      {screen === 'onlineLobby' && <OnlineLobbyScreen onNavigate={navigate} />}
-                      {screen === 'onlineGameTable' && <OnlineGameTableScreen onNavigate={navigate} />}
-                      {screen === 'auth' && <AuthScreen onNavigate={navigate} returnTo={authReturnTo} />}
-                      {screen === 'gameTable' && <GameTableScreen onNavigate={navigate} />}
-                      {screen === 'roundResult' && <RoundResultScreen onNavigate={navigate} />}
-                      {screen === 'victory' && <VictoryScreen onNavigate={navigate} />}
-                      {screen === 'defeat' && <DefeatScreen onNavigate={navigate} />}
-                      {screen === 'profile' && <ProfileScreen onNavigate={navigate} />}
-                      {screen === 'leaderboard' && <LeaderboardScreen onNavigate={navigate} />}
-                      {screen === 'stats' && <StatsScreen onNavigate={navigate} />}
-                      {screen === 'achievements' && <AchievementsScreen onNavigate={navigate} />}
-                      {screen === 'rules' && <RulesScreen onNavigate={navigate} />}
-                    </div>
-                    {showNav && <BottomNav active={screen} onNavigate={navigate} />}
-                  </div>
-                </div>
+                <BrowserRouter>
+                  <Routes>
+                    <Route element={<BareLayout />}>
+                      <Route path={pathFor('splash')} element={<SplashPage />} />
+                      <Route path={pathFor('auth')} element={<AuthPage Comp={AuthScreen} />} />
+                      <Route path={pathFor('roundResult')} element={<RoundResultPage />} />
+                      <Route path={pathFor('victory')} element={<VictoryPage />} />
+                      <Route path={pathFor('defeat')} element={<DefeatPage />} />
+                      <Route path={pathFor('freestyleTable')} element={<FreestylePage />} />
+                    </Route>
+
+                    <Route element={<ChromeLayout />}>
+                      <Route path={pathFor('home')} element={<HomePage />} />
+                      <Route path={pathFor('gameMode')} element={<GameModePage />} />
+                      <Route path={pathFor('stakeConfig')} element={<StakeConfigPage />} />
+                      <Route path={pathFor('lobby')} element={<LobbyPage />} />
+                      <Route path={pathFor('onlineLobby')} element={<OnlineLobbyPage />} />
+                      <Route path={pathFor('onlineGameTable')} element={<OnlineGameTablePage />} />
+                      <Route path={pathFor('gameTable')} element={<GameTablePage />} />
+                      <Route path={pathFor('profile')} element={<ProfilePage />} />
+                      <Route path={pathFor('leaderboard')} element={<LeaderboardPage />} />
+                      <Route path={pathFor('stats')} element={<StatsPage />} />
+                      <Route path={pathFor('achievements')} element={<AchievementsPage />} />
+                      <Route path={pathFor('rules')} element={<RulesPage />} />
+                      <Route path={pathFor('tournaments')} element={<TournamentsPage />} />
+                    </Route>
+
+                    <Route path="*" element={<Navigate to={pathFor('splash')} replace />} />
+                  </Routes>
+                </BrowserRouter>
               </GameProvider>
             </AuthProvider>
           </ErrorBoundary>

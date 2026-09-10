@@ -12,7 +12,7 @@ import {
   rotateRoundStateForView,
   type SeatWithProfile,
 } from '../lib/online/api'
-import { getActiveOnlineTableId, setActiveOnlineTableId } from '../lib/online/session'
+import { getActiveOnlineTableId, setActiveOnlineTableId, getOnlineSpectate, setOnlineSpectate } from '../lib/online/session'
 import { humanizeError } from '../lib/online/errors'
 import { supabase } from '../lib/supabase/client'
 import { GameTableHud } from '../components/game/GameTableHud'
@@ -22,31 +22,20 @@ import { SpecialWinOverlayWrapper } from '../components/game/SpecialWinOverlayWr
 import { RoundEndRevealOverlay } from '../components/game/RoundEndRevealOverlay'
 import { BankConfirmOverlay } from '../components/game/BankConfirmOverlay'
 import { PauseOverlay } from '../components/game/PauseOverlay'
-
-// ==========================================================================
-// OnlineGameTableScreen — serveur autoritaire (callEngine + Realtime).
-// Vue pivotée : mon siège = sud (index 0).
-// Feedback : coup rejeté, lag, reconnexion.
-// ==========================================================================
+import { TableChat } from '../components/game/TableChat'
+import { UiButton } from '../components/ui'
 
 const VIEW_HUMAN = 0
-
 type ConnStatus = 'connected' | 'reconnecting' | 'offline'
 
 function rejectMessage(action: string, raw: string | undefined): string {
-  const base = humanizeError(raw, 'Action refusée par le serveur.')
-  if (raw && /not your turn|pas votre tour|wrong turn/i.test(raw)) {
-    return 'Ce n’est plus votre tour — état resynchronisé.'
-  }
-  if (raw && /illegal|not playable|invalid card|carte/i.test(raw)) {
-    return 'Coup illégal — carte non jouable dans ce contexte.'
-  }
-  if (raw && /already|déjà/i.test(raw)) {
-    return 'Action déjà prise en compte (un autre client l’a validée).'
-  }
-  if (action === 'play_card') return `Coup rejeté : ${base}`
-  if (action === 'bank_player') return `Banque refusée : ${base}`
-  if (action === 'claim_victory') return `Réclamation refusée : ${base}`
+  const base = humanizeError(raw, 'Action refusee par le serveur.')
+  if (raw && /not your turn|pas votre tour|wrong turn/i.test(raw)) return 'Ce n est plus votre tour.'
+  if (raw && /illegal|not playable|invalid card|carte/i.test(raw)) return 'Coup illegal.'
+  if (action === 'play_card') return 'Coup rejete : ' + base
+  if (action === 'bank_player') return 'Banque refusee : ' + base
+  if (action === 'claim_victory') return 'Reclamation refusee : ' + base
+  if (action === 'leave_table') return 'Depart refuse : ' + base
   return base
 }
 
@@ -58,9 +47,12 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   const [roundNumber, setRoundNumber] = useState(1)
   const [seats, setSeats] = useState<SeatWithProfile[]>([])
   const [mySeat, setMySeat] = useState<number | null>(null)
+  const [isSpectating, setIsSpectating] = useState(() => getOnlineSpectate())
   const [baseStake, setBaseStake] = useState(500)
   const [selectedCardIndex, setSelectedCardIndex] = useState<number | null>(null)
   const [confirmingBank, setConfirmingBank] = useState(false)
+  const [confirmingLeave, setConfirmingLeave] = useState(false)
+  const [leaving, setLeaving] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const [compactMode, setCompactMode] = useState(true)
   const [busy, setBusy] = useState(false)
@@ -71,7 +63,6 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
     typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'connected',
   )
   const [lastSyncAt, setLastSyncAt] = useState<number>(Date.now())
-  const [actionLagMs, setActionLagMs] = useState<number | null>(null)
 
   const resolvingTrickRef = useRef(false)
   const syncingRef = useRef(false)
@@ -92,12 +83,8 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   }, [])
 
   const applyEngineBody = useCallback((body: Record<string, unknown>) => {
-    if (body.state) {
-      setPhysicalState(parsePublicState(body.state))
-    }
-    if (typeof body.roundNumber === 'number') {
-      setRoundNumber(body.roundNumber)
-    }
+    if (body.state) setPhysicalState(parsePublicState(body.state))
+    if (typeof body.roundNumber === 'number') setRoundNumber(body.roundNumber)
     setLastSyncAt(Date.now())
     failStreakRef.current = 0
     setConnStatus(prev => (prev === 'offline' ? prev : 'connected'))
@@ -106,33 +93,17 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   const pullState = useCallback(async () => {
     if (!tableId || syncingRef.current) return
     syncingRef.current = true
-    const t0 = performance.now()
     try {
       const { ok, body, status } = await callEngine('get_state', tableId)
-      if (ok) {
-        applyEngineBody(body)
-      } else {
+      if (ok) applyEngineBody(body)
+      else {
         failStreakRef.current += 1
-        if (status === 401) {
-          showError('Session expirée. Reconnectez-vous.')
-        } else if (failStreakRef.current >= 2) {
-          setConnStatus(navigator.onLine ? 'reconnecting' : 'offline')
-        }
-        if (body.error) {
-          if (failStreakRef.current >= 3) {
-            showError(humanizeError(String(body.error), 'Synchronisation impossible.'))
-          }
-        }
+        if (status === 401) showError('Session expiree.')
+        else if (failStreakRef.current >= 2) setConnStatus(navigator.onLine ? 'reconnecting' : 'offline')
       }
-      const lag = Math.round(performance.now() - t0)
-      if (lag > 800) setActionLagMs(lag)
-      else setActionLagMs(null)
-    } catch (e) {
+    } catch {
       failStreakRef.current += 1
       setConnStatus(navigator.onLine ? 'reconnecting' : 'offline')
-      if (failStreakRef.current >= 3) {
-        showError(humanizeError(e instanceof Error ? e.message : String(e), 'Connexion perdue.'))
-      }
     } finally {
       syncingRef.current = false
     }
@@ -145,28 +116,20 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
       if (!seatRes.error) {
         setSeats(seatRes.seats)
         const mine = seatRes.seats.find(s => s.user_id === user.id)
-        if (mine) setMySeat(mine.seat_index)
+        if (mine) {
+          setMySeat(mine.seat_index)
+          setIsSpectating(false)
+          setOnlineSpectate(false)
+        } else if (getOnlineSpectate()) {
+          setMySeat(0)
+          setIsSpectating(true)
+        }
       }
       if (tableRes.table) setBaseStake(tableRes.table.base_stake)
     } catch {
-      // seats non bloquant
+      /* ignore */
     }
   }, [tableId, user])
-
-  useEffect(() => {
-    const onOff = () => setConnStatus('offline')
-    const onOn = () => {
-      setConnStatus('reconnecting')
-      void pullState()
-      void refreshSeats()
-    }
-    window.addEventListener('offline', onOff)
-    window.addEventListener('online', onOn)
-    return () => {
-      window.removeEventListener('offline', onOff)
-      window.removeEventListener('online', onOn)
-    }
-  }, [pullState, refreshSeats])
 
   useEffect(() => {
     if (authLoading) return
@@ -175,10 +138,9 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
       return
     }
     if (!tableId) {
-      onNavigate('onlineLobby')
+      onNavigate(getOnlineSpectate() ? 'tournaments' : 'onlineLobby')
       return
     }
-
     let cancelled = false
     ;(async () => {
       setLoading(true)
@@ -186,7 +148,6 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
       await pullState()
       if (!cancelled) setLoading(false)
     })()
-
     return () => {
       cancelled = true
     }
@@ -194,39 +155,19 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
 
   useEffect(() => {
     if (!tableId) return
-
     const channel = supabase
-      .channel(`table:${tableId}`)
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'kora_rounds', filter: `table_id=eq.${tableId}` },
-        () => {
-          void pullState()
-        },
-      )
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'kora_table_players', filter: `table_id=eq.${tableId}` },
-        () => {
-          void refreshSeats()
-        },
-      )
-      .subscribe(status => {
-        if (status === 'SUBSCRIBED') {
-          setConnStatus(prev => (prev === 'offline' ? prev : 'connected'))
-          failStreakRef.current = 0
-        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          setConnStatus(navigator.onLine ? 'reconnecting' : 'offline')
-        } else if (status === 'CLOSED') {
-          setConnStatus(navigator.onLine ? 'reconnecting' : 'offline')
-        }
+      .channel('table:' + tableId)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kora_rounds', filter: 'table_id=eq.' + tableId }, () => {
+        void pullState()
       })
-
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'kora_table_players', filter: 'table_id=eq.' + tableId }, () => {
+        void refreshSeats()
+      })
+      .subscribe()
     const poll = setInterval(() => {
       void pullState()
       void refreshSeats()
     }, 2500)
-
     return () => {
       clearInterval(poll)
       void supabase.removeChannel(channel)
@@ -234,13 +175,12 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   }, [tableId, pullState, refreshSeats])
 
   useEffect(() => {
-    if (!tableId || !physicalState || isPaused) return
+    if (!tableId || !physicalState || isPaused || isSpectating) return
     if (physicalState.phase !== 'trickWon') {
       resolvingTrickRef.current = false
       return
     }
     if (resolvingTrickRef.current) return
-
     resolvingTrickRef.current = true
     const timer = setTimeout(async () => {
       const { ok, body } = await callEngine('resolve_trick', tableId)
@@ -248,9 +188,8 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
       else await pullState()
       resolvingTrickRef.current = false
     }, 1200)
-
     return () => clearTimeout(timer)
-  }, [physicalState?.phase, tableId, isPaused, applyEngineBody, pullState])
+  }, [physicalState?.phase, tableId, isPaused, isSpectating, applyEngineBody, pullState])
 
   const viewState = useMemo(() => {
     if (!physicalState || mySeat === null) return null
@@ -264,8 +203,8 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
       const isMe = viewIdx === VIEW_HUMAN
       return {
         id: String(physicalIdx),
-        name: isMe ? 'Vous' : seat?.profile?.username ?? (seat ? 'Joueur' : '—'),
-        avatar: seat?.profile?.avatar ?? (isMe ? '🦅' : '∅'),
+        name: isMe ? (isSpectating ? 'Spectateur' : 'Vous') : seat?.profile?.username ?? (seat ? 'Joueur' : '—'),
+        avatar: seat?.profile?.avatar ?? '',
         capital: seat?.capital ?? 0,
         level: 1,
         cardsLeft: viewState?.hands[viewIdx]?.length ?? 0,
@@ -274,36 +213,43 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
         tricks: viewState?.trickWinners.filter(w => w === viewIdx).length ?? 0,
       }
     })
-  }, [seats, mySeat, viewState])
+  }, [seats, mySeat, viewState, isSpectating])
 
-  if (authLoading || loading || !viewState || mySeat === null) {
+  const myCapital = mySeat !== null ? seats.find(s => s.seat_index === mySeat)?.capital ?? 0 : 0
+  const roundInProgress =
+    !!physicalState && (physicalState.phase === 'playing' || physicalState.phase === 'trickWon')
+  const alreadyBanked =
+    !!physicalState && mySeat !== null && physicalState.bankedPlayers.includes(mySeat)
+
+  if (authLoading || loading || !viewState || (mySeat === null && !isSpectating)) {
     return (
       <div className="felt-bg table-screen table-screen--loading">
         <span className="table-loading-text">Chargement de la table…</span>
-        {connStatus !== 'connected' && (
-          <span className="table-loading-conn">
-            {connStatus === 'offline' ? 'Hors ligne' : 'Reconnexion…'}
-          </span>
-        )}
       </div>
     )
   }
 
   const currentViewPlayer = getCurrentPlayerIndex(viewState)
-  const isHumanTurn = viewState.phase === 'playing' && currentViewPlayer === VIEW_HUMAN
+  const isHumanTurn = !isSpectating && viewState.phase === 'playing' && currentViewPlayer === VIEW_HUMAN
   const requestedSuit = viewState.currentTrick?.requestedSuit ?? null
   const humanHand = viewState.hands[VIEW_HUMAN]
   const humanIsBanked = viewState.bankedPlayers.includes(VIEW_HUMAN)
   const isHumanLeader =
-    viewState.currentTrick !== null &&
+    !!viewState.currentTrick &&
     viewState.currentTrick.requestedSuit !== null &&
     viewState.currentTrick.starterIndex === VIEW_HUMAN
 
-  const playableCards = isHumanTurn ? getPlayableCards(humanHand.filter(c => c.state !== 'back'), requestedSuit) : []
+  const playableCards = isHumanTurn
+    ? getPlayableCards(
+        humanHand.filter(c => c.state !== 'back'),
+        requestedSuit,
+      )
+    : []
   const isCardPlayable = (card: GameCard) =>
     playableCards.some(c => c.suit === card.suit && c.value === card.value)
 
   const canBank =
+    !isSpectating &&
     viewState.phase === 'playing' &&
     !!viewState.currentTrick &&
     viewState.currentTrick.trickNumber < 3 &&
@@ -312,74 +258,35 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
     viewState.currentTrick.playedCards.length === 0
 
   const canClaim =
+    !isSpectating &&
     viewState.phase === 'playing' &&
     isHumanTurn &&
     !!viewState.currentTrick &&
     viewState.currentTrick.playedCards.length === 0 &&
     !humanIsBanked
 
-  let statusMessage: string | null = null
-  let statusTone: 'gold' | 'green' | 'muted' = 'muted'
-
-  if (busy) {
-    statusMessage = 'Envoi au serveur…'
-    statusTone = 'muted'
-  } else if (viewState.phase === 'roundEnd' && viewState.outcome?.kind === 'normal') {
-    const w = viewState.outcome.roundWinnerIndex
-    const name = w === VIEW_HUMAN ? 'Vous' : players[w]?.name ?? `Siège ${w}`
-    statusMessage = viewState.outcome.wonByClaim
-      ? '👑 Victoire réclamée · Round terminé'
-      : `${name} gagne · ${COMBO_LABEL[viewState.outcome.combo]}`
-    statusTone = 'gold'
-  } else if (viewState.phase === 'specialWin') {
-    statusMessage = 'Règle spéciale · Round arrêté'
-    statusTone = 'gold'
-  } else if (viewState.phase === 'trickWon' && viewState.lastTrickWinnerIndex !== null) {
-    const w = viewState.lastTrickWinnerIndex
-    statusMessage = w === VIEW_HUMAN ? 'Vous gagnez le pli' : `${players[w]?.name ?? 'Joueur'} gagne le pli`
-    statusTone = 'gold'
-  } else if (viewState.phase === 'playing') {
-    if (isHumanTurn && !humanIsBanked) {
-      statusMessage = isHumanLeader ? 'À toi de jouer · à la main' : 'À toi de jouer'
-      statusTone = 'gold'
-    } else if (requestedSuit) {
-      statusMessage = `Couleur demandée ${requestedSuit}`
-      statusTone = 'muted'
-    } else if (currentViewPlayer !== null && currentViewPlayer !== VIEW_HUMAN) {
-      statusMessage = `${players[currentViewPlayer]?.name ?? 'Joueur'} joue…`
-      statusTone = 'muted'
-    }
-  }
+  const statusMessage = isSpectating
+    ? 'Mode spectateur — lecture seule'
+    : leaving
+      ? 'Depart de la table…'
+      : busy
+        ? 'Envoi…'
+        : isHumanTurn
+          ? 'A toi de jouer'
+          : null
 
   async function runAction(action: Parameters<typeof callEngine>[0], extra: Record<string, unknown> = {}) {
-    if (!tableId || busy) return
-    if (connStatus === 'offline') {
-      showError('Hors ligne — impossible d’envoyer le coup. Réessayez quand la connexion revient.')
-      return
-    }
+    if (!tableId || busy || isSpectating || leaving) return
     setBusy(true)
-    setError(null)
-    const t0 = performance.now()
     try {
-      const { ok, body, status } = await callEngine(action, tableId, extra)
-      const lag = Math.round(performance.now() - t0)
-      setActionLagMs(lag > 600 ? lag : null)
-
-      if (ok) {
-        applyEngineBody(body)
-        if (lag > 1200) showToast(`Réponse lente (${lag} ms)`)
-      } else {
+      const { ok, body } = await callEngine(action, tableId, extra)
+      if (ok) applyEngineBody(body)
+      else {
         await pullState()
-        const msg = rejectMessage(action, body.error != null ? String(body.error) : undefined)
-        showError(msg)
-        if (status === 401) showToast('Reconnectez-vous')
-        else showToast('Coup non pris en compte')
+        showError(rejectMessage(action, body.error != null ? String(body.error) : undefined))
       }
     } catch (e) {
-      setConnStatus(navigator.onLine ? 'reconnecting' : 'offline')
-      showError(humanizeError(e instanceof Error ? e.message : String(e), 'Échec réseau — coup non envoyé.'))
-      showToast('Échec d’envoi')
-      await pullState()
+      showError(humanizeError(e instanceof Error ? e.message : String(e), 'Echec reseau.'))
     }
     setBusy(false)
     await refreshSeats()
@@ -395,7 +302,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   }
 
   function handleCardSelect(index: number) {
-    if (!isHumanTurn || busy || connStatus === 'offline') return
+    if (!isHumanTurn || busy || leaving || connStatus === 'offline') return
     if (!isCardPlayable(humanHand[index])) return
     setSelectedCardIndex(prev => (prev === index ? null : index))
   }
@@ -406,7 +313,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   }
 
   function attemptPlayCard(index: number) {
-    if (!isHumanTurn || busy || connStatus === 'offline') return
+    if (!isHumanTurn || busy || leaving || connStatus === 'offline') return
     if (!isCardPlayable(humanHand[index])) return
     void playCardAtIndex(index)
   }
@@ -421,77 +328,86 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   }
 
   async function handleRoundEndContinue() {
+    if (isSpectating) return
     await runAction('start_next_round')
     setSelectedCardIndex(null)
     await refreshSeats()
   }
 
-  async function handleLeave() {
-    if (tableId) await callEngine('leave_table', tableId)
-    setActiveOnlineTableId(null)
-    onNavigate('onlineLobby')
+  async function handleLeaveConfirm() {
+    setConfirmingLeave(false)
+    setIsPaused(false)
+
+    if (isSpectating || !tableId) {
+      setOnlineSpectate(false)
+      setActiveOnlineTableId(null)
+      onNavigate(isSpectating ? 'tournaments' : 'onlineLobby')
+      return
+    }
+
+    setLeaving(true)
+    try {
+      const { ok, body } = await callEngine('leave_table', tableId)
+      if (!ok) {
+        const msg = rejectMessage('leave_table', body.error != null ? String(body.error) : undefined)
+        showError(msg)
+        setLeaving(false)
+        return
+      }
+      const cash = typeof body.cashOut === 'number' ? body.cashOut : null
+      const forfeited = body.forfeited === true
+      if (cash != null && cash > 0) {
+        showToast(
+          (forfeited ? 'Abandon — ' : 'Cash-out — ') + cash.toLocaleString('fr-FR') + ' FCFA rendus au wallet',
+          3200,
+        )
+      } else if (forfeited) {
+        showToast('Vous avez abandonne la table.', 2500)
+      }
+      setOnlineSpectate(false)
+      setActiveOnlineTableId(null)
+      setTimeout(() => onNavigate('onlineLobby'), cash != null && cash > 0 ? 400 : 0)
+    } catch (e) {
+      showError(humanizeError(e instanceof Error ? e.message : String(e), 'Impossible de quitter la table.'))
+      setLeaving(false)
+    }
   }
 
-  async function handleManualReconnect() {
-    setConnStatus('reconnecting')
-    failStreakRef.current = 0
-    showToast('Resynchronisation…')
-    await pullState()
-    await refreshSeats()
-    if (failStreakRef.current === 0) {
-      setConnStatus('connected')
-      showToast('Reconnecté')
+  function requestLeave() {
+    if (leaving) return
+    if (isSpectating) {
+      void handleLeaveConfirm()
+      return
     }
+    setConfirmingLeave(true)
   }
 
   const tricksWonThisRound = [0, 1, 2, 3].map(
     index => viewState.trickWinners.filter(winner => winner === index).length,
   )
 
-  const secondsSinceSync = Math.max(0, Math.round((Date.now() - lastSyncAt) / 1000))
-
   return (
     <div className="felt-bg table-screen">
       <div className="table-screen-pattern" aria-hidden />
 
-      {connStatus !== 'connected' && (
-        <div
-          className={`online-conn-banner ${connStatus === 'offline' ? 'is-offline' : 'is-reconnect'}`}
-        >
-          <span>
-            {connStatus === 'offline'
-              ? 'Hors ligne — coups bloqués'
-              : `Reconnexion… (dernier sync il y a ${secondsSinceSync}s)`}
-          </span>
-          <button
-            type="button"
-            onClick={() => void handleManualReconnect()}
-            className="online-conn-retry"
-          >
-            Réessayer
+      {isSpectating && (
+        <div className="online-conn-banner is-reconnect" role="status">
+          <span>Mode spectateur — lecture seule</span>
+          <button type="button" className="online-conn-retry" onClick={() => void handleLeaveConfirm()}>
+            Quitter
           </button>
         </div>
       )}
 
-      {connStatus === 'connected' && actionLagMs !== null && actionLagMs > 800 && (
-        <div className="online-lag-badge">LAG {actionLagMs} ms</div>
-      )}
-
       {error && (
-        <div
-          role="alert"
-          className={`online-error-toast${connStatus !== 'connected' ? ' is-under-banner' : ''}`}
-          onClick={() => setError(null)}
-        >
-          <strong className="online-error-title">Action refusée</strong>
+        <div role="alert" className="online-error-toast" onClick={() => setError(null)}>
           {error}
-          <span className="online-error-hint">Appuyez pour fermer</span>
         </div>
       )}
 
       {toast && <div className="online-info-toast">{toast}</div>}
 
-      {viewState.phase === 'specialWin' && viewState.outcome?.kind === 'specialWin' && (
+      {viewState.phase === 'specialWin' && viewState.outcome?.kind === 'specialWin' && !isSpectating && (
         <SpecialWinOverlayWrapper
           outcome={viewState.outcome}
           hands={viewState.hands}
@@ -499,7 +415,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
         />
       )}
 
-      {viewState.phase === 'roundEnd' && viewState.outcome?.kind === 'normal' && (
+      {viewState.phase === 'roundEnd' && viewState.outcome?.kind === 'normal' && !isSpectating && (
         <RoundEndRevealOverlay
           outcome={viewState.outcome}
           hands={viewState.hands}
@@ -508,7 +424,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
         />
       )}
 
-      {confirmingBank && (
+      {confirmingBank && !isSpectating && (
         <BankConfirmOverlay
           baseStake={baseStake}
           onConfirm={() => void handleConfirmBank()}
@@ -516,49 +432,82 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
         />
       )}
 
-      {isPaused && (
-        <PauseOverlay onResume={() => setIsPaused(false)} onQuit={() => void handleLeave()} />
+      {confirmingLeave && !isSpectating && (
+        <div className="game-overlay game-overlay--dim game-overlay--z-pause" role="dialog" aria-modal="true">
+          <h2 className="font-display game-overlay-title">QUITTER LA TABLE ?</h2>
+          <p className="game-overlay-desc">
+            {roundInProgress && !alreadyBanked
+              ? 'Un round est en cours : vous abandonnez (forfait). Votre capital restant sera rendu au wallet du compte.'
+              : 'Votre capital restant sur cette table sera rendu au wallet du compte.'}
+          </p>
+          {myCapital > 0 && (
+            <p className="game-overlay-desc" style={{ marginTop: 8 }}>
+              Cash-out estime : <strong>{myCapital.toLocaleString('fr-FR')} FCFA</strong>
+            </p>
+          )}
+          <div className="game-overlay-actions">
+            <UiButton fullWidth onClick={() => setConfirmingLeave(false)} className="game-overlay-cta">
+              Rester
+            </UiButton>
+            <button
+              type="button"
+              className="game-overlay-danger"
+              disabled={leaving}
+              onClick={() => void handleLeaveConfirm()}
+            >
+              {leaving ? 'Depart…' : roundInProgress && !alreadyBanked ? 'Abandonner la table' : 'Quitter et cash-out'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {isPaused && !confirmingLeave && (
+        <PauseOverlay onResume={() => setIsPaused(false)} onQuit={requestLeave} />
       )}
 
       <GameTableHud
         roundNumber={roundNumber}
         tricksWonThisRound={tricksWonThisRound}
         statusMessage={statusMessage}
-        statusTone={statusTone}
+        statusTone="muted"
         compactMode={compactMode}
-        canBank={canBank && !busy && connStatus !== 'offline'}
+        canBank={canBank && !busy && !leaving && connStatus !== 'offline'}
         onPause={() => setIsPaused(true)}
-        onQuit={() => void handleLeave()}
+        onQuit={requestLeave}
         onToggleCompact={() => setCompactMode(v => !v)}
         onOpenRules={() => onNavigate('rules')}
         onRequestBank={() => setConfirmingBank(true)}
       />
 
-      <div className="table-screen-body">
-        <GameTableArea
-          players={players}
-          roundState={viewState}
-          currentPlayerIndex={currentViewPlayer}
-          compactMode={compactMode}
-        />
+      <GameTableArea
+        players={players}
+        roundState={viewState}
+        currentPlayerIndex={currentViewPlayer}
+        compactMode={compactMode}
+      />
 
+      {!isSpectating && (
         <PlayerHand
           players={players}
           hand={humanHand}
-          isHumanTurn={isHumanTurn && !busy && connStatus !== 'offline'}
+          isHumanTurn={isHumanTurn && !busy && !leaving && connStatus !== 'offline'}
           humanIsBanked={humanIsBanked}
           isLeader={isHumanLeader}
           selectedCardIndex={selectedCardIndex}
-          canClaim={canClaim && !busy && connStatus !== 'offline'}
+          canClaim={canClaim && !busy && !leaving && connStatus !== 'offline'}
           isCardPlayable={isCardPlayable}
-          isPlaying={viewState.phase === 'playing'}
+          isPlaying={busy || leaving}
           compactMode={compactMode}
           onCardSelect={handleCardSelect}
           onAttemptPlay={attemptPlayCard}
           onPlayCard={handlePlayCard}
           onClaimVictory={() => void handleClaimVictory()}
         />
-      </div>
+      )}
+
+      {tableId && (
+        <TableChat tableId={tableId} myUserId={user?.id ?? null} title="Discussion table" />
+      )}
     </div>
   )
 }

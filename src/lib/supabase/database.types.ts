@@ -1,5 +1,5 @@
 // ==========================================================================
-// database.types.ts — Miroir TypeScript du schéma Supabase `kora_*`.
+// database.types.ts — Miroir TypeScript du schema Supabase `kora_*`.
 // ==========================================================================
 
 export type ComboTypeDb = 'simple' | 'kora' | '33' | 'trinity' | 'kmt'
@@ -153,6 +153,54 @@ export interface Database {
         }
         Update: Partial<Database['public']['Tables']['kora_round_hands']['Row']>
       }
+      kora_tournaments: {
+        Row: {
+          id: string
+          name: string
+          status: 'upcoming' | 'open' | 'live' | 'completed'
+          format: 'single_elim' | 'rounds_race' | 'swiss'
+          entry_fee_fcfa: number
+          prize_pool_fcfa: number
+          prizes: unknown
+          max_players: number
+          starts_at: string
+          tagline: string
+          rules_preset: 'standard' | 'training' | 'high_stakes'
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          status?: 'upcoming' | 'open' | 'live' | 'completed'
+          format: 'single_elim' | 'rounds_race' | 'swiss'
+          entry_fee_fcfa?: number
+          prize_pool_fcfa?: number
+          prizes?: unknown
+          max_players: number
+          starts_at: string
+          tagline?: string
+          rules_preset?: 'standard' | 'training' | 'high_stakes'
+          created_at?: string
+          updated_at?: string
+        }
+        Update: Partial<Database['public']['Tables']['kora_tournaments']['Insert']>
+      }
+      kora_tournament_registrations: {
+        Row: {
+          tournament_id: string
+          user_id: string
+          registered_at: string
+          fee_paid_fcfa: number
+        }
+        Insert: {
+          tournament_id: string
+          user_id: string
+          registered_at?: string
+          fee_paid_fcfa?: number
+        }
+        Update: Partial<Database['public']['Tables']['kora_tournament_registrations']['Row']>
+      }
     }
     Functions: {
       kora_ensure_player_rows: {
@@ -163,6 +211,14 @@ export interface Database {
         Args: { p_stats: Record<string, unknown> }
         Returns: Database['public']['Tables']['kora_lifetime_stats']['Row']
       }
+      kora_register_tournament: {
+        Args: { p_tournament_id: string }
+        Returns: { ok: boolean; error?: string; registered_count?: number; tournament_id?: string }
+      }
+      kora_unregister_tournament: {
+        Args: { p_tournament_id: string }
+        Returns: { ok: boolean; error?: string; tournament_id?: string }
+      }
     }
   }
 }
@@ -171,3 +227,5 @@ export type KoraProfile = Database['public']['Tables']['kora_profiles']['Row']
 export type KoraLifetimeStatsRow = Database['public']['Tables']['kora_lifetime_stats']['Row']
 export type KoraTable = Database['public']['Tables']['kora_tables']['Row']
 export type KoraTablePlayer = Database['public']['Tables']['kora_table_players']['Row']
+export type KoraTournament = Database['public']['Tables']['kora_tournaments']['Row']
+export type KoraTournamentRegistration = Database['public']['Tables']['kora_tournament_registrations']['Row']

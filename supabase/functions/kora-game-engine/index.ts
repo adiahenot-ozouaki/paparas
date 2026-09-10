@@ -1,40 +1,5 @@
 // ==========================================================================
 // index.ts — Edge Function `kora-game-engine`.
-//
-// Point d'entrée HTTP unique, actions dispatchées par `action` dans le
-// corps JSON. Toute la logique de jeu vient de engine/ (portage verbatim
-// du moteur client, à une exception près : engine/deck.ts utilise un RNG
-// cryptographique au lieu de Math.random()).
-//
-// Un seul client Supabase, en service role — utilisé à la fois pour
-// vérifier l'identité de l'appelant (admin.auth.getUser(jwt) valide un JWT
-// sans avoir besoin d'un client séparé construit avec ce JWT) ET pour lire/
-// écrire kora_rounds / kora_round_hands / capital / stats. Ce contournement
-// volontaire de RLS est sûr ICI précisément parce que chaque action
-// revalide tout elle-même (siège occupé, tour du joueur, coup légal) avant
-// d'écrire quoi que ce soit — jamais un accès direct non validé.
-//
-// Chaque action valide le coup en rejouant l'état à travers les fonctions
-// pures de engine/round.ts, qui lèvent une erreur sur tout coup illégal
-// (mauvais tour, couleur non suivie, etc.). C'est cette validation qui
-// rend le serveur réellement autoritaire — impossible de tricher en
-// modifiant l'état côté client, il n'y a plus d'état côté client qui
-// compte.
-//
-// --- Modèle "table cash game" (pas de tournoi à élimination) ---
-// Un siège dont le capital tombe sous le seuil d'élimination est SUPPRIMÉ
-// de kora_table_players (pas juste marqué) : il se libère immédiatement
-// pour qu'un nouveau joueur puisse le prendre avec le buy-in de son choix.
-// Il n'y a donc plus de "fin de partie" côté serveur : gamesPlayed/
-// gamesWon ne sont plus incrémentés pour ce modèle, seules les stats par
-// round (déjà en place) comptent.
-//
-// Prendre un siège vacant (`join_table`) N'EST PAS une action de cette
-// Edge Function : c'est un simple INSERT direct dans kora_table_players,
-// gouverné par RLS (voir migration kora_cash_table_dynamic_seats), exactement
-// comme l'assise initiale en lobby — seule différence, la policy autorise
-// désormais status='playing' en plus de 'lobby', avec vérification du
-// buy-in dans [min_buy_in, max_buy_in] de la table.
 // ==========================================================================
 
 import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
@@ -69,10 +34,6 @@ function jsonResponse(body: unknown, status = 200): Response {
 function errorResponse(message: string, status = 400): Response {
   return jsonResponse({ error: message }, status)
 }
-
-// ----------------------------------------------------------------------------
-// Lignes DB (formes minimales — uniquement les colonnes qu'on lit/écrit ici)
-// ----------------------------------------------------------------------------
 
 interface TableRow {
   id: string
@@ -115,23 +76,12 @@ interface HandRow {
   revealed: boolean
 }
 
-/** Nombre total de sièges physiques à la table (0 à 3) — reste toujours 4,
- * peu importe combien sont réellement occupés à un instant donné. Un siège
- * vacant est traité comme un siège "banni" depuis le début du round (voir
- * computeVacantSeats plus bas) — c'est le même mécanisme que la banque
- * volontaire en cours de round, le moteur n'a besoin d'aucun changement. */
 const NUM_PLAYERS = 4
-/** En dessous de ce nombre de sièges occupés, un round ne peut pas être joué (un pli à un seul joueur n'a pas de sens). */
 const MIN_ACTIVE_PLAYERS = 2
-
-// ----------------------------------------------------------------------------
-// Reconstruction / décomposition RoundState <-> lignes DB
-// ----------------------------------------------------------------------------
 
 function reconstructRoundState(table: TableRow, round: RoundRow, hands: HandRow[]): RoundState {
   const handsBySeat: Card[][] = Array.from({ length: NUM_PLAYERS }, () => [])
   for (const h of hands) handsBySeat[h.seat_index] = h.cards
-
   return {
     phase: round.phase,
     variant: table.deck_variant,
@@ -146,7 +96,6 @@ function reconstructRoundState(table: TableRow, round: RoundRow, hands: HandRow[
   }
 }
 
-/** Ne renvoie au joueur QUE sa propre main en clair — les autres sont masquées, sauf révélation explicite (victoire par règle spéciale). */
 function toPublicState(state: RoundState, callerSeatIndex: number) {
   const handsRevealed = state.outcome?.kind === 'specialWin'
   return {
@@ -171,14 +120,6 @@ async function loadSeats(admin: SupabaseClient, tableId: string): Promise<SeatRo
   return (data ?? []) as SeatRow[]
 }
 
-/**
- * Sièges 0..3 SANS occupant actuel — traités comme "bannis depuis le début
- * du round" (paramètre eliminatedPlayers de initRound), exactement comme
- * un joueur qui va en banque volontairement en cours de partie. C'est ce
- * mécanisme, déjà présent dans engine/round.ts sans le savoir, qui permet
- * à une table cash game de fonctionner à 2, 3 ou 4 joueurs sans AUCUNE
- * modification du moteur pur.
- */
 function computeVacantSeats(seats: SeatRow[]): number[] {
   const occupied = new Set(seats.map(s => s.seat_index))
   const vacant: number[] = []
@@ -197,14 +138,11 @@ async function loadLatestRound(admin: SupabaseClient, tableId: string): Promise<
     .limit(1)
     .maybeSingle()
   if (error || !round) throw new Error('Aucun round en cours pour cette table.')
-
   const { data: hands, error: handsError } = await admin.from('kora_round_hands').select('*').eq('round_id', round.id)
   if (handsError) throw new Error(`Impossible de charger les mains : ${handsError.message}`)
-
   return { round: round as RoundRow, hands: (hands ?? []) as HandRow[] }
 }
 
-/** Insère un nouveau round (première distribution ou round suivant) + les 4 mains associées. */
 async function insertRound(
   admin: SupabaseClient,
   tableId: string,
@@ -229,7 +167,6 @@ async function insertRound(
     .select('*')
     .single()
   if (error || !round) throw new Error(`Échec de création du round : ${error?.message}`)
-
   const revealed = state.outcome?.kind === 'specialWin'
   const handRows = seats.map(seat => ({
     round_id: round.id,
@@ -240,11 +177,9 @@ async function insertRound(
   }))
   const { error: handsError } = await admin.from('kora_round_hands').insert(handRows)
   if (handsError) throw new Error(`Échec de création des mains : ${handsError.message}`)
-
   return round as RoundRow
 }
 
-/** Met à jour un round existant (après playCard / resolveTrick / bankPlayer / claimVictory) + réécrit les 4 mains. */
 async function updateRound(admin: SupabaseClient, roundId: string, state: RoundState, seats: SeatRow[]): Promise<void> {
   const { error } = await admin
     .from('kora_rounds')
@@ -259,7 +194,6 @@ async function updateRound(admin: SupabaseClient, roundId: string, state: RoundS
     })
     .eq('id', roundId)
   if (error) throw new Error(`Échec de mise à jour du round : ${error.message}`)
-
   const revealed = state.outcome?.kind === 'specialWin'
   for (const seat of seats) {
     const { error: handError } = await admin
@@ -271,21 +205,6 @@ async function updateRound(admin: SupabaseClient, roundId: string, state: RoundS
   }
 }
 
-// ----------------------------------------------------------------------------
-// Paiement + statistiques — appelé chaque fois qu'un round se termine
-// (outcome non nul) et n'a pas encore été payé (payout_applied=false).
-// Idempotent par construction : la garde payout_applied empêche tout
-// double paiement même en cas de retry réseau côté client.
-//
-// Modèle "table cash game" (voir migration kora_cash_table_dynamic_seats) :
-// un siège dont le capital tombe sous le seuil d'élimination est SUPPRIMÉ
-// (pas juste marqué) — il se libère immédiatement pour qu'un nouveau
-// joueur puisse s'y asseoir avec le buy-in de son choix. Il n'y a donc
-// plus de notion de "partie terminée" : gamesPlayed/gamesWon ne sont plus
-// incrémentés pour ce modèle (décision produit actée), seules les stats
-// par round (déjà en place) comptent.
-// ----------------------------------------------------------------------------
-
 async function applyPayoutAndStats(
   admin: SupabaseClient,
   table: TableRow,
@@ -296,18 +215,7 @@ async function applyPayoutAndStats(
   if (!state.outcome || round.payout_applied) {
     return { eliminatedSeats: [] }
   }
-
   const stakeConfig: GameStakeConfig = { baseStake: table.base_stake, startingCapital: table.starting_capital }
-
-  // --- Recalcul du paiement en excluant les sièges VACANTS du pot. ---
-  // L'engine traite un siège vacant exactement comme un joueur banni
-  // (mécanisme volontairement partagé avec la banque en cours de round,
-  // voir computeVacantSeats) — mais son calcul de pot original
-  // (state.outcome.payout) facture `baseStake` à CHAQUE siège banni, y
-  // compris les vacants, comme s'il s'agissait d'un vrai joueur ayant
-  // réellement perdu de l'argent. Sans cette correction, le(s) gagnant(s)
-  // recevraient un pot gonflé par de l'argent fictif (siège vacant = pas
-  // de joueur = pas de perte réelle à créditer à qui que ce soit).
   const realSeatIndexes = seats.map(s => s.seat_index)
   const realBankedIndexes = state.bankedPlayers.filter(idx => realSeatIndexes.includes(idx))
   const winnerIndexes =
@@ -320,21 +228,9 @@ async function applyPayoutAndStats(
     bankedPlayerIndexes: realBankedIndexes,
   })
   const payoutLines = [...correctedPayout.winners, ...correctedPayout.losers]
-
-  // Le round a déjà été persisté (insertRound/updateRound) AVANT cet appel,
-  // avec le payout BRUT du moteur (incluant les sièges vacants). On corrige
-  // ici l'enregistrement ET l'objet en mémoire (déjà référencé par la
-  // réponse JSON en cours de construction chez l'appelant) pour que la
-  // valeur vue par le client soit TOUJOURS celle réellement créditée —
-  // sinon l'historique du round et les crédits réels divergeraient dès
-  // qu'un siège vacant existait ce round-là.
   state.outcome!.payout = correctedPayout
-
   const payoutPlayers: PayoutPlayer[] = seats.map(s => ({ capital: s.capital }))
   const updatedPlayers = applyRoundPayout(payoutPlayers, correctedPayout, stakeConfig)
-
-  // --- Capital, par siège. Sous le seuil : le siège se LIBÈRE (suppression
-  // de la ligne), pas de simple flag — c'est tout le principe cash game. ---
   const eliminatedSeats: number[] = []
   for (let i = 0; i < seats.length; i++) {
     const seatIdx = seats[i].seat_index
@@ -351,16 +247,10 @@ async function applyPayoutAndStats(
       if (error) throw new Error(`Échec de mise à jour du capital (siège ${seatIdx}) : ${error.message}`)
     }
   }
-
-  // --- Statistiques cumulées, par siège (chaque siège = un vrai joueur en
-  // ligne). Calculées AVANT toute suppression de ligne ci-dessus — `seats`
-  // référence toujours les occupants du round qui vient de se jouer, que
-  // leur siège vienne d'être libéré ou non. ---
   const isRoundWinner = (seatIndex: number) =>
     state.outcome!.kind === 'normal'
       ? state.outcome!.roundWinnerIndex === seatIndex
       : state.outcome!.winners.some(w => w.playerIndex === seatIndex)
-
   for (let i = 0; i < seats.length; i++) {
     const seat = seats[i]
     const seatIdx = seat.seat_index
@@ -368,18 +258,15 @@ async function applyPayoutAndStats(
     const delta = line?.amount ?? 0
     const tricksWonThisRound = state.trickWinners.filter(w => w === seatIdx).length
     const newCapital = updatedPlayers[i].capital
-
     const { data: statsRow, error: statsError } = await admin
       .from('kora_lifetime_stats')
       .select('*')
       .eq('user_id', seat.user_id)
       .single()
     if (statsError || !statsRow) throw new Error(`Statistiques introuvables pour ${seat.user_id} : ${statsError?.message}`)
-
     const comboCounts = { ...statsRow.combo_counts }
     const specialRuleCounts = { ...statsRow.special_rule_counts }
     let bestCombo = statsRow.best_combo as string | null
-
     if (state.outcome!.kind === 'normal' && isRoundWinner(seatIdx)) {
       const combo = state.outcome!.combo
       comboCounts[combo] = (comboCounts[combo] ?? 0) + 1
@@ -394,7 +281,6 @@ async function applyPayoutAndStats(
         }
       }
     }
-
     const { error: updateStatsError } = await admin
       .from('kora_lifetime_stats')
       .update({
@@ -413,24 +299,16 @@ async function applyPayoutAndStats(
       .eq('user_id', seat.user_id)
     if (updateStatsError) throw new Error(`Échec de mise à jour des stats (${seat.user_id}) : ${updateStatsError.message}`)
   }
-
   await admin.from('kora_rounds').update({ payout_applied: true, outcome: state.outcome }).eq('id', round.id)
-
   return { eliminatedSeats }
 }
-
-// ----------------------------------------------------------------------------
-// Authentification de l'appelant
-// ----------------------------------------------------------------------------
 
 async function authenticate(req: Request, admin: SupabaseClient): Promise<{ userId: string }> {
   const authHeader = req.headers.get('Authorization')
   if (!authHeader) throw new Error('UNAUTHENTICATED')
-
   const jwt = authHeader.replace(/^Bearer\s+/i, '')
   const { data, error } = await admin.auth.getUser(jwt)
   if (error || !data.user) throw new Error('UNAUTHENTICATED')
-
   return { userId: data.user.id }
 }
 
@@ -440,37 +318,25 @@ function findCallerSeat(seats: SeatRow[], userId: string): SeatRow {
   return seat
 }
 
-// ============================================================================
-// Actions
-// ============================================================================
-
 async function handleStartTable(admin: SupabaseClient, tableId: string, seatIndex: number): Promise<Response> {
   const table = await loadTable(admin, tableId)
   if (table.status !== 'lobby') return errorResponse('Cette table a déjà démarré ou est terminée.')
-
   const seats = await loadSeats(admin, tableId)
   if (seats.length < MIN_ACTIVE_PLAYERS) {
     return errorResponse(`Il faut au moins ${MIN_ACTIVE_PLAYERS} joueurs pour démarrer (actuellement ${seats.length}).`)
   }
   if (!seats.every(s => s.is_ready)) return errorResponse('Tous les joueurs assis doivent être prêts.')
-
   const stakeConfig: GameStakeConfig = { baseStake: table.base_stake, startingCapital: table.starting_capital }
   const state = initRound({
     variant: table.deck_variant,
     numPlayers: NUM_PLAYERS,
-    startPlayerIndex: 0, // initRound saute automatiquement les sièges vacants si besoin (voir eliminatedPlayers)
+    startPlayerIndex: 0,
     stakeConfig,
     eliminatedPlayers: computeVacantSeats(seats),
   })
-
   const round = await insertRound(admin, tableId, 1, state, seats)
   await admin.from('kora_tables').update({ status: 'playing', started_at: new Date().toISOString() }).eq('id', tableId)
-
   const payoutResult = await applyPayoutAndStats(admin, table, round, state, seats)
-
-  // BUG corrigé : renvoyait `state` brut (les 4 mains en clair, y compris
-  // celles des autres joueurs) au lieu de le filtrer comme toutes les
-  // autres actions — seule différence, ici, avec les autres handlers.
   return jsonResponse({ state: toPublicState(state, seatIndex), eliminatedSeats: payoutResult.eliminatedSeats })
 }
 
@@ -479,10 +345,8 @@ async function handlePlayCard(admin: SupabaseClient, tableId: string, seatIndex:
   const seats = await loadSeats(admin, tableId)
   const { round, hands } = await loadLatestRound(admin, tableId)
   const prevState = reconstructRoundState(table, round, hands)
-
   const nextState = playCard(prevState, seatIndex, card)
   await updateRound(admin, round.id, nextState, seats)
-
   return jsonResponse({ state: toPublicState(nextState, seatIndex) })
 }
 
@@ -491,14 +355,11 @@ async function handleResolveTrick(admin: SupabaseClient, tableId: string, seatIn
   const seats = await loadSeats(admin, tableId)
   const { round, hands } = await loadLatestRound(admin, tableId)
   const prevState = reconstructRoundState(table, round, hands)
-
   const stakeConfig: GameStakeConfig = { baseStake: table.base_stake, startingCapital: table.starting_capital }
   const nextState = resolveTrick(prevState, stakeConfig)
   await updateRound(admin, round.id, nextState, seats)
-
   const updatedRound: RoundRow = { ...round, phase: nextState.phase, outcome: nextState.outcome }
   const payoutResult = await applyPayoutAndStats(admin, table, updatedRound, nextState, seats)
-
   return jsonResponse({ state: toPublicState(nextState, seatIndex), eliminatedSeats: payoutResult.eliminatedSeats })
 }
 
@@ -507,14 +368,11 @@ async function handleBankPlayer(admin: SupabaseClient, tableId: string, seatInde
   const seats = await loadSeats(admin, tableId)
   const { round, hands } = await loadLatestRound(admin, tableId)
   const prevState = reconstructRoundState(table, round, hands)
-
   const stakeConfig: GameStakeConfig = { baseStake: table.base_stake, startingCapital: table.starting_capital }
   const nextState = bankPlayer(prevState, seatIndex, stakeConfig)
   await updateRound(admin, round.id, nextState, seats)
-
   const updatedRound: RoundRow = { ...round, phase: nextState.phase, outcome: nextState.outcome }
   const payoutResult = await applyPayoutAndStats(admin, table, updatedRound, nextState, seats)
-
   return jsonResponse({ state: toPublicState(nextState, seatIndex), eliminatedSeats: payoutResult.eliminatedSeats })
 }
 
@@ -523,64 +381,165 @@ async function handleClaimVictory(admin: SupabaseClient, tableId: string, seatIn
   const seats = await loadSeats(admin, tableId)
   const { round, hands } = await loadLatestRound(admin, tableId)
   const prevState = reconstructRoundState(table, round, hands)
-
   const stakeConfig: GameStakeConfig = { baseStake: table.base_stake, startingCapital: table.starting_capital }
   const nextState = claimVictory(prevState, seatIndex, stakeConfig)
   await updateRound(admin, round.id, nextState, seats)
-
   const updatedRound: RoundRow = { ...round, phase: nextState.phase, outcome: nextState.outcome }
   const payoutResult = await applyPayoutAndStats(admin, table, updatedRound, nextState, seats)
-
   return jsonResponse({ state: toPublicState(nextState, seatIndex), eliminatedSeats: payoutResult.eliminatedSeats })
 }
 
 /**
- * Quitte volontairement la table (table cash game — "cash out"). Le siège
- * se libère immédiatement pour un futur joueur, exactement comme une
- * élimination, sauf que le capital restant n'est pas remis en jeu — le
- * joueur l'emporte simplement avec lui (pas de wallet persistant pour
- * l'instant, voir README : le capital ne vit que pour la durée où le
- * joueur reste assis à CETTE table).
+ * Quitte volontairement la table (table cash game — "cash out").
  *
- * Refusé si un round est en cours ET que ce siège n'est pas déjà banni
- * pour ce round (déjà "allé en banque" via bank_player) — quitter en plein
- * milieu d'un pli casserait le décompte activeCount du moteur (voir
- * engine/round.ts::playCard). Entre deux rounds (phase roundEnd/
- * specialWin) ou avant le tout premier round (table encore en lobby),
- * c'est toujours autorisé.
+ * - Round en cours + pas encore banké → forfait (force bank, même après le 3e pli)
+ * - Capital restant du siège → crédit wallet_balance du compte
+ * - Siège supprimé (libère la place)
+ * - Plus personne à table → status finished
  */
-async function handleLeaveTable(admin: SupabaseClient, tableId: string, seatIndex: number): Promise<Response> {
+async function handleLeaveTable(
+  admin: SupabaseClient,
+  tableId: string,
+  seatIndex: number,
+  userId: string,
+): Promise<Response> {
   const table = await loadTable(admin, tableId)
+  const seats = await loadSeats(admin, tableId)
+  const seat = seats.find(s => s.seat_index === seatIndex)
+  const cashOut = seat?.capital ?? 0
+  let forfeited = false
 
   if (table.status === 'playing') {
-    const { round, hands } = await loadLatestRound(admin, tableId)
-    const state = reconstructRoundState(table, round, hands)
-    const roundInProgress = state.phase === 'playing' || state.phase === 'trickWon'
-    const alreadyBanked = state.bankedPlayers.includes(seatIndex)
+    try {
+      const { round, hands } = await loadLatestRound(admin, tableId)
+      const state = reconstructRoundState(table, round, hands)
+      const roundInProgress = state.phase === 'playing' || state.phase === 'trickWon'
+      const alreadyBanked = state.bankedPlayers.includes(seatIndex)
 
-    if (roundInProgress && !alreadyBanked) {
-      return errorResponse(
-        'Impossible de quitter en plein round — terminez-le ou allez en banque (bank_player) avant de quitter.',
-      )
+      if (roundInProgress && !alreadyBanked) {
+        forfeited = true
+        const stakeConfig: GameStakeConfig = {
+          baseStake: table.base_stake,
+          startingCapital: table.starting_capital,
+        }
+
+        let nextState: RoundState
+        const canLegalBank =
+          state.phase === 'playing' &&
+          !!state.currentTrick &&
+          state.currentTrick.trickNumber < 3
+
+        if (canLegalBank) {
+          try {
+            nextState = bankPlayer(state, seatIndex, stakeConfig)
+          } catch {
+            nextState = forceForfeitBank(state, seatIndex, stakeConfig)
+          }
+        } else {
+          nextState = forceForfeitBank(state, seatIndex, stakeConfig)
+        }
+
+        await updateRound(admin, round.id, nextState, seats)
+
+        if (nextState.outcome) {
+          const updatedRound: RoundRow = {
+            ...round,
+            phase: nextState.phase,
+            outcome: nextState.outcome,
+          }
+          await applyPayoutAndStats(admin, table, updatedRound, nextState, seats)
+        }
+      }
+    } catch {
+      // Pas de round chargeable — on libère quand même le siège
     }
   }
 
-  const { error } = await admin.from('kora_table_players').delete().eq('table_id', tableId).eq('seat_index', seatIndex)
+  // Cash-out : capital siège → wallet compte
+  if (cashOut > 0) {
+    const { data: profile, error: profErr } = await admin
+      .from('kora_profiles')
+      .select('wallet_balance')
+      .eq('id', userId)
+      .single()
+    if (profErr || !profile) {
+      console.error('[leave_table] profil cash-out:', profErr?.message)
+    } else {
+      const nextWallet = (profile.wallet_balance ?? 0) + cashOut
+      const { error: walletErr } = await admin
+        .from('kora_profiles')
+        .update({ wallet_balance: nextWallet })
+        .eq('id', userId)
+      if (walletErr) {
+        console.error('[leave_table] crédit wallet:', walletErr.message)
+      }
+    }
+  }
+
+  const { error } = await admin
+    .from('kora_table_players')
+    .delete()
+    .eq('table_id', tableId)
+    .eq('seat_index', seatIndex)
   if (error) throw new Error(`Échec pour quitter la table : ${error.message}`)
 
-  return jsonResponse({ left: true })
+  const remaining = await loadSeats(admin, tableId)
+  if (remaining.length === 0 && table.status !== 'finished') {
+    await admin.from('kora_tables').update({ status: 'finished' }).eq('id', tableId)
+  }
+
+  return jsonResponse({ left: true, cashOut, forfeited })
+}
+
+/** Forfait hors fenêtre de banque légale (après 3e pli ou phase trickWon). */
+function forceForfeitBank(
+  state: RoundState,
+  seatIndex: number,
+  stakeConfig: GameStakeConfig,
+): RoundState {
+  if (state.bankedPlayers.includes(seatIndex)) return state
+
+  const newBanked = [...state.bankedPlayers, seatIndex]
+  const activeIndexes = Array.from({ length: state.numPlayers }, (_, i) => i).filter(
+    i => !newBanked.includes(i),
+  )
+  const stateAfter: RoundState = { ...state, bankedPlayers: newBanked }
+
+  if (activeIndexes.length === 1 && (state.phase === 'playing' || state.phase === 'trickWon')) {
+    const winnerIndex = activeIndexes[0]
+    const payout = computeRoundPayout({
+      baseStake: stakeConfig.baseStake,
+      multiplier: 1,
+      winnerIndexes: [winnerIndex],
+      allPlayerIndexes: Array.from({ length: state.numPlayers }, (_, i) => i),
+      bankedPlayerIndexes: newBanked,
+    })
+    return {
+      ...stateAfter,
+      phase: 'roundEnd',
+      currentTrick: null,
+      outcome: {
+        kind: 'normal',
+        roundWinnerIndex: winnerIndex,
+        combo: 'simple',
+        multiplier: 1,
+        payout,
+        bankedPlayerIndexes: newBanked,
+        wonByClaim: false,
+      },
+    }
+  }
+
+  return stateAfter
 }
 
 async function handleGetState(admin: SupabaseClient, tableId: string, seatIndex: number): Promise<Response> {
   const table = await loadTable(admin, tableId)
-
   if (table.status === 'lobby') {
     return jsonResponse({ tableStatus: 'lobby', roundNumber: 0, state: null, isYourTurn: false })
   }
-
   const { round, hands } = await loadLatestRound(admin, tableId)
   const state = reconstructRoundState(table, round, hands)
-
   return jsonResponse({
     tableStatus: table.status,
     roundNumber: round.round_number,
@@ -592,17 +551,10 @@ async function handleGetState(admin: SupabaseClient, tableId: string, seatIndex:
 async function handleStartNextRound(admin: SupabaseClient, tableId: string, seatIndex: number): Promise<Response> {
   const table = await loadTable(admin, tableId)
   if (table.status !== 'playing') return errorResponse('Cette table n\'est plus en cours.')
-
   const seats = await loadSeats(admin, tableId)
   const { round: prevRound, hands } = await loadLatestRound(admin, tableId)
   const prevState = reconstructRoundState(table, prevRound, hands)
-
   if (!prevState.outcome) return errorResponse('Le round précédent n\'est pas encore terminé.')
-
-  // Table cash game : si trop de sièges se sont libérés (éliminations), on
-  // NE force plus la fin de la table — on attend simplement qu'un nouveau
-  // joueur s'assoie. Ce n'est pas une erreur, juste un état normal entre
-  // deux mains tant qu'il n'y a pas assez de monde pour jouer un pli.
   if (seats.length < MIN_ACTIVE_PLAYERS) {
     return jsonResponse({
       waitingForPlayers: true,
@@ -610,11 +562,9 @@ async function handleStartNextRound(admin: SupabaseClient, tableId: string, seat
       message: `En attente d'au moins ${MIN_ACTIVE_PLAYERS} joueurs pour continuer (actuellement ${seats.length}).`,
     })
   }
-
   const winnerIndex =
     prevState.outcome.kind === 'normal' ? prevState.outcome.roundWinnerIndex : prevState.outcome.winners[0].playerIndex
   const nextStarter = (winnerIndex + 1) % NUM_PLAYERS
-
   const stakeConfig: GameStakeConfig = { baseStake: table.base_stake, startingCapital: table.starting_capital }
   const nextState = initRound({
     variant: table.deck_variant,
@@ -623,16 +573,10 @@ async function handleStartNextRound(admin: SupabaseClient, tableId: string, seat
     stakeConfig,
     eliminatedPlayers: computeVacantSeats(seats),
   })
-
   const round = await insertRound(admin, tableId, prevRound.round_number + 1, nextState, seats)
   const payoutResult = await applyPayoutAndStats(admin, table, round, nextState, seats)
-
   return jsonResponse({ state: toPublicState(nextState, seatIndex), eliminatedSeats: payoutResult.eliminatedSeats })
 }
-
-// ============================================================================
-// Router HTTP
-// ============================================================================
 
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') {
@@ -641,32 +585,22 @@ Deno.serve(async req => {
   if (req.method !== 'POST') {
     return errorResponse('Méthode non supportée.', 405)
   }
-
   const supabaseUrl = Deno.env.get('SUPABASE_URL')!
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
   const admin = createClient(supabaseUrl, serviceRoleKey)
-
   let body: { action?: string; tableId?: string; card?: Card }
   try {
     body = await req.json()
   } catch {
     return errorResponse('Corps de requête JSON invalide.')
   }
-
   const { action, tableId } = body
   if (!action) return errorResponse('Champ "action" manquant.')
-
   try {
-    // L'appelant doit être assis à la table pour TOUTE action, y compris
-    // start_table (seul un joueur assis peut démarrer sa propre table) —
-    // c'est aussi ce qui permet de filtrer la réponse sur SA main.
     const { userId } = await authenticate(req, admin)
-
     if (!tableId) return errorResponse('Champ "tableId" manquant.')
-
     const seats = await loadSeats(admin, tableId)
     const callerSeat = findCallerSeat(seats, userId)
-
     switch (action) {
       case 'start_table':
         return await handleStartTable(admin, tableId, callerSeat.seat_index)
@@ -685,16 +619,13 @@ Deno.serve(async req => {
       case 'start_next_round':
         return await handleStartNextRound(admin, tableId, callerSeat.seat_index)
       case 'leave_table':
-        return await handleLeaveTable(admin, tableId, callerSeat.seat_index)
+        return await handleLeaveTable(admin, tableId, callerSeat.seat_index, userId)
       default:
         return errorResponse(`Action inconnue : "${action}".`)
     }
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err)
     if (message === 'UNAUTHENTICATED') return errorResponse('Authentification requise.', 401)
-    // Les erreurs levées par engine/round.ts (coup illégal, mauvais tour...)
-    // remontent ici telles quelles — ce sont déjà des messages destinés à
-    // être lus, pas des détails d'implémentation à cacher.
     return errorResponse(message, 400)
   }
 })

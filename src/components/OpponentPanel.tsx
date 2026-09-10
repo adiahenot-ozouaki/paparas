@@ -48,10 +48,10 @@ export function OpponentPanel({
   }
 
   return (
-    <div className={`opp-panel${isActive ? ' is-active' : ''}`}>
+    <div className={'opp-panel' + (isActive ? ' is-active' : '')}>
       <div className="opp-panel-meta">
         {!compactMode && (
-          <div className={`opp-info${isActive ? ' is-active' : ''}`}>
+          <div className={'opp-info' + (isActive ? ' is-active' : '')}>
             <p className="font-display opp-name">{name}</p>
             <p className="opp-stats">
               {capital.toLocaleString('fr-FR')} · {cardsLeft}c
@@ -76,7 +76,7 @@ export function OpponentPanel({
         )}
       </div>
 
-      <div className={`opp-backs opp-backs--${position}`}>
+      <div className={'opp-backs opp-backs--' + position}>
         {Array.from({ length: cardsLeft }).map((_, i) => (
           <PlayingCard
             key={i}
@@ -87,7 +87,7 @@ export function OpponentPanel({
             rotated={isVertical}
             style={
               position === 'top'
-                ? { transform: `rotate(${(i - 1.5) * 3}deg)` }
+                ? { transform: 'rotate(' + ((i - 1.5) * 3) + 'deg)' }
                 : { marginTop: i > 0 ? -20 : 0 }
             }
           />
@@ -115,7 +115,7 @@ function Badge({
   children: ReactNode
 }) {
   return (
-    <div className={`opp-badge opp-badge--${tone}${pulse ? ' is-pulse' : ''}`}>
+    <div className={'opp-badge opp-badge--' + tone + (pulse ? ' is-pulse' : '')}>
       <span>{children}</span>
     </div>
   )

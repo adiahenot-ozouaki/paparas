@@ -1,6 +1,6 @@
 import type { Screen } from '../types'
 import type { LucideIcon } from 'lucide-react'
-import { Home, Trophy, BarChart3, User, BookOpen, Sparkles } from 'lucide-react'
+import { Home, Trophy, BarChart3, User, BookOpen, Sparkles, Swords } from 'lucide-react'
 import { SpadeIcon } from './icons'
 
 export type NavItem = {
@@ -20,6 +20,7 @@ export const NAV_ITEMS: NavItem[] = [
 
 /** Secondary destinations — SideNav footer + BottomNav overflow sheet (mobile). */
 export const MORE_NAV_ITEMS: NavItem[] = [
+  { id: 'tournaments', label: 'Tournois', icon: Swords },
   { id: 'rules', label: 'Règles', icon: BookOpen },
   { id: 'achievements', label: 'Hauts faits', icon: Sparkles },
 ]
@@ -31,9 +32,10 @@ export const PLAY_ACTIVE_SCREENS: Screen[] = [
   'gameTable',
   'gameMode',
   'stakeConfig',
+  'tournaments',
 ]
 
-export const MORE_ACTIVE_SCREENS: Screen[] = ['rules', 'achievements']
+export const MORE_ACTIVE_SCREENS: Screen[] = ['rules', 'achievements', 'tournaments']
 
 export function isNavItemActive(active: Screen, item: NavItem): boolean {
   if (active === item.id) return true

@@ -82,3 +82,23 @@ export function consumePendingJoinTableId(): string | null {
     return null
   }
 }
+
+const KEY_SPECTATE = 'kora:onlineSpectate'
+
+/** Mode observation (pas de siege). */
+export function setOnlineSpectate(on: boolean): void {
+  try {
+    if (on) sessionStorage.setItem(KEY_SPECTATE, '1')
+    else sessionStorage.removeItem(KEY_SPECTATE)
+  } catch {
+    // ignore
+  }
+}
+
+export function getOnlineSpectate(): boolean {
+  try {
+    return sessionStorage.getItem(KEY_SPECTATE) === '1'
+  } catch {
+    return false
+  }
+}

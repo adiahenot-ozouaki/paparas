@@ -15,6 +15,12 @@ import './screens/screens-layout.css'
 import './theme/p1-unified.css'
 import './theme/p2-a11y.css'
 import './theme/p3-polish.css'
+import './theme/clean-layout.css'
+import './theme/clean-bridge.css'
+import './screens/freestyle-table.css'
+import './theme/ads.css'
+import './theme/tournaments.css'
+import './theme/table-chat.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

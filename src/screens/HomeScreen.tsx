@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Screen } from '../types'
+import AdSlot from '../components/ads/AdSlot'
 import { useGame, HUMAN_INDEX, SEAT_AVATARS } from '../game/GameContext'
 import { useAuth } from '../auth/AuthContext'
 import { COMBO_LABEL } from '../game/combo'
@@ -22,7 +23,7 @@ import {
 const QUICK_LINKS: { label: string; icon: typeof Zap; screen: Screen }[] = [
   { label: 'Partie rapide', icon: Zap, screen: 'stakeConfig' },
   { label: 'Classement', icon: Trophy, screen: 'leaderboard' },
-  { label: 'Règles', icon: BookOpen, screen: 'rules' },
+  { label: 'Regles', icon: BookOpen, screen: 'rules' },
 ]
 
 const PLAY_NAV_DELAY_MS = 280
@@ -136,7 +137,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
             <AvatarIcon avatar={displayAvatar} size={28} />
           </div>
           <div className="home-header-meta">
-            <p className="home-header-status">{user ? 'Connecté' : 'Bienvenue'}</p>
+            <p className="home-header-status">{user ? 'Connecte' : 'Bienvenue'}</p>
             <div className="home-header-name-row">
               <h3 className="font-display home-header-name">{displayName}</h3>
               <span className="home-level-pill">
@@ -150,6 +151,8 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
         </header>
 
         <div className="home-main">
+          <AdSlot placement="home-banner-top" className="home-ad-top" />
+
           <div className="home-money-stack">
             <MoneyCard
               variant="green"
@@ -190,7 +193,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
                       {primaryResume.status === 'playing' ? 'Reprendre la table' : 'Retour au lobby'}
                     </p>
                     <p className="home-resume-meta">
-                      Code {primaryResume.code} · mise {primaryResume.baseStake.toLocaleString('fr-FR')} · siège{' '}
+                      Code {primaryResume.code} · mise {primaryResume.baseStake.toLocaleString('fr-FR')} · siege{' '}
                       {primaryResume.seatIndex + 1}
                       {activeTables.length > 1 ? ` · +${activeTables.length - 1} autre(s)` : ''}
                     </p>
@@ -202,6 +205,20 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
               </SectionCard>
             )}
           </div>
+
+          <SectionCard
+            className="home-tourney-teaser"
+            variant="gold"
+            onClick={() => onNavigate('tournaments')}
+          >
+            <div className="home-resume-row">
+              <div>
+                <p className="font-display home-resume-title">Tournois</p>
+                <p className="home-resume-meta">Competitions · lots FCFA · inscriptions</p>
+              </div>
+              <span className="home-resume-arrow">→</span>
+            </div>
+          </SectionCard>
 
           <div className="home-hero">
             <div className="home-brand">
@@ -239,6 +256,8 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
               })}
             </div>
           </div>
+
+          <AdSlot placement="home-banner-bottom" className="home-ad-bottom" />
         </div>
 
         <aside className="home-side">
@@ -250,7 +269,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
 
           <section className="home-activity">
             <div className="home-activity-head">
-              <h3 className="font-display home-activity-title">Activité</h3>
+              <h3 className="font-display home-activity-title">Activite</h3>
               <UiButton variant="ghost" onClick={goStats}>
                 Stats
               </UiButton>
@@ -258,11 +277,11 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
 
             {gamesPlayed === 0 ? (
               <EmptyState
-                title="Aucune partie solo pour l’instant."
+                title="Aucune partie solo pour l'instant."
                 dashed={false}
                 action={
                   <UiButton onClick={handlePlay} className="home-first-play">
-                    Première partie
+                    Premiere partie
                   </UiButton>
                 }
               />

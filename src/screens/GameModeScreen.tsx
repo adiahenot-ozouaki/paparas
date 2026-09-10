@@ -1,5 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import type { Screen } from '../types'
+import AdSlot from '../components/ads/AdSlot'
 import { useAuth } from '../auth/AuthContext'
 import { useGame } from '../game/GameContext'
 import { findMyActiveTables, listOpenLobbyTables, type MyActiveTable, type OpenLobbyTable } from '../lib/online/api'
@@ -9,7 +10,8 @@ import {
   setPendingJoinCode,
   setPendingJoinTableId,
 } from '../lib/online/session'
-import { Zap, Bot, Globe } from '../components/icons'
+import { Zap, Bot, Globe, Sparkles } from '../components/icons'
+import { Swords } from 'lucide-react'
 import {
   AlertBanner,
   BackButton,
@@ -41,14 +43,14 @@ const TRAINING_PRESET = {
 function humanizeListError(raw: string): string {
   const lower = raw.toLowerCase()
   if (lower.includes('failed to fetch') || lower.includes('network')) {
-    return 'Impossible de charger les tables (réseau).'
+    return 'Impossible de charger les tables (reseau).'
   }
-  return raw.length > 120 ? raw.slice(0, 100) + '…' : raw
+  return raw.length > 120 ? raw.slice(0, 100) + '...' : raw
 }
 
 export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
   const { user } = useAuth()
-  const { configureGame } = useGame()
+  const { configureGame, startNewGame } = useGame()
   const [myTables, setMyTables] = useState<MyActiveTable[]>([])
   const [openTables, setOpenTables] = useState<OpenLobbyTable[]>([])
   const [listError, setListError] = useState<string | null>(null)
@@ -71,7 +73,7 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
           setOpenTables(open.tables)
         }
       } catch (e) {
-        if (!cancelled) setListError(humanizeListError(e instanceof Error ? e.message : 'Erreur réseau'))
+        if (!cancelled) setListError(humanizeListError(e instanceof Error ? e.message : 'Erreur reseau'))
       }
     })()
     return () => {
@@ -95,6 +97,19 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
   function startTraining() {
     configureGame(TRAINING_PRESET)
     onNavigate('lobby')
+  }
+
+  function startFreestyle() {
+    configureGame({
+      baseStake: 100,
+      startingCapital: 5000,
+      deckVariant: 'as',
+      endMode: 'fixedRounds',
+      maxRounds: 99,
+      targetCapital: 99_999,
+    })
+    startNewGame()
+    onNavigate('freestyleTable')
   }
 
   function openOnlineCreate() {
@@ -130,7 +145,7 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
             <BackButton absolute={false} onClick={() => onNavigate('home')} />
             <PageHeader
               title="Mode de jeu"
-              subtitle={`Solo libre · Online${user ? ' · connecté' : ' · compte requis'}`}
+              subtitle={`Solo libre · Online${user ? ' · connecte' : ' · compte requis'}`}
             />
           </div>
 
@@ -147,7 +162,7 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
                     {t.status === 'playing' ? 'Reprendre la partie' : 'Retour au lobby'}
                   </p>
                   <p className="mode-resume-meta">
-                    Code {t.code} · mise {t.baseStake.toLocaleString('fr-FR')} · siège {t.seatIndex + 1}
+                    Code {t.code} · mise {t.baseStake.toLocaleString('fr-FR')} · siege {t.seatIndex + 1}
                   </p>
                 </SectionCard>
               ))}
@@ -155,6 +170,21 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
           )}
 
           <div className="mode-body mode-body--solo">
+            <AdSlot placement="mode-banner" className="mode-ad" />
+
+            <SectionCard className="mode-tourney-card" onClick={() => onNavigate('tournaments')}>
+              <div className="mode-online-head">
+                <span className="mode-online-emoji">
+                  <Swords size={22} className="kora-icon" aria-hidden />
+                </span>
+                <span className="font-display mode-online-title">Tournois</span>
+                <span className="mode-badge mode-badge--gold">NOUVEAU</span>
+              </div>
+              <p className="mode-online-desc">
+                Inscriptions, lots en FCFA, formats elimination ou course aux rounds.
+              </p>
+            </SectionCard>
+
             <p className="mode-group-label">Solo · IA</p>
 
             <ModeCard
@@ -164,30 +194,41 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
               badgeTone="gold"
               accent="var(--kora-gold)"
               desc="As, mise 500, 8 rounds max — table IA tout de suite."
-              meta="3–10+A · capital 5 000"
+              meta="3-10+A · capital 5 000"
               onClick={startQuick}
             />
 
             <ModeCard
               icon={<Bot size={22} className="kora-icon" />}
-              title="Entraînement"
+              title="Entrainement"
               badge="APPRENDRE"
               badgeTone="green"
               accent="var(--kora-success)"
-              desc="Paquet court (3–8), petites mises — idéal pour les règles."
+              desc="Paquet court (3-8), petites mises — ideal pour les regles."
               meta="Variante 8 · mise 100 · 5 rounds"
               onClick={startTraining}
             />
 
+            <ModeCard
+              icon={<Sparkles size={22} className="kora-icon" />}
+              title="Table freestyle"
+              badge="TEST UI"
+              badgeTone="green"
+              accent="var(--kora-green)"
+              desc="Cartes et 4 joueurs seulement — sans points, cash ni textes. Bac a sable UI."
+              meta="As · pas de banque · donne auto"
+              onClick={startFreestyle}
+            />
+
             <SectionCard variant="dashed" onClick={() => onNavigate('stakeConfig')}>
-              <span className="mode-config-hint">Configurer une table solo (mise, capital, variante, fin)…</span>
+              <span className="mode-config-hint">Configurer une table solo (mise, capital, variante, fin)...</span>
             </SectionCard>
           </div>
         </div>
 
         <aside className="mode-side">
           <div className="mode-body mode-body--online">
-            <p className="mode-group-label">En ligne · joueurs réels</p>
+            <p className="mode-group-label">En ligne · joueurs reels</p>
 
             <SectionCard className="mode-online-card">
               <div className="mode-online-accent" />
@@ -201,11 +242,11 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
                   {!user && <span className="mode-badge mode-badge--muted">CONNEXION</span>}
                 </div>
                 <p className="mode-online-desc">
-                  Créez une table privée ou rejoignez avec un code / une table ouverte.
+                  Creez une table privee ou rejoignez avec un code / une table ouverte.
                 </p>
                 <div className="mode-online-actions">
                   <UiButton onClick={openOnlineCreate} className="mode-online-btn">
-                    Créer une table
+                    Creer une table
                   </UiButton>
                   <UiButton variant="secondary" onClick={() => openOnlineJoin()} className="mode-online-btn">
                     Rejoindre (code)
@@ -223,7 +264,7 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
               </div>
             )}
             {openTables.length === 0 && !listError ? (
-              <EmptyState title="Aucune table en lobby" description="Créez-en une ou attendez un hôte." />
+              <EmptyState title="Aucune table en lobby" description="Creez-en une ou attendez un hote." />
             ) : (
               <div className="mode-open-list">
                 {openTables.map(t => (
@@ -239,7 +280,7 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
                           Mise {t.table.base_stake.toLocaleString('fr-FR')} · {t.seatCount}/4
                         </p>
                       </div>
-                      <span className="mode-open-cta">S’asseoir</span>
+                      <span className="mode-open-cta">S'asseoir</span>
                     </div>
                   </SectionCard>
                 ))}
