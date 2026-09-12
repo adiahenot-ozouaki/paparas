@@ -27,5 +27,8 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
     // claire : on VEUT que le joueur reste connecté entre deux visites.
     persistSession: true,
     autoRefreshToken: true,
+    detectSessionInUrl: true,
+    // Évite de laisser un refresh token mort spammer le réseau indéfiniment :
+    // supabase-js émettra SIGNED_OUT ; AuthContext purge alors l'état local.
   },
 })
