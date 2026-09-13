@@ -248,7 +248,6 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   const isCardPlayable = (card: GameCard) =>
     playableCards.some(c => c.suit === card.suit && c.value === card.value)
 
-  // Banque: meme regles que solo + moteur (plis 1-2, pas deja banke)
   const canBank =
     !isSpectating &&
     viewState.phase === 'playing' &&
@@ -400,6 +399,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
         <SpecialWinOverlayWrapper
           outcome={viewState.outcome}
           hands={viewState.hands}
+          seatNames={players.map(p => p.name)}
           onContinue={() => void handleRoundEndContinue()}
         />
       )}
@@ -409,6 +409,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
           outcome={viewState.outcome}
           hands={viewState.hands}
           playLog={viewState.playLog}
+          seatNames={players.map(p => p.name)}
           onContinue={() => void handleRoundEndContinue()}
         />
       )}
