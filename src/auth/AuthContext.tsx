@@ -55,8 +55,31 @@ export function humanizeAuthError(raw: string | null | undefined): string {
   if (lower.includes('user not found')) {
     return 'Aucun compte trouvé pour cet email.'
   }
+  if (
+    lower.includes('refresh_token') ||
+    lower.includes('invalid refresh') ||
+    lower.includes('refresh token') ||
+    lower.includes('session not found')
+  ) {
+    return 'Session expirée. Reconnectez-vous.'
+  }
   if (s.length > 160) return s.slice(0, 150) + '…'
   return s
+}
+
+/** Refresh token invalide / expiré / révoqué → on purge la session locale. */
+function isInvalidSessionError(message: string | undefined | null): boolean {
+  if (!message) return false
+  const lower = message.toLowerCase()
+  return (
+    lower.includes('refresh_token') ||
+    lower.includes('invalid refresh') ||
+    lower.includes('refresh token') ||
+    lower.includes('session not found') ||
+    lower.includes('invalid claim') ||
+    lower.includes('jwt expired') ||
+    lower.includes('invalid jwt')
+  )
 }
 
 interface AuthContextValue {
@@ -95,25 +118,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setProfile(data as KoraProfile | null)
   }, [])
 
+  /** Purge session locale sans appeler le serveur (évite boucle 400 refresh). */
+  const clearLocalSession = useCallback(async () => {
+    try {
+      await supabase.auth.signOut({ scope: 'local' })
+    } catch {
+      // ignore
+    }
+    setSession(null)
+    setProfile(null)
+  }, [])
+
   useEffect(() => {
     let isMounted = true
 
-    supabase.auth.getSession().then(({ data }) => {
+    ;(async () => {
+      const { data, error } = await supabase.auth.getSession()
       if (!isMounted) return
+
+      if (error && isInvalidSessionError(error.message)) {
+        await clearLocalSession()
+        setIsLoading(false)
+        return
+      }
+
       setSession(data.session)
       setIsLoading(false)
       if (data.session?.user) {
         void loadProfile(data.session.user.id)
       }
-    })
+    })()
 
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, newSession) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange(async (event, newSession) => {
       if (!isMounted) return
-      setSession(newSession)
-      if (newSession?.user) {
-        void loadProfile(newSession.user.id)
-      } else {
+
+      // Refresh échoué / session révoquée → supabase émet souvent SIGNED_OUT sans session
+      if (event === 'SIGNED_OUT' || !newSession) {
+        setSession(null)
         setProfile(null)
+        return
+      }
+
+      setSession(newSession)
+      if (newSession.user) {
+        void loadProfile(newSession.user.id)
       }
     })
 
@@ -121,7 +169,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       isMounted = false
       subscription.subscription.unsubscribe()
     }
-  }, [loadProfile])
+  }, [loadProfile, clearLocalSession])
 
   const signUp = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signUp({
@@ -141,6 +189,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await supabase.auth.signOut()
+    setSession(null)
+    setProfile(null)
   }, [])
 
   const resetPassword = useCallback(async (email: string) => {

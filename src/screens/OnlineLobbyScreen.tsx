@@ -16,113 +16,57 @@ import {
   type OpenLobbyTable,
   type SeatWithProfile,
 } from '../lib/online/api'
-import {
-  consumePendingJoinCode,
-  consumePendingJoinTableId,
-  getActiveOnlineTableId,
-  setActiveOnlineTableId,
-} from '../lib/online/session'
+import { getActiveOnlineTableId, setActiveOnlineTableId, consumePendingJoinCode } from '../lib/online/session'
 import { humanizeError } from '../lib/online/errors'
-import { TableChat } from '../components/game/TableChat'
 import { supabase } from '../lib/supabase/client'
+import { TableChat } from '../components/game/TableChat'
 import type { KoraTable } from '../lib/supabase/database.types'
 
 type Phase = 'menu' | 'table'
 
 export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Screen) => void }) {
-  const { user, profile, isLoading: authLoading } = useAuth()
+  const { user, isLoading: authLoading, profile, refreshProfile } = useAuth()
   const { stakeConfig, deckVariant } = useGame()
 
   const [phase, setPhase] = useState<Phase>('menu')
   const [table, setTable] = useState<KoraTable | null>(null)
   const [seats, setSeats] = useState<SeatWithProfile[]>([])
+  const [openList, setOpenList] = useState<OpenLobbyTable[]>([])
   const [joinCode, setJoinCode] = useState(() => consumePendingJoinCode() ?? '')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [openTables, setOpenTables] = useState<OpenLobbyTable[]>([])
-  const [listError, setListError] = useState<string | null>(null)
+  const [starting, setStarting] = useState(false)
   const autoJoinDone = useRef(false)
 
-  const mySeat = useMemo(
-    () => (user ? seats.find(s => s.user_id === user.id) : undefined),
-    [seats, user],
-  )
   const isHost = Boolean(user && table && table.created_by === user.id)
+  const mySeat = seats.find(s => s.user_id === user?.id)
   const allReady = seats.length >= 2 && seats.every(s => s.is_ready)
-  const canStart = isHost && allReady && table?.status === 'lobby'
+  const inviteCode = table ? tableInviteCode(table.id) : ''
 
-  const goToTable = useCallback(
-    (tableId: string) => {
-      setActiveOnlineTableId(tableId)
-      onNavigate('onlineGameTable')
-    },
-    [onNavigate],
-  )
-
-  const refresh = useCallback(
-    async (tableId: string) => {
-      const [t, s] = await Promise.all([fetchTable(tableId), fetchSeatsWithProfiles(tableId)])
-      if (t.table) setTable(t.table)
-      if (!s.error) setSeats(s.seats)
-      if (t.table?.status === 'playing') goToTable(tableId)
-    },
-    [goToTable],
-  )
-
-  const refreshOpenList = useCallback(async () => {
-    try {
-      const open = await listOpenLobbyTables(10)
-      if (open.error) setListError(humanizeError(open.error, 'Impossible de charger les tables ouvertes.'))
-      else {
-        setListError(null)
-        setOpenTables(open.tables)
-      }
-    } catch (e) {
-      setListError(humanizeError(e instanceof Error ? e.message : String(e)))
-    }
+  const refresh = useCallback(async (tableId: string) => {
+    const [t, s] = await Promise.all([fetchTable(tableId), fetchSeatsWithProfiles(tableId)])
+    if (t.table) setTable(t.table)
+    if (!s.error) setSeats(s.seats)
+    return { table: t.table, seats: s.seats }
   }, [])
 
+  const refreshOpenList = useCallback(async () => {
+    const { tables } = await listOpenLobbyTables()
+    setOpenList(tables)
+  }, [])
+
+  const goToTable = useCallback(() => {
+    onNavigate('onlineGame')
+  }, [onNavigate])
+
   useEffect(() => {
-    if (authLoading || !user) return
-    let cancelled = false
-    ;(async () => {
-      const stored = getActiveOnlineTableId()
-      if (stored) {
-        const t = await fetchTable(stored)
-        if (!cancelled && t.table && (t.table.status === 'lobby' || t.table.status === 'playing')) {
-          const seatsNow = await fetchSeatsWithProfiles(stored)
-          if (seatsNow.seats.some(s => s.user_id === user.id)) {
-            if (t.table.status === 'playing') {
-              goToTable(stored)
-              return
-            }
-            setTable(t.table)
-            setSeats(seatsNow.seats)
-            setPhase('table')
-            return
-          }
-        }
-      }
-      const mine = await findMyActiveTables(user.id)
-      if (cancelled || mine.error || mine.tables.length === 0) return
-      const preferred = mine.tables.find(x => x.status === 'playing') ?? mine.tables[0]
-      if (preferred.status === 'playing') {
-        goToTable(preferred.tableId)
-        return
-      }
-      const t = await fetchTable(preferred.tableId)
-      const s = await fetchSeatsWithProfiles(preferred.tableId)
-      if (!cancelled && t.table) {
-        setTable(t.table)
-        setSeats(s.seats)
-        setPhase('table')
-        setActiveOnlineTableId(preferred.tableId)
-      }
-    })()
-    return () => {
-      cancelled = true
+    if (authLoading) return
+    if (!user) {
+      onNavigate('auth')
+      return
     }
-  }, [authLoading, user, goToTable])
+    void refreshProfile()
+  }, [authLoading, user, onNavigate, refreshProfile])
 
   useEffect(() => {
     if (phase !== 'menu') return
@@ -132,102 +76,108 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
   }, [phase, refreshOpenList])
 
   useEffect(() => {
-    if (!table?.id) return
-    const tableId = table.id
+    if (!table || phase !== 'table') return
     const channel = supabase
-      .channel(`lobby:${tableId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'kora_table_players', filter: `table_id=eq.${tableId}` }, () => {
-        void refresh(tableId)
-      })
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'kora_tables', filter: `id=eq.${tableId}` }, () => {
-        void refresh(tableId)
-      })
+      .channel('lobby:' + table.id)
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'kora_table_players', filter: 'table_id=eq.' + table.id },
+        () => {
+          void refresh(table.id)
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'kora_tables', filter: 'id=eq.' + table.id },
+        () => {
+          void refresh(table.id)
+        },
+      )
       .subscribe()
-    const poll = setInterval(() => void refresh(tableId), 3000)
+    const poll = setInterval(() => void refresh(table.id), 2000)
     return () => {
       clearInterval(poll)
       void supabase.removeChannel(channel)
     }
-  }, [table?.id, refresh])
+  }, [table?.id, phase, refresh])
 
   useEffect(() => {
-    if (!authLoading && !user) onNavigate('auth')
-  }, [authLoading, user, onNavigate])
+    if (table?.status === 'playing' && mySeat) {
+      goToTable()
+    }
+  }, [table?.status, mySeat, goToTable])
 
   useEffect(() => {
     if (authLoading || !user || autoJoinDone.current || phase !== 'menu') return
-    const tableId = consumePendingJoinTableId()
-    if (!tableId) return
     autoJoinDone.current = true
-    void (async () => {
-      setBusy(true)
-      setError(null)
-      try {
-        const { table: t, error: tErr } = await fetchTable(tableId)
-        if (tErr || !t) {
-          setError(humanizeError(tErr, 'Table introuvable. Elle a peut‑être été fermée.'))
-          setBusy(false)
+    ;(async () => {
+      const { tables } = await findMyActiveTables(user.id)
+      if (tables.length > 0) {
+        const active = tables[0]
+        setActiveOnlineTableId(active.tableId)
+        if (active.status === 'playing') {
+          goToTable()
           return
         }
-        if (t.status === 'playing') {
-          const seatsNow = await fetchSeatsWithProfiles(t.id)
-          if (seatsNow.seats.some(s => s.user_id === user.id)) {
-            goToTable(t.id)
+        await refresh(active.tableId)
+        setPhase('table')
+        return
+      }
+      const pending = joinCode.trim()
+      if (pending.length >= 6) {
+        setBusy(true)
+        try {
+          const { tables: open } = await listOpenLobbyTables(30)
+          const t = open.find(o => tableInviteCode(o.table.id) === pending.toUpperCase() || o.table.id.startsWith(pending))
+          if (!t) {
+            setError('Code introuvable ou table complete.')
             setBusy(false)
             return
           }
-          setError('Cette table a déjà démarré.')
-          setBusy(false)
-          return
-        }
-        if (t.status !== 'lobby') {
-          setError('Cette table n’est plus disponible.')
-          setBusy(false)
-          return
-        }
-        const already = (await fetchSeatsWithProfiles(t.id)).seats.find(s => s.user_id === user.id)
-        if (!already) {
-          const buyIn = Math.min(Math.max(stakeConfig.startingCapital, t.min_buy_in), t.max_buy_in)
-          const { error: joinErr } = await joinOnlineTable({ tableId: t.id, userId: user.id, buyIn })
+          const { error: joinErr } = await joinOnlineTable({
+            tableId: t.table.id,
+            userId: user.id,
+            buyIn: t.table.starting_capital,
+          })
           if (joinErr) {
             setError(humanizeError(joinErr, 'Impossible de rejoindre la table.'))
             setBusy(false)
             return
           }
+          setActiveOnlineTableId(t.table.id)
+          await refresh(t.table.id)
+          setPhase('table')
+        } catch (e) {
+          setError(humanizeError(e instanceof Error ? e.message : String(e)))
         }
-        setActiveOnlineTableId(t.id)
-        setTable(t)
-        await refresh(t.id)
-        setPhase('table')
-      } catch (e) {
-        setError(humanizeError(e instanceof Error ? e.message : String(e)))
+        setBusy(false)
       }
-      setBusy(false)
     })()
-  }, [authLoading, user, phase, goToTable, refresh, stakeConfig.startingCapital])
+  }, [authLoading, user, phase, goToTable, refresh, joinCode])
 
   async function handleCreate() {
     if (!user) return
     setBusy(true)
     setError(null)
     const variant = deckVariant === '8' ? 'as' : deckVariant
+    const tableCapital = stakeConfig.baseStake * 10
     const { table: created, error: createErr } = await createOnlineTable({
       userId: user.id,
       baseStake: stakeConfig.baseStake,
-      startingCapital: stakeConfig.startingCapital,
+      startingCapital: tableCapital,
       deckVariant: variant as '9' | '10' | 'as',
-      minBuyIn: stakeConfig.startingCapital,
-      maxBuyIn: stakeConfig.startingCapital * 3,
+      minBuyIn: tableCapital,
+      maxBuyIn: tableCapital,
     })
     if (createErr || !created) {
-      setError(humanizeError(createErr, 'Impossible de créer la table.'))
+      setError(humanizeError(createErr, 'Impossible de creer la table.'))
       setBusy(false)
       return
     }
     const { error: joinErr } = await joinOnlineTable({
       tableId: created.id,
       userId: user.id,
-      buyIn: stakeConfig.startingCapital,
+      buyIn: tableCapital,
       preferredSeat: 0,
     })
     if (joinErr) {
@@ -249,30 +199,27 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
     try {
       const { table: t, error: tErr } = await fetchTable(tableId)
       if (tErr || !t) {
-        setError(humanizeError(tErr, 'Table introuvable. Elle a peut‑être été fermée.'))
+        setError(humanizeError(tErr, 'Table introuvable.'))
         setBusy(false)
         return
       }
       if (t.status === 'playing') {
-        const seatsNow = await fetchSeatsWithProfiles(t.id)
-        if (seatsNow.seats.find(s => s.user_id === user.id)) {
-          goToTable(t.id)
-          setBusy(false)
-          return
-        }
-        setError('Cette table a déjà démarré.')
+        setError('Cette table a deja demarre.')
         setBusy(false)
         return
       }
       if (t.status !== 'lobby') {
-        setError('Cette table n’est plus disponible.')
+        setError('Cette table n est plus disponible.')
         setBusy(false)
         return
       }
       const already = (await fetchSeatsWithProfiles(t.id)).seats.find(s => s.user_id === user.id)
       if (!already) {
-        const buyIn = Math.min(Math.max(stakeConfig.startingCapital, t.min_buy_in), t.max_buy_in)
-        const { error: joinErr } = await joinOnlineTable({ tableId: t.id, userId: user.id, buyIn })
+        const { error: joinErr } = await joinOnlineTable({
+          tableId: t.id,
+          userId: user.id,
+          buyIn: t.starting_capital,
+        })
         if (joinErr) {
           setError(humanizeError(joinErr, 'Impossible de rejoindre la table.'))
           setBusy(false)
@@ -289,135 +236,123 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
     setBusy(false)
   }
 
-  async function handleJoin() {
-    if (!user) return
+  async function handleJoinByCode() {
     const raw = joinCode.trim()
-    if (!raw) {
-      setError('Entrez le code ou l’UUID de la table.')
+    if (raw.length < 6) {
+      setError('Indiquez un code de table (au moins 6 caracteres).')
       return
     }
     setBusy(true)
     setError(null)
-    let tableId = raw
     try {
-      if (!raw.includes('-') && raw.length <= 12) {
-        const { data, error } = await supabase.from('kora_tables').select('id, status').eq('status', 'lobby').limit(40)
-        if (error) {
-          setError(humanizeError(error.message, 'Recherche de table impossible.'))
-          setBusy(false)
-          return
-        }
-        const match = (data ?? []).find(t => tableInviteCode(t.id) === raw.toUpperCase().replace(/-/g, ''))
-        if (!match) {
-          setError('Aucune table en lobby avec ce code. Vérifiez le code ou choisissez une table ouverte.')
-          setBusy(false)
-          return
-        }
-        tableId = match.id
+      const { tables: open } = await listOpenLobbyTables(40)
+      const upper = raw.toUpperCase()
+      const match =
+        open.find(o => tableInviteCode(o.table.id) === upper) ||
+        open.find(o => o.table.id.replace(/-/g, '').toUpperCase().startsWith(upper))
+      if (!match) {
+        setError('Code introuvable ou table complete.')
+        setBusy(false)
+        return
       }
+      await handleJoinById(match.table.id)
     } catch (e) {
       setError(humanizeError(e instanceof Error ? e.message : String(e)))
       setBusy(false)
-      return
     }
-    setBusy(false)
-    await handleJoinById(tableId)
   }
 
   async function handleToggleReady() {
     if (!user || !table || !mySeat) return
     setBusy(true)
-    setError(null)
-    const { error: e } = await setSeatReady(table.id, user.id, !mySeat.is_ready)
-    if (e) setError(humanizeError(e, 'Impossible de changer le statut prêt.'))
+    const { error: err } = await setSeatReady(table.id, user.id, !mySeat.is_ready)
+    if (err) setError(humanizeError(err))
     await refresh(table.id)
     setBusy(false)
   }
 
   async function handleStart() {
-    if (!table) return
-    setBusy(true)
+    if (!table || !isHost || !allReady) return
+    setStarting(true)
     setError(null)
     const { ok, body } = await callEngine('start_table', table.id)
     if (!ok) {
-      setError(humanizeError(String(body.error ?? ''), 'Impossible de démarrer la table.'))
-      setBusy(false)
+      setError(humanizeError(body.error != null ? String(body.error) : undefined, 'Demarrage refuse.'))
+      setStarting(false)
       return
     }
-    setActiveOnlineTableId(table.id)
-    setBusy(false)
-    onNavigate('onlineGameTable')
+    goToTable()
   }
 
   async function handleLeave() {
-    if (!table) {
+    if (!table || !user) {
       setPhase('menu')
+      setActiveOnlineTableId(null)
       return
     }
     setBusy(true)
-    setError(null)
     try {
-      const { ok, body } = await callEngine('leave_table', table.id)
-      if (!ok) {
-        setError(humanizeError(String(body.error ?? ''), 'Impossible de quitter la table.'))
-        setBusy(false)
-        return
+      if (table.status === 'lobby') {
+        await supabase.from('kora_table_players').delete().eq('table_id', table.id).eq('user_id', user.id)
+        const left = await fetchSeatsWithProfiles(table.id)
+        if (left.seats.length === 0) {
+          await supabase.from('kora_tables').delete().eq('id', table.id)
+        }
+      } else {
+        await callEngine('leave_table', table.id)
       }
-      setActiveOnlineTableId(null)
-      setTable(null)
-      setSeats([])
-      setPhase('menu')
-      void refreshOpenList()
-    } catch (e) {
-      setError(humanizeError(e instanceof Error ? e.message : String(e), 'Impossible de quitter la table.'))
+    } catch {
+      /* ignore */
     }
+    setActiveOnlineTableId(null)
+    setTable(null)
+    setSeats([])
+    setPhase('menu')
     setBusy(false)
+    void refreshOpenList()
   }
 
   if (authLoading || !user) {
     return (
-      <div className="online-lobby-loading">
-        <span className="online-lobby-loading-text">Connexion…</span>
+      <div className="felt-bg online-lobby-screen">
+        <span className="table-loading-text">Chargement...</span>
       </div>
     )
   }
 
   return (
-    <div className="online-lobby-screen">
-      <div className="pattern-african online-lobby-pattern" />
-      <div className="online-lobby-header">
-        <BackButton
-          absolute={false}
-          onClick={() => (phase === 'table' ? void handleLeave() : onNavigate('gameMode'))}
-        />
-        <h1 className="font-display online-lobby-title">
-          {phase === 'menu' ? 'Table en ligne' : 'Lobby privé'}
-        </h1>
-        <p className="online-lobby-sub">
-          {profile?.username ? `Connecté : ${profile.username}` : user.email}
-        </p>
-      </div>
+    <div className="felt-bg online-lobby-screen">
+      <div className="online-lobby-inner">
+        <header className="online-lobby-header">
+          <BackButton
+            onClick={() => (phase === 'table' ? void handleLeave() : onNavigate('gameMode'))}
+          />
+          <h1 className="font-display online-lobby-title">
+            {phase === 'menu' ? 'Table en ligne' : 'Lobby prive'}
+          </h1>
+          {profile && (
+            <p className="online-lobby-wallet">
+              Wallet {profile.wallet_balance.toLocaleString('fr-FR')} FCFA
+            </p>
+          )}
+        </header>
 
-      <div className="online-lobby-body">
         {error && (
-          <div role="alert" className="online-lobby-error">
-            <p className="online-lobby-error-text">{error}</p>
-            <button type="button" onClick={() => setError(null)} className="online-lobby-error-dismiss">
-              Fermer
-            </button>
+          <div role="alert" className="online-error-toast" onClick={() => setError(null)}>
+            {error}
           </div>
         )}
 
         {phase === 'menu' && (
           <>
             <section className="online-lobby-section">
-              <h2 className="font-display online-lobby-section-title">Créer une table</h2>
+              <h2 className="font-display online-lobby-section-title">Creer une table</h2>
               <p className="online-lobby-hint">
-                Mise {stakeConfig.baseStake.toLocaleString('fr-FR')} · buy-in{' '}
-                {stakeConfig.startingCapital.toLocaleString('fr-FR')} (config solo)
+                Mise {stakeConfig.baseStake.toLocaleString('fr-FR')} FCFA
+                {' '}· capital {(stakeConfig.baseStake * 10).toLocaleString('fr-FR')} FCFA
               </p>
               <button type="button" className="btn-primary online-lobby-cta" disabled={busy} onClick={() => void handleCreate()}>
-                {busy ? '…' : 'Créer une table privée'}
+                {busy ? '...' : 'Creer une table privee'}
               </button>
             </section>
 
@@ -428,10 +363,10 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
                   className="online-lobby-input"
                   value={joinCode}
                   onChange={e => setJoinCode(e.target.value)}
-                  placeholder="Code ou UUID"
-                  autoComplete="off"
+                  placeholder="Code table"
+                  maxLength={12}
                 />
-                <button type="button" className="btn-secondary" disabled={busy} onClick={() => void handleJoin()}>
+                <button type="button" className="btn-primary" disabled={busy} onClick={() => void handleJoinByCode()}>
                   Rejoindre
                 </button>
               </div>
@@ -439,16 +374,15 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
 
             <section className="online-lobby-section">
               <h2 className="font-display online-lobby-section-title">Tables ouvertes</h2>
-              {listError && <p className="online-lobby-list-error">{listError}</p>}
-              {openTables.length === 0 && !listError ? (
-                <p className="online-lobby-empty">Aucune table en lobby pour le moment.</p>
+              {openList.length === 0 ? (
+                <p className="online-lobby-hint">Aucune table en lobby pour le moment.</p>
               ) : (
-                <ul className="online-lobby-open-list">
-                  {openTables.map(t => (
+                <ul className="online-lobby-list">
+                  {openList.map(t => (
                     <li key={t.table.id}>
                       <button
                         type="button"
-                        className="online-lobby-open-item"
+                        className="online-lobby-list-item"
                         disabled={busy}
                         onClick={() => void handleJoinById(t.table.id)}
                       >
@@ -467,37 +401,34 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
 
         {phase === 'table' && table && (
           <section className="online-lobby-section online-lobby-table-phase">
-            <p className="online-lobby-code-line">
-              Code d’invitation : <strong className="font-display">{tableInviteCode(table.id)}</strong>
+            <p className="online-lobby-hint">
+              Code <strong className="text-gold">{inviteCode}</strong>
             </p>
             <p className="online-lobby-hint">
               Statut {table.status} · {seats.length}/4 joueurs · mise {table.base_stake.toLocaleString('fr-FR')}
             </p>
             <ul className="online-lobby-seats">
-              {[0, 1, 2, 3].map(i => {
-                const s = seats.find(x => x.seat_index === i)
-                return (
-                  <li key={i} className={s ? 'is-filled' : 'is-empty'}>
-                    <span>Siège {i + 1}</span>
-                    <span>{s ? s.profile?.username ?? 'Joueur' : '—'}</span>
-                    <span>{s ? (s.is_ready ? 'Prêt' : 'Pas prêt') : ''}</span>
-                  </li>
-                )
-              })}
+              {seats.map(s => (
+                <li key={s.user_id}>
+                  {s.profile?.username ?? 'Joueur'} · siege {s.seat_index + 1}
+                  {s.is_ready ? ' · pret' : ''}
+                  {s.user_id === user.id ? ' (vous)' : ''}
+                </li>
+              ))}
             </ul>
             <div className="online-lobby-actions">
               {mySeat && table.status === 'lobby' && (
-                <button type="button" className="btn-secondary" disabled={busy} onClick={() => void handleToggleReady()}>
-                  {mySeat.is_ready ? 'Pas prêt' : 'Je suis prêt'}
+                <button type="button" className="btn-primary" disabled={busy} onClick={() => void handleToggleReady()}>
+                  {mySeat.is_ready ? 'Pas pret' : 'Je suis pret'}
                 </button>
               )}
-              {canStart && (
-                <button type="button" className="btn-primary" disabled={busy} onClick={() => void handleStart()}>
-                  Démarrer la partie
+              {isHost && table.status === 'lobby' && (
+                <button type="button" className="btn-primary glow-gold" disabled={!allReady || starting} onClick={() => void handleStart()}>
+                  {starting ? 'Demarrage...' : 'Demarrer la partie'}
                 </button>
               )}
-              <button type="button" className="btn-secondary online-lobby-leave" disabled={busy} onClick={() => void handleLeave()}>
-                Quitter la table
+              <button type="button" className="online-lobby-leave" disabled={busy} onClick={() => void handleLeave()}>
+                Quitter le lobby
               </button>
             </div>
             <TableChat tableId={table.id} myUserId={user?.id ?? null} title="Discussion lobby" />
