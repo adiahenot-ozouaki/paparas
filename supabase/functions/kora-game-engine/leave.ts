@@ -24,6 +24,7 @@ import {
  * - Capital restant du siège → crédit wallet_balance du compte
  * - Siège supprimé (libère la place)
  * - Plus personne à table → suppression de la table et données liées
+ * - < 2 joueurs restants en partie → cash-out des restants + dissolution
  */
 export async function handleLeaveTable(
   admin: SupabaseClient,
@@ -112,12 +113,35 @@ export async function handleLeaveTable(
   if (error) throw new Error(`Échec pour quitter la table : ${error.message}`)
 
   const remaining = await loadSeats(admin, tableId)
+  let tableDissolved = false
+
   if (remaining.length === 0) {
-    // Plus personne à table → supprimer le lobby / la table et ses données liées
     await deleteEmptyTable(admin, tableId)
+    tableDissolved = true
+  } else if (remaining.length < 2 && table.status === 'playing') {
+    // Moins de 2 joueurs → la table ne peut plus continuer : cash-out des restants + dissolution
+    for (const s of remaining) {
+      const cap = s.capital ?? 0
+      if (cap > 0) {
+        const { data: profile } = await admin
+          .from('kora_profiles')
+          .select('wallet_balance')
+          .eq('id', s.user_id)
+          .maybeSingle()
+        if (profile) {
+          await admin
+            .from('kora_profiles')
+            .update({ wallet_balance: (profile.wallet_balance ?? 0) + cap })
+            .eq('id', s.user_id)
+        }
+      }
+      await admin.from('kora_table_players').delete().eq('table_id', tableId).eq('user_id', s.user_id)
+    }
+    await deleteEmptyTable(admin, tableId)
+    tableDissolved = true
   }
 
-  return jsonResponse({ left: true, cashOut, forfeited })
+  return jsonResponse({ left: true, cashOut, forfeited, tableDissolved })
 }
 
 /** Supprime une table vide (aucun siège) et ses données associées. */
@@ -130,7 +154,6 @@ async function deleteEmptyTable(admin: SupabaseClient, tableId: string): Promise
     const { error: roundsErr } = await admin.from('kora_rounds').delete().eq('table_id', tableId)
     if (roundsErr) console.error('[leave_table] delete rounds:', roundsErr.message)
   }
-  // kora_table_messages a ON DELETE CASCADE sur table_id
   const { error: playersErr } = await admin.from('kora_table_players').delete().eq('table_id', tableId)
   if (playersErr) console.error('[leave_table] delete players:', playersErr.message)
   const { error: tableErr } = await admin.from('kora_tables').delete().eq('id', tableId)
