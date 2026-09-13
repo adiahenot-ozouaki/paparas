@@ -11,13 +11,17 @@ interface SpecialWinOverlayWrapperProps {
   >
   hands: RoundState['hands']
   onContinue: () => void
+  /** Noms affiches par index de vue (0-3). Defaut = SEAT_NAMES solo. */
+  seatNames?: string[]
 }
 
 export function SpecialWinOverlayWrapper({
   outcome,
   hands,
   onContinue,
+  seatNames = SEAT_NAMES,
 }: SpecialWinOverlayWrapperProps) {
+  const names = seatNames.length >= 4 ? seatNames : SEAT_NAMES
   const payoutLines = [
     ...outcome.payout.winners,
     ...outcome.payout.losers,
@@ -27,7 +31,7 @@ export function SpecialWinOverlayWrapper({
         a.playerIndex - b.playerIndex,
     )
     .map(player => ({
-      name: SEAT_NAMES[player.playerIndex],
+      name: names[player.playerIndex] ?? `Joueur ${player.playerIndex + 1}`,
       amount: player.amount,
     }))
 
@@ -35,7 +39,7 @@ export function SpecialWinOverlayWrapper({
     <SpecialWinOverlay
       winners={outcome.winners}
       hands={hands}
-      seatNames={SEAT_NAMES}
+      seatNames={names}
       payoutLines={payoutLines}
       onContinue={onContinue}
     />
