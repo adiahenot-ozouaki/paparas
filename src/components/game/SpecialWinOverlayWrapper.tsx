@@ -11,8 +11,9 @@ interface SpecialWinOverlayWrapperProps {
   >
   hands: RoundState['hands']
   onContinue: () => void
-  /** Noms affiches par index de vue (0-3). Defaut = SEAT_NAMES solo. */
   seatNames?: string[]
+  continueLabel?: string
+  continueDisabled?: boolean
 }
 
 export function SpecialWinOverlayWrapper({
@@ -20,6 +21,8 @@ export function SpecialWinOverlayWrapper({
   hands,
   onContinue,
   seatNames = SEAT_NAMES,
+  continueLabel,
+  continueDisabled,
 }: SpecialWinOverlayWrapperProps) {
   const names = seatNames.length >= 4 ? seatNames : SEAT_NAMES
   const payoutLines = [
@@ -42,6 +45,8 @@ export function SpecialWinOverlayWrapper({
       seatNames={names}
       payoutLines={payoutLines}
       onContinue={onContinue}
+      continueLabel={continueLabel}
+      continueDisabled={continueDisabled}
     />
   )
 }
