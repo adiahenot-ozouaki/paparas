@@ -1,49 +1,20 @@
-// ==========================================================================
-// shared.ts — loaders, types, payout helpers for kora-game-engine.
-// ==========================================================================
+// shared.ts — types, loaders, payout helpers for kora-game-engine
+import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
+import type { Card } from './engine/types.ts'
+import type { RoundState } from './engine/round.ts'
+import type { GameStakeConfig, PayoutPlayer } from './engine/payout.ts'
+import { applyRoundPayout, computeRoundPayout } from './engine/payout.ts'
 
-import { createClient, type SupabaseClient } from 'jsr:@supabase/supabase-js@2'
-import type { Card, DeckVariant, ComboType } from './engine/types.ts'
-import {
-  bankPlayer,
-  claimVictory,
-  getCurrentPlayerIndex,
-  initRound,
-  playCard,
-  resolveTrick,
-  type RoundOutcome,
-  type RoundState,
-} from './engine/round.ts'
-import type { GameStakeConfig } from './engine/payout.ts'
-import { applyRoundPayout, computeRoundPayout, type PayoutPlayer } from './engine/payout.ts'
-import { getComboMultiplier } from './engine/combo.ts'
-
-export const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-}
-
-export function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
-  })
-}
-
-export function errorResponse(message: string, status = 400): Response {
-  return jsonResponse({ error: message }, status)
-}
+export const NUM_PLAYERS = 4
+export const MIN_ACTIVE_PLAYERS = 2
 
 export interface TableRow {
   id: string
-  status: 'lobby' | 'playing' | 'finished'
+  status: string
   base_stake: number
   starting_capital: number
-  deck_variant: DeckVariant
+  deck_variant: '9' | '10' | 'as'
   created_by: string
-  min_buy_in: number
-  max_buy_in: number
 }
 
 export interface SeatRow {
@@ -58,50 +29,38 @@ export interface RoundRow {
   id: string
   table_id: string
   round_number: number
-  phase: RoundState['phase']
-  current_trick: RoundState['currentTrick']
-  play_log: RoundState['playLog']
+  phase: string
+  current_trick: unknown
+  play_log: unknown
   trick_winners: number[]
   banked_players: number[]
   last_trick_winner_index: number | null
-  outcome: RoundOutcome | null
-  payout_applied: boolean
+  outcome: RoundState['outcome']
+  payout_applied?: boolean
 }
 
-export interface HandRow {
-  round_id: string
-  user_id: string
-  seat_index: number
-  cards: Card[]
-  revealed: boolean
+export function jsonResponse(body: Record<string, unknown>, status = 200): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      'Content-Type': 'application/json',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    },
+  })
 }
 
-export const NUM_PLAYERS = 4
-export const MIN_ACTIVE_PLAYERS = 2
-
-export function reconstructRoundState(table: TableRow, round: RoundRow, hands: HandRow[]): RoundState {
-  const handsBySeat: Card[][] = Array.from({ length: NUM_PLAYERS }, () => [])
-  for (const h of hands) handsBySeat[h.seat_index] = h.cards
-  return {
-    phase: round.phase,
-    variant: table.deck_variant,
-    numPlayers: NUM_PLAYERS,
-    hands: handsBySeat,
-    currentTrick: round.current_trick,
-    playLog: round.play_log,
-    trickWinners: round.trick_winners,
-    lastTrickWinnerIndex: round.last_trick_winner_index,
-    bankedPlayers: round.banked_players,
-    outcome: round.outcome,
-  }
+export function errorResponse(message: string, status = 400): Response {
+  return jsonResponse({ error: message }, status)
 }
 
-export function toPublicState(state: RoundState, callerSeatIndex: number) {
-  const handsRevealed = state.outcome?.kind === 'specialWin'
-  return {
-    ...state,
-    hands: state.hands.map((h, i) => (i === callerSeatIndex || handsRevealed ? h : h.map(() => null))),
-  }
+export async function authenticate(req: Request, admin: SupabaseClient): Promise<{ userId: string }> {
+  const auth = req.headers.get('Authorization')
+  if (!auth) throw new Error('UNAUTHENTICATED')
+  const token = auth.replace(/^Bearer\s+/i, '')
+  const { data, error } = await admin.auth.getUser(token)
+  if (error || !data.user) throw new Error('UNAUTHENTICATED')
+  return { userId: data.user.id }
 }
 
 export async function loadTable(admin: SupabaseClient, tableId: string): Promise<TableRow> {
@@ -115,32 +74,62 @@ export async function loadSeats(admin: SupabaseClient, tableId: string): Promise
     .from('kora_table_players')
     .select('*')
     .eq('table_id', tableId)
-    .order('seat_index', { ascending: true })
-  if (error) throw new Error(`Impossible de charger les sièges : ${error.message}`)
+    .order('seat_index')
+  if (error) throw new Error(`Échec chargement sièges : ${error.message}`)
   return (data ?? []) as SeatRow[]
 }
 
 export function computeVacantSeats(seats: SeatRow[]): number[] {
   const occupied = new Set(seats.map(s => s.seat_index))
-  const vacant: number[] = []
-  for (let i = 0; i < NUM_PLAYERS; i++) {
-    if (!occupied.has(i)) vacant.push(i)
-  }
-  return vacant
+  return Array.from({ length: NUM_PLAYERS }, (_, i) => i).filter(i => !occupied.has(i))
 }
 
-export async function loadLatestRound(admin: SupabaseClient, tableId: string): Promise<{ round: RoundRow; hands: HandRow[] }> {
+export async function loadLatestRound(
+  admin: SupabaseClient,
+  tableId: string,
+): Promise<{ round: RoundRow; hands: Card[][] }> {
   const { data: round, error } = await admin
     .from('kora_rounds')
     .select('*')
     .eq('table_id', tableId)
     .order('round_number', { ascending: false })
     .limit(1)
-    .maybeSingle()
-  if (error || !round) throw new Error('Aucun round en cours pour cette table.')
-  const { data: hands, error: handsError } = await admin.from('kora_round_hands').select('*').eq('round_id', round.id)
-  if (handsError) throw new Error(`Impossible de charger les mains : ${handsError.message}`)
-  return { round: round as RoundRow, hands: (hands ?? []) as HandRow[] }
+    .single()
+  if (error || !round) throw new Error('Aucun round actif.')
+  const { data: handRows, error: handErr } = await admin
+    .from('kora_round_hands')
+    .select('seat_index, cards')
+    .eq('round_id', round.id)
+  if (handErr) throw new Error(`Échec chargement mains : ${handErr.message}`)
+  const hands: Card[][] = Array.from({ length: NUM_PLAYERS }, () => [])
+  for (const h of handRows ?? []) {
+    hands[(h as { seat_index: number }).seat_index] = (h as { cards: Card[] }).cards ?? []
+  }
+  return { round: round as RoundRow, hands }
+}
+
+export function reconstructRoundState(table: TableRow, round: RoundRow, hands: Card[][]): RoundState {
+  return {
+    phase: round.phase as RoundState['phase'],
+    numPlayers: NUM_PLAYERS,
+    hands,
+    currentTrick: round.current_trick as RoundState['currentTrick'],
+    playLog: (round.play_log as Card[][]) ?? Array.from({ length: NUM_PLAYERS }, () => []),
+    trickWinners: round.trick_winners ?? [],
+    bankedPlayers: round.banked_players ?? [],
+    lastTrickWinnerIndex: round.last_trick_winner_index,
+    outcome: round.outcome,
+  }
+}
+
+export function toPublicState(state: RoundState, viewerSeat: number): RoundState {
+  // Hands of other seats hidden unless revealed (outcome)
+  const hide = state.phase === 'playing' || state.phase === 'trickWon'
+  const hands = state.hands.map((hand, i) => {
+    if (!hide || i === viewerSeat) return hand
+    return hand.map(c => ({ ...c, state: 'back' as const }))
+  })
+  return { ...state, hands }
 }
 
 export async function insertRound(
@@ -150,7 +139,7 @@ export async function insertRound(
   state: RoundState,
   seats: SeatRow[],
 ): Promise<RoundRow> {
-  const { data: round, error } = await admin
+  const { data, error } = await admin
     .from('kora_rounds')
     .insert({
       table_id: tableId,
@@ -162,22 +151,20 @@ export async function insertRound(
       banked_players: state.bankedPlayers,
       last_trick_winner_index: state.lastTrickWinnerIndex,
       outcome: state.outcome,
-      payout_applied: false,
     })
     .select('*')
     .single()
-  if (error || !round) throw new Error(`Échec de création du round : ${error?.message}`)
-  const revealed = state.outcome?.kind === 'specialWin'
-  const handRows = seats.map(seat => ({
-    round_id: round.id,
-    user_id: seat.user_id,
-    seat_index: seat.seat_index,
-    cards: state.hands[seat.seat_index],
-    revealed,
-  }))
-  const { error: handsError } = await admin.from('kora_round_hands').insert(handRows)
-  if (handsError) throw new Error(`Échec de création des mains : ${handsError.message}`)
-  return round as RoundRow
+  if (error || !data) throw new Error(`Échec création round : ${error?.message}`)
+  for (const seat of seats) {
+    const { error: handError } = await admin.from('kora_round_hands').insert({
+      round_id: data.id,
+      seat_index: seat.seat_index,
+      cards: state.hands[seat.seat_index] ?? [],
+      revealed: false,
+    })
+    if (handError) throw new Error(`Échec insertion main : ${handError.message}`)
+  }
+  return data as RoundRow
 }
 
 export async function updateRound(admin: SupabaseClient, roundId: string, state: RoundState, seats: SeatRow[]): Promise<void> {
@@ -194,6 +181,14 @@ export async function updateRound(admin: SupabaseClient, roundId: string, state:
     })
     .eq('id', roundId)
   if (error) throw new Error(`Échec de mise à jour du round : ${error.message}`)
+
+  if (state.phase === 'roundEnd' || state.phase === 'specialWin') {
+    const tableId = seats[0]?.table_id
+    if (tableId) {
+      await admin.from('kora_table_players').update({ is_ready: false }).eq('table_id', tableId)
+    }
+  }
+
   const revealed = state.outcome?.kind === 'specialWin'
   for (const seat of seats) {
     const { error: handError } = await admin
@@ -227,7 +222,6 @@ export async function applyPayoutAndStats(
     allPlayerIndexes: realSeatIndexes,
     bankedPlayerIndexes: realBankedIndexes,
   })
-  const payoutLines = [...correctedPayout.winners, ...correctedPayout.losers]
   state.outcome!.payout = correctedPayout
   const payoutPlayers: PayoutPlayer[] = seats.map(s => ({ capital: s.capital }))
   const updatedPlayers = applyRoundPayout(payoutPlayers, correctedPayout, stakeConfig)
@@ -247,73 +241,12 @@ export async function applyPayoutAndStats(
       if (error) throw new Error(`Échec de mise à jour du capital (siège ${seatIdx}) : ${error.message}`)
     }
   }
-  const isRoundWinner = (seatIndex: number) =>
-    state.outcome!.kind === 'normal'
-      ? state.outcome!.roundWinnerIndex === seatIndex
-      : state.outcome!.winners.some(w => w.playerIndex === seatIndex)
-  for (let i = 0; i < seats.length; i++) {
-    const seat = seats[i]
-    const seatIdx = seat.seat_index
-    const line = payoutLines.find(p => p.playerIndex === seatIdx)
-    const delta = line?.amount ?? 0
-    const tricksWonThisRound = state.trickWinners.filter(w => w === seatIdx).length
-    const newCapital = updatedPlayers[i].capital
-    const { data: statsRow, error: statsError } = await admin
-      .from('kora_lifetime_stats')
-      .select('*')
-      .eq('user_id', seat.user_id)
-      .single()
-    if (statsError || !statsRow) throw new Error(`Statistiques introuvables pour ${seat.user_id} : ${statsError?.message}`)
-    const comboCounts = { ...statsRow.combo_counts }
-    const specialRuleCounts = { ...statsRow.special_rule_counts }
-    let bestCombo = statsRow.best_combo as string | null
-    if (state.outcome!.kind === 'normal' && isRoundWinner(seatIdx)) {
-      const combo = state.outcome!.combo
-      comboCounts[combo] = (comboCounts[combo] ?? 0) + 1
-      const currentBestMultiplier = bestCombo ? getComboMultiplier(bestCombo as ComboType) : 0
-      if (getComboMultiplier(combo) > currentBestMultiplier) bestCombo = combo
-    }
-    if (state.outcome!.kind === 'specialWin') {
-      const winnerEntry = state.outcome!.winners.find(w => w.playerIndex === seatIdx)
-      if (winnerEntry) {
-        for (const rule of winnerEntry.rules) {
-          specialRuleCounts[rule] = (specialRuleCounts[rule] ?? 0) + 1
-        }
-      }
-    }
-    const { error: updateStatsError } = await admin
-      .from('kora_lifetime_stats')
-      .update({
-        total_rounds_won: statsRow.total_rounds_won + (isRoundWinner(seatIdx) ? 1 : 0),
-        total_tricks_won: statsRow.total_tricks_won + tricksWonThisRound,
-        total_gains: statsRow.total_gains + Math.max(0, delta),
-        total_losses: statsRow.total_losses + Math.max(0, -delta),
-        net_gain_total: statsRow.net_gain_total + delta,
-        max_capital_ever: Math.max(statsRow.max_capital_ever, newCapital),
-        min_capital_ever: statsRow.min_capital_ever === 0 ? newCapital : Math.min(statsRow.min_capital_ever, newCapital),
-        combo_counts: comboCounts,
-        special_rule_counts: specialRuleCounts,
-        best_combo: bestCombo,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('user_id', seat.user_id)
-    if (updateStatsError) throw new Error(`Échec de mise à jour des stats (${seat.user_id}) : ${updateStatsError.message}`)
-  }
   await admin.from('kora_rounds').update({ payout_applied: true, outcome: state.outcome }).eq('id', round.id)
   return { eliminatedSeats }
 }
 
-export async function authenticate(req: Request, admin: SupabaseClient): Promise<{ userId: string }> {
-  const authHeader = req.headers.get('Authorization')
-  if (!authHeader) throw new Error('UNAUTHENTICATED')
-  const jwt = authHeader.replace(/^Bearer\s+/i, '')
-  const { data, error } = await admin.auth.getUser(jwt)
-  if (error || !data.user) throw new Error('UNAUTHENTICATED')
-  return { userId: data.user.id }
-}
-
 export function findCallerSeat(seats: SeatRow[], userId: string): SeatRow {
   const seat = seats.find(s => s.user_id === userId)
-  if (!seat) throw new Error("Vous n'êtes pas assis à cette table.")
+  if (!seat) throw new Error('Vous n\'êtes pas assis à cette table.')
   return seat
 }
