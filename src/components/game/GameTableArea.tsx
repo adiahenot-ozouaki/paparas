@@ -17,7 +17,6 @@ export function GameTableArea({
   compactMode,
 }: GameTableAreaProps) {
   const stackSize = compactMode ? 'md' : 'sm'
-  const sideColumnWidth = compactMode ? 88 : 78
 
   const trickLeaderIndex =
     roundState.currentTrick && roundState.currentTrick.requestedSuit !== null
@@ -36,12 +35,7 @@ export function GameTableArea({
   const east = seat(1)
 
   return (
-    <div
-      className={`table-area${compactMode ? ' is-compact' : ''}`}
-      style={{
-        gridTemplateColumns: `${sideColumnWidth}px 1fr ${sideColumnWidth}px`,
-      }}
-    >
+    <div className={`table-area${compactMode ? ' is-compact' : ''}`}>
       <div className="table-area-north">
         <OpponentPanel
           position="top"
@@ -55,7 +49,9 @@ export function GameTableArea({
           isEliminated={north.eliminated}
           compactMode={compactMode}
           playedCards={roundState.playLog[2] ?? []}
-          playedCardsHighlightLast={roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex === 2}
+          playedCardsHighlightLast={
+            roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex === 2
+          }
           stackSize={stackSize}
         />
       </div>
@@ -73,7 +69,9 @@ export function GameTableArea({
           isEliminated={west.eliminated}
           compactMode={compactMode}
           playedCards={roundState.playLog[3] ?? []}
-          playedCardsHighlightLast={roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex === 3}
+          playedCardsHighlightLast={
+            roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex === 3
+          }
           stackSize={stackSize}
         />
       </div>
@@ -91,12 +89,14 @@ export function GameTableArea({
           isEliminated={east.eliminated}
           compactMode={compactMode}
           playedCards={roundState.playLog[1] ?? []}
-          playedCardsHighlightLast={roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex === 1}
+          playedCardsHighlightLast={
+            roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex === 1
+          }
           stackSize={stackSize}
         />
       </div>
 
-      <div className="table-area-center">
+      <div className="table-area-center" aria-hidden>
         <div className="table-oval table-area-oval" />
       </div>
 
@@ -106,7 +106,9 @@ export function GameTableArea({
           orientation="horizontal"
           size={stackSize}
           showLeadIndicator={trickLeaderIndex === 0}
-          highlightLast={roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex === 0}
+          highlightLast={
+            roundState.phase === 'trickWon' && roundState.lastTrickWinnerIndex === 0
+          }
         />
       </div>
     </div>

@@ -1,6 +1,13 @@
 /* Table area, opponent, hand, reveal overlays, online chrome */
 
 .table-area {
+  --table-side: 72px;
+  --table-pad-bottom: 210px;
+  --table-pad-top: 8px;
+  --table-oval-ratio: 1.55;
+  --table-oval-max-w: min(92%, 520px);
+  --table-oval-max-h: min(86%, 340px);
+
   position: absolute;
   inset: 0;
   display: grid;
@@ -8,20 +15,176 @@
     "north north north"
     "west center east"
     "south south south";
-  grid-template-rows: auto 1fr auto;
-  padding-top: 8px;
-  padding-bottom: 210px;
-  padding-left: 4px;
-  padding-right: 4px;
+  grid-template-columns: var(--table-side) minmax(0, 1fr) var(--table-side);
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  padding-top: var(--table-pad-top);
+  padding-bottom: var(--table-pad-bottom);
+  padding-left: max(4px, env(safe-area-inset-left, 0px));
+  padding-right: max(4px, env(safe-area-inset-right, 0px));
+  /* Empêche le reflow des piles de cartes de déformer le centre */
+  contain: layout;
 }
 
-.table-area.is-compact { padding-bottom: 185px; }
-.table-area-north { grid-area: north; justify-self: center; align-self: start; }
-.table-area-west { grid-area: west; align-self: center; justify-self: center; }
-.table-area-east { grid-area: east; align-self: center; justify-self: center; }
-.table-area-center { grid-area: center; position: relative; min-width: 0; min-height: 0; }
-.table-area-oval { position: absolute; inset: 6% 2%; border-radius: 50%; z-index: 0; }
-.table-area-south { grid-area: south; justify-self: center; align-self: end; margin-top: 6px; }
+.table-area.is-compact {
+  --table-side: 88px;
+  --table-pad-bottom: 185px;
+}
+
+.table-area-north {
+  grid-area: north;
+  justify-self: center;
+  align-self: start;
+  z-index: 2;
+  /* largeur stable : ne pas faire grossir la ligne north */
+  max-width: 100%;
+}
+
+.table-area-west {
+  grid-area: west;
+  align-self: center;
+  justify-self: center;
+  z-index: 2;
+  max-width: 100%;
+}
+
+.table-area-east {
+  grid-area: east;
+  align-self: center;
+  justify-self: center;
+  z-index: 2;
+  max-width: 100%;
+}
+
+.table-area-center {
+  grid-area: center;
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: grid;
+  place-items: center;
+  /* ancre stable pour l'ovale indépendamment du contenu des sièges */
+  z-index: 0;
+}
+
+/*
+ * Ovale du tapis : ratio d'aspect verrouillé.
+ * Avant : inset % + border-radius 50% → l'ellipse changeait à chaque carte
+ * (la cellule center changeait de ratio quand north/south/west/east croissaient).
+ * Maintenant : centré, aspect-ratio fixe, borné par max-width/max-height.
+ */
+.table-area-oval {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  translate: -50% -50%;
+  width: var(--table-oval-max-w);
+  max-height: var(--table-oval-max-h);
+  aspect-ratio: var(--table-oval-ratio);
+  height: auto;
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.table-area-south {
+  grid-area: south;
+  justify-self: center;
+  align-self: end;
+  margin-top: 6px;
+  z-index: 2;
+  max-width: 100%;
+}
+
+/* —— Responsive table —— */
+
+/* Très petits téléphones */
+@media (max-width: 360px) {
+  .table-area {
+    --table-side: 56px;
+    --table-pad-bottom: 195px;
+    --table-oval-max-w: min(96%, 280px);
+    --table-oval-max-h: min(82%, 180px);
+  }
+  .table-area.is-compact {
+    --table-side: 64px;
+    --table-pad-bottom: 170px;
+  }
+}
+
+/* Téléphones standards */
+@media (min-width: 361px) and (max-width: 480px) {
+  .table-area {
+    --table-side: 68px;
+    --table-oval-max-w: min(94%, 340px);
+    --table-oval-max-h: min(84%, 220px);
+  }
+}
+
+/* Tablettes portrait / grands téléphones */
+@media (min-width: 600px) {
+  .table-area {
+    --table-side: 96px;
+    --table-pad-top: 12px;
+    --table-pad-bottom: 230px;
+    --table-oval-max-w: min(88%, 480px);
+    --table-oval-max-h: min(88%, 300px);
+  }
+  .table-area.is-compact {
+    --table-side: 110px;
+    --table-pad-bottom: 200px;
+  }
+}
+
+/* Tablettes paysage / petits laptops */
+@media (min-width: 900px) {
+  .table-area {
+    --table-side: 112px;
+    --table-pad-bottom: 240px;
+    --table-oval-max-w: min(80%, 560px);
+    --table-oval-max-h: min(86%, 360px);
+    --table-oval-ratio: 1.6;
+  }
+}
+
+/* Desktop */
+@media (min-width: 1100px) {
+  .table-area {
+    --table-side: 128px;
+    --table-pad-top: 16px;
+    --table-pad-bottom: 260px;
+    --table-oval-max-w: min(72%, 640px);
+    --table-oval-max-h: min(82%, 400px);
+    --table-oval-ratio: 1.65;
+  }
+  .table-area.is-compact {
+    --table-side: 140px;
+    --table-pad-bottom: 220px;
+  }
+}
+
+/* Grands écrans */
+@media (min-width: 1600px) {
+  .table-area {
+    --table-side: 150px;
+    --table-oval-max-w: min(64%, 720px);
+    --table-oval-max-h: min(78%, 440px);
+  }
+}
+
+/* Hauteur limitée (landscape phone) : ovale plus plat, moins de padding bas */
+@media (max-height: 500px) and (orientation: landscape) {
+  .table-area {
+    --table-pad-top: 4px;
+    --table-pad-bottom: 120px;
+    --table-side: 56px;
+    --table-oval-ratio: 2;
+    --table-oval-max-w: min(70%, 420px);
+    --table-oval-max-h: min(70%, 160px);
+  }
+  .table-area.is-compact {
+    --table-pad-bottom: 110px;
+  }
+}
 
 .opp-panel { display: flex; flex-direction: column; align-items: center; gap: 6px; transition: filter 0.25s ease; }
 .opp-panel.is-active { filter: drop-shadow(0 0 12px rgba(214, 168, 79, 0.35)); }
