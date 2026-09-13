@@ -1,16 +1,14 @@
-// game.ts — start / play / resolve / bank / claim / get_state / next_round
+// game.ts — start_table, play, bank, claim, resolve, next round
 import type { SupabaseClient } from 'jsr:@supabase/supabase-js@2'
 import type { Card } from './engine/types.ts'
+import type { GameStakeConfig } from './engine/payout.ts'
 import {
   bankPlayer,
   claimVictory,
-  getCurrentPlayerIndex,
   initRound,
   playCard,
   resolveTrick,
-  type RoundState,
 } from './engine/round.ts'
-import type { GameStakeConfig } from './engine/payout.ts'
 import {
   applyPayoutAndStats,
   computeVacantSeats,
@@ -20,21 +18,20 @@ import {
   loadLatestRound,
   loadSeats,
   loadTable,
+  NUM_PLAYERS,
+  MIN_ACTIVE_PLAYERS,
   reconstructRoundState,
   toPublicState,
   updateRound,
   type RoundRow,
-  type TableRow,
-  NUM_PLAYERS,
-  MIN_ACTIVE_PLAYERS,
 } from './shared.ts'
 
 export async function handleStartTable(admin: SupabaseClient, tableId: string, seatIndex: number): Promise<Response> {
   const table = await loadTable(admin, tableId)
-  if (table.status !== 'lobby') return errorResponse('Cette table a déjà démarré ou est terminée.')
+  if (table.status !== 'lobby') return errorResponse('La table a déjà démarré ou n\'est plus disponible.')
   const seats = await loadSeats(admin, tableId)
   if (seats.length < MIN_ACTIVE_PLAYERS) {
-    return errorResponse(`Il faut au moins ${MIN_ACTIVE_PLAYERS} joueurs pour démarrer (actuellement ${seats.length}).`)
+    return errorResponse(`Il faut au moins ${MIN_ACTIVE_PLAYERS} joueurs pour démarrer.`)
   }
   if (!seats.every(s => s.is_ready)) return errorResponse('Tous les joueurs assis doivent être prêts.')
   const stakeConfig: GameStakeConfig = { baseStake: table.base_stake, startingCapital: table.starting_capital }
@@ -47,6 +44,7 @@ export async function handleStartTable(admin: SupabaseClient, tableId: string, s
   })
   const round = await insertRound(admin, tableId, 1, state, seats)
   await admin.from('kora_tables').update({ status: 'playing', started_at: new Date().toISOString() }).eq('id', tableId)
+  await admin.from('kora_table_players').update({ is_ready: false }).eq('table_id', tableId)
   const payoutResult = await applyPayoutAndStats(admin, table, round, state, seats)
   return jsonResponse({ state: toPublicState(state, seatIndex), eliminatedSeats: payoutResult.eliminatedSeats })
 }
@@ -102,17 +100,19 @@ export async function handleClaimVictory(admin: SupabaseClient, tableId: string,
 
 export async function handleGetState(admin: SupabaseClient, tableId: string, seatIndex: number): Promise<Response> {
   const table = await loadTable(admin, tableId)
-  if (table.status === 'lobby') {
-    return jsonResponse({ tableStatus: 'lobby', roundNumber: 0, state: null, isYourTurn: false })
+  const seats = await loadSeats(admin, tableId)
+  try {
+    const { round, hands } = await loadLatestRound(admin, tableId)
+    const state = reconstructRoundState(table, round, hands)
+    return jsonResponse({
+      state: toPublicState(state, seatIndex),
+      roundNumber: round.round_number,
+      tableStatus: table.status,
+      occupiedSeats: seats.length,
+    })
+  } catch {
+    return jsonResponse({ state: null, tableStatus: table.status, occupiedSeats: seats.length })
   }
-  const { round, hands } = await loadLatestRound(admin, tableId)
-  const state = reconstructRoundState(table, round, hands)
-  return jsonResponse({
-    tableStatus: table.status,
-    roundNumber: round.round_number,
-    state: toPublicState(state, seatIndex),
-    isYourTurn: getCurrentPlayerIndex(state) === seatIndex,
-  })
 }
 
 export async function handleStartNextRound(admin: SupabaseClient, tableId: string, seatIndex: number): Promise<Response> {
@@ -127,8 +127,32 @@ export async function handleStartNextRound(admin: SupabaseClient, tableId: strin
       waitingForPlayers: true,
       occupiedSeats: seats.length,
       message: `En attente d'au moins ${MIN_ACTIVE_PLAYERS} joueurs pour continuer (actuellement ${seats.length}).`,
+      state: toPublicState(prevState, seatIndex),
     })
   }
+
+  await admin
+    .from('kora_table_players')
+    .update({ is_ready: true })
+    .eq('table_id', tableId)
+    .eq('seat_index', seatIndex)
+
+  const seatsAfter = await loadSeats(admin, tableId)
+  const readyCount = seatsAfter.filter(s => s.is_ready).length
+  const allReady = seatsAfter.length >= MIN_ACTIVE_PLAYERS && seatsAfter.every(s => s.is_ready)
+
+  if (!allReady) {
+    return jsonResponse({
+      waitingForReady: true,
+      readyCount,
+      total: seatsAfter.length,
+      message: `En attente des autres joueurs (${readyCount}/${seatsAfter.length}).`,
+      state: toPublicState(prevState, seatIndex),
+    })
+  }
+
+  await admin.from('kora_table_players').update({ is_ready: false }).eq('table_id', tableId)
+
   const winnerIndex =
     prevState.outcome.kind === 'normal' ? prevState.outcome.roundWinnerIndex : prevState.outcome.winners[0].playerIndex
   const nextStarter = (winnerIndex + 1) % NUM_PLAYERS
@@ -138,9 +162,12 @@ export async function handleStartNextRound(admin: SupabaseClient, tableId: strin
     numPlayers: NUM_PLAYERS,
     startPlayerIndex: nextStarter,
     stakeConfig,
-    eliminatedPlayers: computeVacantSeats(seats),
+    eliminatedPlayers: computeVacantSeats(seatsAfter),
   })
-  const round = await insertRound(admin, tableId, prevRound.round_number + 1, nextState, seats)
-  const payoutResult = await applyPayoutAndStats(admin, table, round, nextState, seats)
-  return jsonResponse({ state: toPublicState(nextState, seatIndex), eliminatedSeats: payoutResult.eliminatedSeats })
+  await insertRound(admin, tableId, prevRound.round_number + 1, nextState, seatsAfter)
+  return jsonResponse({
+    state: toPublicState(nextState, seatIndex),
+    roundNumber: prevRound.round_number + 1,
+    nextRoundStarted: true,
+  })
 }
