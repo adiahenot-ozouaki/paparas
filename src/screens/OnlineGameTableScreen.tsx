@@ -203,7 +203,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
       const isMe = viewIdx === VIEW_HUMAN
       return {
         id: String(physicalIdx),
-        name: isMe ? (isSpectating ? 'Spectateur' : 'Vous') : seat?.profile?.username ?? (seat ? 'Joueur' : '—'),
+        name: isMe ? (isSpectating ? 'Spectateur' : 'Vous') : seat?.profile?.username ?? (seat ? 'Joueur' : '\u2014'),
         avatar: seat?.profile?.avatar ?? '',
         capital: seat?.capital ?? 0,
         level: 1,
@@ -224,7 +224,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   if (authLoading || loading || !viewState || (mySeat === null && !isSpectating)) {
     return (
       <div className="felt-bg table-screen table-screen--loading">
-        <span className="table-loading-text">Chargement de la table…</span>
+        <span className="table-loading-text">Chargement de la table\u2026</span>
       </div>
     )
   }
@@ -257,20 +257,15 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
     isHumanTurn &&
     viewState.currentTrick.playedCards.length === 0
 
-  const canClaim =
-    !isSpectating &&
-    viewState.phase === 'playing' &&
-    isHumanTurn &&
-    !!viewState.currentTrick &&
-    viewState.currentTrick.playedCards.length === 0 &&
-    !humanIsBanked
+  // Victoire sp\u00e9ciale / r\u00e9clamation d\u00e9sactiv\u00e9e en online (serveur + UI)
+  const canClaim = false
 
   const statusMessage = isSpectating
-    ? 'Mode spectateur — lecture seule'
+    ? 'Mode spectateur \u2014 lecture seule'
     : leaving
-      ? 'Depart de la table…'
+      ? 'Depart de la table\u2026'
       : busy
-        ? 'Envoi…'
+        ? 'Envoi\u2026'
         : isHumanTurn
           ? 'A toi de jouer'
           : null
@@ -323,10 +318,6 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
     await runAction('bank_player')
   }
 
-  async function handleClaimVictory() {
-    await runAction('claim_victory')
-  }
-
   async function handleRoundEndContinue() {
     if (isSpectating) return
     await runAction('start_next_round')
@@ -358,7 +349,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
       const forfeited = body.forfeited === true
       if (cash != null && cash > 0) {
         showToast(
-          (forfeited ? 'Abandon — ' : 'Cash-out — ') + cash.toLocaleString('fr-FR') + ' FCFA rendus au wallet',
+          (forfeited ? 'Abandon \u2014 ' : 'Cash-out \u2014 ') + cash.toLocaleString('fr-FR') + ' FCFA rendus au wallet',
           3200,
         )
       } else if (forfeited) {
@@ -392,7 +383,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
 
       {isSpectating && (
         <div className="online-conn-banner is-reconnect" role="status">
-          <span>Mode spectateur — lecture seule</span>
+          <span>Mode spectateur \u2014 lecture seule</span>
           <button type="button" className="online-conn-retry" onClick={() => void handleLeaveConfirm()}>
             Quitter
           </button>
@@ -455,7 +446,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
               disabled={leaving}
               onClick={() => void handleLeaveConfirm()}
             >
-              {leaving ? 'Depart…' : roundInProgress && !alreadyBanked ? 'Abandonner la table' : 'Quitter et cash-out'}
+              {leaving ? 'Depart\u2026' : roundInProgress && !alreadyBanked ? 'Abandonner la table' : 'Quitter et cash-out'}
             </button>
           </div>
         </div>
@@ -501,7 +492,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
           onCardSelect={handleCardSelect}
           onAttemptPlay={attemptPlayCard}
           onPlayCard={handlePlayCard}
-          onClaimVictory={() => void handleClaimVictory()}
+          onClaimVictory={() => {}}
         />
       )}
 
