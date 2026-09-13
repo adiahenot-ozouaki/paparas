@@ -48,9 +48,7 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
     () => (user ? seats.find(s => s.user_id === user.id) : undefined),
     [seats, user],
   )
-  const isHost = Boolean(user && table && table.created_by === user.id)
   const allReady = seats.length >= 2 && seats.every(s => s.is_ready)
-  // Demarrage auto des que N>=2 joueurs sont tous prets
   const canStart = allReady && table?.status === 'lobby'
 
   const goToTable = useCallback(
@@ -189,7 +187,6 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
           setError(humanizeError(e instanceof Error ? e.message : String(e)))
         }
         setBusy(false)
-        return
       }
     })()
   }, [authLoading, user, phase, goToTable, refresh])
@@ -230,7 +227,6 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
     setBusy(true)
     setError(null)
     const variant = deckVariant === '8' ? 'as' : deckVariant
-    // Capital interne pour le moteur (non affiche) = 10 x mise
     const tableCapital = stakeConfig.baseStake * 10
     const { table: created, error: createErr } = await createOnlineTable({
       userId: user.id,
@@ -375,132 +371,208 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
 
   if (authLoading || !user) {
     return (
-      <div className="felt-bg online-lobby-screen">
-        <span className="table-loading-text">Chargement...</span>
+      <div className="online-lobby-screen">
+        <div className="online-lobby-loading">
+          <span className="online-lobby-loading-text">Chargement…</span>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="felt-bg online-lobby-screen">
-      <div className="online-lobby-inner">
-        <header className="online-lobby-header">
-          <BackButton
-            onClick={() => (phase === 'table' ? void handleLeave() : onNavigate('gameMode'))}
-          />
-          <h1 className="font-display online-lobby-title">
-            {phase === 'menu' ? 'Table en ligne' : 'Lobby'}
-          </h1>
-          {profile && (
-            <p className="online-lobby-wallet">
-              Wallet {profile.wallet_balance.toLocaleString('fr-FR')} FCFA
-            </p>
-          )}
-        </header>
+    <div className="online-lobby-screen">
+      <div className="online-lobby-pattern" aria-hidden />
+      <header className="online-lobby-header">
+        <BackButton
+          onClick={() => (phase === 'table' ? void handleLeave() : onNavigate('gameMode'))}
+        />
+        <h1 className="font-display online-lobby-title">
+          {phase === 'menu' ? 'En ligne' : 'Lobby'}
+        </h1>
+        <p className="online-lobby-sub">
+          {phase === 'menu'
+            ? `Mise ${stakeConfig.baseStake.toLocaleString('fr-FR')} FCFA · démarrage auto à 2 joueurs prêts`
+            : table
+              ? `Mise ${table.base_stake.toLocaleString('fr-FR')} FCFA · ${seats.length}/4 places`
+              : 'Préparation de la table…'}
+        </p>
+        {profile && phase === 'menu' && (
+          <p className="online-lobby-sub" style={{ marginTop: 6 }}>
+            Wallet · {profile.wallet_balance.toLocaleString('fr-FR')} FCFA
+          </p>
+        )}
+      </header>
 
+      <div className="online-lobby-body">
         {error && (
-          <div role="alert" className="online-error-toast" onClick={() => setError(null)}>
-            {error}
+          <div className="online-lobby-error" role="alert">
+            <p className="online-lobby-error-text">{error}</p>
+            <button type="button" className="online-lobby-error-dismiss" onClick={() => setError(null)}>
+              Fermer
+            </button>
           </div>
         )}
 
         {phase === 'menu' && (
-          <>
-            <section className="online-lobby-section">
-              <h2 className="font-display online-lobby-section-title">File d'attente</h2>
-              <p className="online-lobby-hint">
-                Mise {stakeConfig.baseStake.toLocaleString('fr-FR')} FCFA — demarrage auto des que 2 joueurs sont prets
+          <div className="online-lobby-stack">
+            <section className="online-lobby-card">
+              <p className="online-lobby-card-meta">MATCHMAKING</p>
+              <h2 className="online-lobby-card-title">Trouver une partie</h2>
+              <p className="online-lobby-sub" style={{ marginBottom: 12 }}>
+                Rejoint une table à ta mise ou en crée une. Prêt automatique.
               </p>
-              <button type="button" className="btn-primary online-lobby-cta glow-gold" disabled={busy} onClick={() => void handleMatchmake()}>
-                {busy ? 'Recherche...' : 'Trouver une partie'}
+              <button
+                type="button"
+                className="btn-primary glow-gold online-lobby-btn-block"
+                disabled={busy}
+                onClick={() => void handleMatchmake()}
+              >
+                {busy ? 'Recherche…' : 'Trouver une partie'}
               </button>
-              <button type="button" className="btn-primary online-lobby-cta" disabled={busy} onClick={() => void handleCreate()} style={{ marginTop: 10 }}>
-                {busy ? '...' : 'Creer une table privee (code)'}
+              <button
+                type="button"
+                className="btn-primary online-lobby-btn-block online-lobby-btn-block--sm"
+                disabled={busy}
+                onClick={() => void handleCreate()}
+              >
+                Créer une table privée
               </button>
             </section>
 
-            <section className="online-lobby-section">
-              <h2 className="font-display online-lobby-section-title">Rejoindre avec un code</h2>
-              <div className="online-lobby-join-row">
-                <input
-                  className="online-lobby-input"
-                  value={joinCode}
-                  onChange={e => setJoinCode(e.target.value)}
-                  placeholder="Code table"
-                  maxLength={12}
-                />
-                <button type="button" className="btn-primary" disabled={busy} onClick={() => void handleJoinByCode()}>
-                  Rejoindre
-                </button>
-              </div>
+            <section className="online-lobby-card">
+              <p className="online-lobby-card-meta">CODE D'INVITATION</p>
+              <h2 className="online-lobby-card-title">Rejoindre avec un code</h2>
+              <input
+                className="online-lobby-input"
+                value={joinCode}
+                onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                placeholder="Ex. A1B2C3D4"
+                maxLength={12}
+                autoCapitalize="characters"
+                autoCorrect="off"
+                spellCheck={false}
+              />
+              <button
+                type="button"
+                className="btn-primary online-lobby-btn-block online-lobby-btn-block--sm"
+                disabled={busy || joinCode.trim().length < 6}
+                onClick={() => void handleJoinByCode()}
+              >
+                Rejoindre
+              </button>
             </section>
 
-            <section className="online-lobby-section">
-              <h2 className="font-display online-lobby-section-title">Tables ouvertes</h2>
-              {listError && <p className="online-lobby-hint">{listError}</p>}
-              {openTables.length === 0 ? (
-                <p className="online-lobby-hint">Aucune table en lobby pour le moment.</p>
+            <section className="online-lobby-card">
+              <p className="online-lobby-card-meta">TABLES OUVERTES</p>
+              <h2 className="online-lobby-card-title">Lobbys publics</h2>
+              {listError && (
+                <div className="online-lobby-list-error">
+                  <p className="online-lobby-list-error-text">{listError}</p>
+                </div>
+              )}
+              {openTables.length === 0 && !listError ? (
+                <p className="online-lobby-empty">Aucune table en attente. Lance une recherche ou crée la tienne.</p>
               ) : (
-                <ul className="online-lobby-list">
+                <ul className="online-lobby-open-list">
                   {openTables.map(t => (
                     <li key={t.table.id}>
                       <button
                         type="button"
-                        className="online-lobby-list-item"
+                        className="online-lobby-open-item"
                         disabled={busy}
                         onClick={() => void handleJoinById(t.table.id)}
                       >
-                        <span className="font-display">{t.code}</span>
-                        <span>
-                          {t.seatCount}/4 · mise {t.table.base_stake.toLocaleString('fr-FR')}
-                        </span>
+                        <div>
+                          <p className="online-lobby-open-code font-display">{t.code}</p>
+                          <p className="online-lobby-open-meta">
+                            {t.seatCount}/4 joueurs · mise {t.table.base_stake.toLocaleString('fr-FR')} FCFA
+                          </p>
+                        </div>
+                        <span className="online-lobby-open-cta">Rejoindre →</span>
                       </button>
                     </li>
                   ))}
                 </ul>
               )}
             </section>
-          </>
+          </div>
         )}
 
         {phase === 'table' && table && (
-          <section className="online-lobby-section online-lobby-table-phase">
-            <p className="online-lobby-hint">
-              Code <strong className="text-gold">{inviteCode}</strong>
-            </p>
-            <p className="online-lobby-hint">
-              Statut {table.status} · {seats.length}/4 · mise {table.base_stake.toLocaleString('fr-FR')} FCFA
-            </p>
-            <ul className="online-lobby-seats">
-              {seats.map(s => (
-                <li key={s.user_id}>
-                  {s.profile?.username ?? 'Joueur'} · siege {s.seat_index + 1}
-                  {s.is_ready ? ' · pret' : ''}
-                  {s.user_id === user.id ? ' (vous)' : ''}
-                </li>
-              ))}
-            </ul>
+          <div className="online-lobby-table-panel">
+            <div className="online-lobby-invite">
+              <p className="online-lobby-invite-label">Code table</p>
+              <p className="font-display online-lobby-invite-code">{inviteCode}</p>
+              <p className="online-lobby-sub" style={{ marginTop: 8 }}>
+                Partage ce code pour inviter des amis
+              </p>
+            </div>
+
+            <div className="online-lobby-seats" role="list">
+              {[0, 1, 2, 3].map(seatIdx => {
+                const s = seats.find(x => x.seat_index === seatIdx)
+                const isYou = Boolean(s && user && s.user_id === user.id)
+                return (
+                  <div
+                    key={seatIdx}
+                    role="listitem"
+                    className={'online-lobby-seat' + (isYou ? ' is-you' : '')}
+                  >
+                    <div className="online-lobby-seat-avatar" aria-hidden>
+                      {s ? (s.profile?.username?.[0]?.toUpperCase() ?? '?') : '·'}
+                    </div>
+                    <div className="online-lobby-seat-meta">
+                      <p className="online-lobby-seat-name">
+                        {s
+                          ? (s.profile?.username ?? 'Joueur') + (isYou ? ' (vous)' : '')
+                          : `Siège ${seatIdx + 1}`}
+                      </p>
+                      <p className="online-lobby-seat-cap">
+                        {s ? `Place ${seatIdx + 1}` : 'En attente…'}
+                      </p>
+                    </div>
+                    <span className={'online-lobby-seat-status' + (s?.is_ready ? ' is-ready' : '')}>
+                      {!s ? 'Libre' : s.is_ready ? 'Prêt' : 'Pas prêt'}
+                    </span>
+                  </div>
+                )
+              })}
+            </div>
+
             <div className="online-lobby-actions">
               {mySeat && table.status === 'lobby' && (
-                <button type="button" className="btn-primary" disabled={busy} onClick={() => void handleToggleReady()}>
-                  {mySeat.is_ready ? 'Pas pret' : 'Je suis pret'}
+                <button
+                  type="button"
+                  className="btn-primary glow-gold online-lobby-action-primary"
+                  disabled={busy}
+                  onClick={() => void handleToggleReady()}
+                >
+                  {mySeat.is_ready ? 'Annuler — pas prêt' : 'Je suis prêt'}
                 </button>
               )}
-              {table.status === 'lobby' && seats.length >= 2 && !allReady && (
-                <p className="online-lobby-hint">En attente que tous les joueurs soient prets...</p>
-              )}
               {table.status === 'lobby' && seats.length < 2 && (
-                <p className="online-lobby-hint">En attente d'au moins un autre joueur...</p>
+                <p className="online-lobby-wait-hint">En attente d'au moins un autre joueur…</p>
+              )}
+              {table.status === 'lobby' && seats.length >= 2 && !allReady && (
+                <p className="online-lobby-wait-hint">En attente que tout le monde soit prêt…</p>
               )}
               {canStart && (
-                <p className="online-lobby-hint text-gold">Lancement automatique...</p>
+                <p className="online-lobby-wait-hint" style={{ color: '#d6a84f' }}>
+                  Lancement automatique…
+                </p>
               )}
-              <button type="button" className="online-lobby-leave" disabled={busy} onClick={() => void handleLeave()}>
+              <button
+                type="button"
+                className="online-lobby-action-secondary online-lobby-leave"
+                disabled={busy}
+                onClick={() => void handleLeave()}
+              >
                 Quitter le lobby
               </button>
             </div>
-            <TableChat tableId={table.id} myUserId={user?.id ?? null} title="Discussion lobby" />
-          </section>
+
+            <TableChat tableId={table.id} myUserId={user?.id ?? null} title="Discussion" />
+          </div>
         )}
       </div>
     </div>
