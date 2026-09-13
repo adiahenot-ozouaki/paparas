@@ -1,185 +1,195 @@
-/* Table area, opponent, hand, reveal overlays, online chrome */
+/* Table area — layout hybride: relative + absolute (plus de grille)
+ * Sièges / ovale / piles jouées en absolute → aucun reflow quand une carte est jouée.
+ * Main joueur (.player-hand) reste absolute bottom (hors de .table-area).
+ * HUD reste en flux dans .table-screen.
+ */
 
 .table-area {
-  --table-side: 72px;
+  /* Réserve bas pour la main + padding haut pour le HUD */
   --table-pad-bottom: 210px;
   --table-pad-top: 8px;
+  --table-inset-x: max(6px, env(safe-area-inset-left, 0px));
+  --table-inset-x-right: max(6px, env(safe-area-inset-right, 0px));
+  --table-seat-n-top: 4px;
+  --table-seat-s-bottom: calc(var(--table-pad-bottom) + 4px);
+  --table-seat-side-y: 42%;
   --table-oval-ratio: 1.55;
-  --table-oval-max-w: min(92%, 520px);
-  --table-oval-max-h: min(86%, 340px);
+  --table-oval-max-w: min(78%, 480px);
+  --table-oval-max-h: min(52%, 300px);
 
   position: absolute;
   inset: 0;
-  display: grid;
-  grid-template-areas:
-    "north north north"
-    "west center east"
-    "south south south";
-  grid-template-columns: var(--table-side) minmax(0, 1fr) var(--table-side);
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  padding-top: var(--table-pad-top);
-  padding-bottom: var(--table-pad-bottom);
-  padding-left: max(4px, env(safe-area-inset-left, 0px));
-  padding-right: max(4px, env(safe-area-inset-right, 0px));
-  /* Empêche le reflow des piles de cartes de déformer le centre */
-  contain: layout;
+  /* conteneur relative pour les enfants absolute */
+  z-index: 1;
+  pointer-events: none; /* les sièges réactivent les events */
+  contain: layout style;
+}
+
+.table-area > * {
+  pointer-events: auto;
 }
 
 .table-area.is-compact {
-  --table-side: 88px;
   --table-pad-bottom: 185px;
+  --table-seat-s-bottom: calc(var(--table-pad-bottom) + 4px);
 }
 
+/* —— Sièges (absolute, positions stables) —— */
+
 .table-area-north {
-  grid-area: north;
-  justify-self: center;
-  align-self: start;
+  position: absolute;
+  top: var(--table-seat-n-top);
+  left: 50%;
+  translate: -50% 0;
   z-index: 2;
-  /* largeur stable : ne pas faire grossir la ligne north */
-  max-width: 100%;
+  max-width: min(92%, 360px);
+  display: flex;
+  justify-content: center;
 }
 
 .table-area-west {
-  grid-area: west;
-  align-self: center;
-  justify-self: center;
+  position: absolute;
+  left: var(--table-inset-x);
+  top: var(--table-seat-side-y);
+  translate: 0 -50%;
   z-index: 2;
-  max-width: 100%;
+  max-width: min(28vw, 140px);
+  display: flex;
+  justify-content: center;
 }
 
 .table-area-east {
-  grid-area: east;
-  align-self: center;
-  justify-self: center;
+  position: absolute;
+  right: var(--table-inset-x-right);
+  top: var(--table-seat-side-y);
+  translate: 0 -50%;
   z-index: 2;
-  max-width: 100%;
+  max-width: min(28vw, 140px);
+  display: flex;
+  justify-content: center;
 }
+
+.table-area-south {
+  position: absolute;
+  bottom: var(--table-seat-s-bottom);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 2;
+  max-width: min(92%, 360px);
+  display: flex;
+  justify-content: center;
+}
+
+/* —— Centre / ovale (décor stable, hors flux) —— */
 
 .table-area-center {
-  grid-area: center;
-  position: relative;
-  min-width: 0;
-  min-height: 0;
-  display: grid;
-  place-items: center;
-  /* ancre stable pour l'ovale indépendamment du contenu des sièges */
-  z-index: 0;
-}
-
-/*
- * Ovale du tapis : ratio d'aspect verrouillé.
- * Avant : inset % + border-radius 50% → l'ellipse changeait à chaque carte
- * (la cellule center changeait de ratio quand north/south/west/east croissaient).
- * Maintenant : centré, aspect-ratio fixe, borné par max-width/max-height.
- */
-.table-area-oval {
   position: absolute;
   left: 50%;
-  top: 50%;
+  top: 46%;
   translate: -50% -50%;
   width: var(--table-oval-max-w);
   max-height: var(--table-oval-max-h);
   aspect-ratio: var(--table-oval-ratio);
   height: auto;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.table-area-oval {
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
   z-index: 0;
   pointer-events: none;
 }
 
-.table-area-south {
-  grid-area: south;
-  justify-self: center;
-  align-self: end;
-  margin-top: 6px;
-  z-index: 2;
-  max-width: 100%;
-}
+/* —— Responsive —— */
 
-/* —— Responsive table —— */
-
-/* Très petits téléphones */
 @media (max-width: 360px) {
   .table-area {
-    --table-side: 56px;
     --table-pad-bottom: 195px;
-    --table-oval-max-w: min(96%, 280px);
-    --table-oval-max-h: min(82%, 180px);
+    --table-seat-side-y: 40%;
+    --table-oval-max-w: min(88%, 280px);
+    --table-oval-max-h: min(48%, 180px);
   }
   .table-area.is-compact {
-    --table-side: 64px;
     --table-pad-bottom: 170px;
   }
+  .table-area-west,
+  .table-area-east {
+    max-width: min(30vw, 100px);
+  }
 }
 
-/* Téléphones standards */
 @media (min-width: 361px) and (max-width: 480px) {
   .table-area {
-    --table-side: 68px;
-    --table-oval-max-w: min(94%, 340px);
-    --table-oval-max-h: min(84%, 220px);
+    --table-oval-max-w: min(82%, 340px);
+    --table-oval-max-h: min(50%, 220px);
   }
 }
 
-/* Tablettes portrait / grands téléphones */
 @media (min-width: 600px) {
   .table-area {
-    --table-side: 96px;
     --table-pad-top: 12px;
     --table-pad-bottom: 230px;
-    --table-oval-max-w: min(88%, 480px);
-    --table-oval-max-h: min(88%, 300px);
+    --table-seat-n-top: 8px;
+    --table-seat-side-y: 44%;
+    --table-oval-max-w: min(72%, 480px);
+    --table-oval-max-h: min(54%, 300px);
   }
   .table-area.is-compact {
-    --table-side: 110px;
     --table-pad-bottom: 200px;
+  }
+  .table-area-west,
+  .table-area-east {
+    max-width: min(22vw, 160px);
   }
 }
 
-/* Tablettes paysage / petits laptops */
 @media (min-width: 900px) {
   .table-area {
-    --table-side: 112px;
     --table-pad-bottom: 240px;
-    --table-oval-max-w: min(80%, 560px);
-    --table-oval-max-h: min(86%, 360px);
+    --table-oval-max-w: min(68%, 560px);
+    --table-oval-max-h: min(56%, 360px);
     --table-oval-ratio: 1.6;
   }
 }
 
-/* Desktop */
 @media (min-width: 1100px) {
   .table-area {
-    --table-side: 128px;
     --table-pad-top: 16px;
     --table-pad-bottom: 260px;
-    --table-oval-max-w: min(72%, 640px);
-    --table-oval-max-h: min(82%, 400px);
+    --table-seat-n-top: 12px;
+    --table-seat-side-y: 45%;
+    --table-oval-max-w: min(60%, 640px);
+    --table-oval-max-h: min(58%, 400px);
     --table-oval-ratio: 1.65;
   }
   .table-area.is-compact {
-    --table-side: 140px;
     --table-pad-bottom: 220px;
   }
-}
-
-/* Grands écrans */
-@media (min-width: 1600px) {
-  .table-area {
-    --table-side: 150px;
-    --table-oval-max-w: min(64%, 720px);
-    --table-oval-max-h: min(78%, 440px);
+  .table-area-west,
+  .table-area-east {
+    max-width: min(18vw, 180px);
   }
 }
 
-/* Hauteur limitée (landscape phone) : ovale plus plat, moins de padding bas */
+@media (min-width: 1600px) {
+  .table-area {
+    --table-oval-max-w: min(52%, 720px);
+    --table-oval-max-h: min(56%, 440px);
+  }
+}
+
 @media (max-height: 500px) and (orientation: landscape) {
   .table-area {
     --table-pad-top: 4px;
     --table-pad-bottom: 120px;
-    --table-side: 56px;
+    --table-seat-n-top: 2px;
+    --table-seat-side-y: 48%;
     --table-oval-ratio: 2;
-    --table-oval-max-w: min(70%, 420px);
-    --table-oval-max-h: min(70%, 160px);
+    --table-oval-max-w: min(55%, 420px);
+    --table-oval-max-h: min(55%, 160px);
   }
   .table-area.is-compact {
     --table-pad-bottom: 110px;
