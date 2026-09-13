@@ -4,20 +4,17 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import type { Card } from './engine/types.ts'
+import { authenticate, errorResponse, findCallerSeat, loadSeats } from './shared.ts'
 import {
-  authenticate,
-  errorResponse,
-  findCallerSeat,
   handleBankPlayer,
   handleClaimVictory,
   handleGetState,
-  handleLeaveTable,
   handlePlayCard,
   handleResolveTrick,
   handleStartNextRound,
   handleStartTable,
-  loadSeats,
-} from './handlers.ts'
+} from './game.ts'
+import { handleLeaveTable } from './leave.ts'
 
 Deno.serve(async req => {
   if (req.method === 'OPTIONS') {
