@@ -12,6 +12,8 @@ interface RoundEndRevealOverlayProps {
   hands: Card[][]
   playLog: Card[][]
   onContinue: () => void
+  /** Noms affiches par index de vue (0-3). Defaut = SEAT_NAMES solo. */
+  seatNames?: string[]
 }
 
 export function RoundEndRevealOverlay({
@@ -19,9 +21,11 @@ export function RoundEndRevealOverlay({
   hands,
   playLog,
   onContinue,
+  seatNames = SEAT_NAMES,
 }: RoundEndRevealOverlayProps) {
   const [phase, setPhase] = useState<Phase>('handsReveal')
   const winnerIndex = outcome.roundWinnerIndex
+  const names = seatNames.length >= 4 ? seatNames : SEAT_NAMES
   const comboLabel = COMBO_LABEL[outcome.combo]
   const payoutLines = [...outcome.payout.winners, ...outcome.payout.losers].sort(
     (a, b) => a.playerIndex - b.playerIndex,
@@ -31,7 +35,7 @@ export function RoundEndRevealOverlay({
   const trailingCount = countTrailingThrees(winnerSequence)
 
   const winnerCause = outcome.wonByClaim
-    ? `👑 Victoire réclamée · ${comboLabel}`
+    ? `Victoire reclamee · ${comboLabel}`
     : `Combo ${comboLabel}`
 
   return (
@@ -44,12 +48,12 @@ export function RoundEndRevealOverlay({
             CARTES DU ROUND
           </p>
           <p className="text-gold font-display reveal-hands-winner">
-            {SEAT_NAMES[winnerIndex]} — {comboLabel}
-            {outcome.wonByClaim ? ' · 👑' : ''}
+            {names[winnerIndex]} — {comboLabel}
+            {outcome.wonByClaim ? ' ·' : ''}
           </p>
 
           <div className="reveal-hands-list">
-            {SEAT_NAMES.map((name, i) => {
+            {names.map((name, i) => {
               const isWinner = i === winnerIndex
               const isBanked = outcome.bankedPlayerIndexes.includes(i)
               const played = playLog[i] ?? []
@@ -61,7 +65,7 @@ export function RoundEndRevealOverlay({
 
               return (
                 <div
-                  key={name}
+                  key={name + '-' + i}
                   className={`anim-fade-in-up reveal-hand-row${isWinner ? ' is-winner-gold' : ''}`}
                   style={{ animationDelay: `${i * 0.06}s` }}
                 >
@@ -79,7 +83,7 @@ export function RoundEndRevealOverlay({
                     >
                       {name}
                     </span>
-                    {isBanked && <span className="reveal-bank-icon">🏦</span>}
+                    {isBanked && <span className="reveal-bank-icon">Banque</span>}
                     {isWinner && (
                       <span className={`reveal-cause${outcome.wonByClaim ? ' is-claim' : ''}`}>
                         {winnerCause}
@@ -134,7 +138,7 @@ export function RoundEndRevealOverlay({
             onClick={() => setPhase('payout')}
             style={{ width: '100%' }}
           >
-            VOIR LES GAINS →
+            VOIR LES GAINS
           </button>
         </div>
       )}
@@ -142,7 +146,7 @@ export function RoundEndRevealOverlay({
       {phase === 'payout' && (
         <div className="anim-fade-in-up reveal-payout">
           <p className="text-gold font-display reveal-payout-title">
-            {SEAT_NAMES[winnerIndex]} remporte le round
+            {names[winnerIndex]} remporte le round
           </p>
           <div className="reveal-payout-list">
             {payoutLines.map((p, i) => (
@@ -151,8 +155,8 @@ export function RoundEndRevealOverlay({
                 className={`reveal-payout-row${i < payoutLines.length - 1 ? ' has-border' : ''}`}
               >
                 <span className="reveal-payout-name">
-                  {SEAT_NAMES[p.playerIndex]}
-                  {outcome.bankedPlayerIndexes.includes(p.playerIndex) ? ' 🏦' : ''}
+                  {names[p.playerIndex] ?? `Joueur ${p.playerIndex + 1}`}
+                  {outcome.bankedPlayerIndexes.includes(p.playerIndex) ? ' (banque)' : ''}
                 </span>
                 <span
                   className={`font-display reveal-payout-amt ${p.amount > 0 ? 'is-gain' : 'is-loss'}`}
@@ -174,7 +178,7 @@ export function RoundEndRevealOverlay({
               width: '100%',
             }}
           >
-            CONTINUER →
+            CONTINUER
           </button>
         </div>
       )}
