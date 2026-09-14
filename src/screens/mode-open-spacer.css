@@ -1,0 +1,16 @@
+/* Espace sous Tables ouvertes — BottomNav mobile (~72–80px) */
+.mode-open-spacer {
+  display: none;
+}
+
+@media (max-width: 899px) {
+  .mode-open-spacer {
+    display: block;
+    height: 88px;
+    flex-shrink: 0;
+  }
+
+  .mode-open-tables {
+    padding-bottom: 8px;
+  }
+}
