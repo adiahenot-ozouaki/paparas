@@ -199,9 +199,11 @@ export function GameProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!user) return
+    setStatsSyncing(true)
     void syncLifetimeStatsWithCloud(loadLocalLifetimeStats()).then(({ stats, error }) => {
       if (error) console.warn('[stats] initial sync:', error)
       setLifetimeStats(stats)
+      setStatsSyncing(false)
     })
   }, [user])
 
