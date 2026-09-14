@@ -157,7 +157,7 @@ export default function GameTableScreen({
               baseStake: stakeConfig.baseStake,
             })
           ) {
-            return bankPlayer(prev, index)
+            return bankPlayer(prev, index, stakeConfig)
           }
         }
 
@@ -173,61 +173,76 @@ export default function GameTableScreen({
         })
         return playCard(prev, index, card)
       })
-    }, 700)
+    }, 900)
 
     return () => clearTimeout(timer)
-  }, [roundState, currentPlayerIndex, isPaused, setRoundState, players, stakeConfig])
+  }, [roundState, currentPlayerIndex, setRoundState, stakeConfig, isPaused, players])
 
   useEffect(() => {
     if (roundState.phase !== 'trickWon') return
+    if (isPaused) return
+
     const timer = setTimeout(() => {
       setRoundState((prev: RoundState) =>
         prev.phase === 'trickWon' ? resolveTrick(prev, stakeConfig) : prev,
       )
-    }, 900)
+    }, 1400)
+
     return () => clearTimeout(timer)
-  }, [roundState, setRoundState, stakeConfig])
+  }, [roundState, setRoundState, stakeConfig, isPaused])
 
-  function handleCardSelect(index: number) {
-    if (!isHumanTurn || humanIsBanked) return
-    if (!isCardPlayable(humanHand[index])) return
-    setSelectedCardIndex(prev => (prev === index ? null : index))
-  }
+  useEffect(() => {
+    if (roundState.phase !== 'roundEnd' && roundState.phase !== 'specialWin') return
+    applyCurrentPayout()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roundState.phase, roundState.outcome])
 
-  function handlePlayCard() {
-    if (selectedCardIndex === null || !isHumanTurn) return
-    const card = humanHand[selectedCardIndex]
-    setRoundState(prev => playCard(prev, HUMAN_INDEX, card))
-    setSelectedCardIndex(null)
-  }
-
-  function attemptPlayCard(index: number) {
-    if (!isHumanTurn || humanIsBanked) return
-    if (!isCardPlayable(humanHand[index])) return
-    const card = humanHand[index]
-    setRoundState(prev => playCard(prev, HUMAN_INDEX, card))
-    setSelectedCardIndex(null)
-  }
-
-  function handleConfirmBank() {
-    setConfirmingBank(false)
-    bankPlayerAction()
-  }
-
-  function handleClaimVictory() {
-    claimVictoryAction()
-  }
+  useEffect(() => {
+    if (!canBank && confirmingBank) setConfirmingBank(false)
+  }, [canBank, confirmingBank])
 
   function handleRoundEndContinue() {
-    applyCurrentPayout()
-    const over = checkGameOverNow()
-    if (over) {
-      recordGameResult()
-      onNavigate(over.humanWon ? 'victory' : 'defeat')
+    const result = checkGameOverNow()
+    if (result.isOver && result.winnerIndex !== undefined) {
+      recordGameResult(result.winnerIndex === HUMAN_INDEX)
+      onNavigate(result.winnerIndex === HUMAN_INDEX ? 'victory' : 'defeat')
       return
     }
     startNextRound()
     setSelectedCardIndex(null)
+  }
+
+  function handleCardSelect(index: number) {
+    if (!isHumanTurn) return
+    if (!isCardPlayable(humanHand[index])) return
+    setSelectedCardIndex(prev => (prev === index ? null : index))
+  }
+
+  function playCardAtIndex(index: number) {
+    const card = humanHand[index]
+    setRoundState((prev: RoundState) => playCard(prev, HUMAN_INDEX, card))
+    setSelectedCardIndex(null)
+  }
+
+  function handlePlayCard() {
+    if (selectedCardIndex === null || !isHumanTurn) return
+    playCardAtIndex(selectedCardIndex)
+  }
+
+  function attemptPlayCard(index: number) {
+    if (!isHumanTurn) return
+    if (!isCardPlayable(humanHand[index])) return
+    playCardAtIndex(index)
+  }
+
+  function handleConfirmBank() {
+    bankPlayerAction(HUMAN_INDEX)
+    setConfirmingBank(false)
+    setSelectedCardIndex(null)
+  }
+
+  function handleClaimVictory() {
+    claimVictoryAction(HUMAN_INDEX)
   }
 
   const tricksWonThisRound = [0, 1, 2, 3].map(
@@ -236,7 +251,42 @@ export default function GameTableScreen({
 
   return (
     <div className="felt-bg table-screen">
-      <div className="table-screen-pattern pattern-african" aria-hidden />
+      <div className="table-screen-pattern" aria-hidden />
+
+      {roundState.phase === 'specialWin' &&
+        roundState.outcome?.kind === 'specialWin' && (
+          <SpecialWinOverlayWrapper
+            outcome={roundState.outcome}
+            hands={roundState.hands}
+            onContinue={handleRoundEndContinue}
+          />
+        )}
+
+      {roundState.phase === 'roundEnd' &&
+        roundState.outcome?.kind === 'normal' && (
+          <RoundEndRevealOverlay
+            outcome={roundState.outcome}
+            hands={roundState.hands}
+            playLog={roundState.playLog}
+            onContinue={handleRoundEndContinue}
+          />
+        )}
+
+      {confirmingBank && (
+        <BankConfirmOverlay
+          baseStake={stakeConfig.baseStake}
+          onConfirm={handleConfirmBank}
+          onCancel={() => setConfirmingBank(false)}
+        />
+      )}
+
+      {isPaused && (
+        <PauseOverlay
+          onResume={() => setIsPaused(false)}
+          onQuit={() => onNavigate('home')}
+        />
+      )}
+
       <GameTableHud
         roundNumber={roundNumber}
         tricksWonThisRound={tricksWonThisRound}
@@ -250,6 +300,7 @@ export default function GameTableScreen({
         onOpenRules={() => onNavigate('rules')}
         onRequestBank={() => setConfirmingBank(true)}
       />
+
       <div className="table-screen-body">
         <GameTableArea
           players={players}
@@ -257,53 +308,24 @@ export default function GameTableScreen({
           currentPlayerIndex={currentPlayerIndex}
           compactMode={compactMode}
         />
+
         <PlayerHand
           players={players}
-          humanHand={humanHand}
-          selectedCardIndex={selectedCardIndex}
+          hand={humanHand}
           isHumanTurn={isHumanTurn}
           humanIsBanked={humanIsBanked}
           isLeader={isHumanLeader}
-          compactMode={compactMode}
+          selectedCardIndex={selectedCardIndex}
           canClaim={canClaim}
           isCardPlayable={isCardPlayable}
-          onSelectCard={handleCardSelect}
+          isPlaying={roundState.phase === 'playing'}
+          compactMode={compactMode}
+          onCardSelect={handleCardSelect}
+          onAttemptPlay={attemptPlayCard}
           onPlayCard={handlePlayCard}
-          onAttemptPlayCard={attemptPlayCard}
           onClaimVictory={handleClaimVictory}
         />
       </div>
-
-      {confirmingBank && (
-        <BankConfirmOverlay
-          onConfirm={handleConfirmBank}
-          onCancel={() => setConfirmingBank(false)}
-        />
-      )}
-
-      {isPaused && (
-        <PauseOverlay
-          onResume={() => setIsPaused(false)}
-          onQuit={() => onNavigate('home')}
-        />
-      )}
-
-      {roundState.phase === 'specialWin' && roundState.specialWinners && (
-        <SpecialWinOverlayWrapper
-          roundState={roundState}
-          onContinue={handleRoundEndContinue}
-        />
-      )}
-
-      {roundState.phase === 'roundEnd' &&
-        roundState.outcome?.kind === 'normal' && (
-          <RoundEndRevealOverlay
-            outcome={roundState.outcome}
-            hands={roundState.hands}
-            playLog={roundState.playLog}
-            onContinue={handleRoundEndContinue}
-          />
-        )}
     </div>
   )
 }
