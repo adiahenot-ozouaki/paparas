@@ -234,38 +234,129 @@
 .player-hand-hint { color: #a9b0b7; font-size: 11px; margin: 0; letter-spacing: 0.04em; opacity: 0.85; }
 .player-hand-claim-btn { padding: 10px 24px !important; font-size: 12px !important; border-radius: 12px !important; letter-spacing: 0.06em; background: linear-gradient(135deg, #9b59b6, #6f3d82) !important; box-shadow: 0 4px 16px rgba(155, 89, 182, 0.4) !important; }
 
-.reveal-overlay { position: absolute; inset: 0; background: rgba(11, 13, 16, 0.95); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; overflow-y: auto; }
+.reveal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 13, 16, 0.95);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(20px, env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .reveal-rays { position: absolute; top: 30%; left: 50%; width: 280px; height: 280px; transform: translate(-50%, -50%); background-image: conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--reveal-accent, #d6a84f) 8%, transparent) 20deg, transparent 40deg); animation: victoryRays 7s linear infinite; border-radius: 50%; pointer-events: none; }
 .reveal-rays--gold { background-image: conic-gradient(from 0deg, transparent, rgba(214, 168, 79, 0.08) 20deg, transparent 40deg); }
 .reveal-intro { text-align: center; position: relative; }
 .reveal-kicker { color: #a9b0b7; font-size: 12px; font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: 0.14em; margin: 0 0 12px; }
 .reveal-kicker--center { text-align: center; font-size: 11px; letter-spacing: 0.1em; margin: 0 0 16px; }
 .reveal-intro-title { font-size: 40px; font-weight: 800; color: var(--reveal-accent, #d6a84f); text-shadow: 0 0 40px color-mix(in srgb, var(--reveal-accent, #d6a84f) 50%, transparent); letter-spacing: 0.06em; }
-.reveal-showcase { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 16px; }
+.reveal-showcase { width: 100%; max-width: min(100%, 420px); display: flex; flex-direction: column; gap: 16px; }
 .reveal-rule-card { border: 1.5px solid; border-radius: 18px; padding: 16px 18px; }
-.reveal-rule-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+.reveal-rule-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
 .reveal-rule-label { font-size: 24px; font-weight: 800; }
 .reveal-rule-player { color: #a9b0b7; font-size: 12px; }
 .reveal-rule-desc { color: #a9b0b7; font-size: 12px; margin: 0 0 12px; }
 .reveal-rule-sum { margin-top: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 6px 12px; display: inline-block; font-size: 13px; font-weight: 700; }
-.reveal-hands { width: 100%; max-width: 360px; position: relative; }
-.reveal-hands--wide { max-width: 420px; }
-.reveal-hands-winner { text-align: center; font-size: 16px; font-weight: 700; margin: 0 0 16px; }
-.reveal-hands-list { display: flex; flex-direction: column; gap: 8px; }
-.reveal-hand-row { display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 8px 10px; }
-.reveal-hand-row.is-winner-gold { background: rgba(214, 168, 79, 0.1); border-color: rgba(214, 168, 79, 0.4); flex-direction: column; align-items: stretch; padding: 10px 12px; gap: 8px; }
-.reveal-hand-name { width: 56px; font-size: 12px; flex-shrink: 0; color: #a9b0b7; font-weight: 500; }
-.reveal-hand-name.is-gold { color: #d6a84f; font-weight: 700; width: auto; font-size: 13px; }
-.reveal-hand-cards { display: flex; gap: 4px; }
-.reveal-line-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Mains / cartes — adapté aux cartes sm (43×61) */
+.reveal-hands {
+  width: 100%;
+  max-width: min(100%, 480px);
+  position: relative;
+}
+.reveal-hands--wide {
+  max-width: min(100%, 520px);
+}
+.reveal-hands-winner {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 14px;
+}
+.reveal-hands-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* Toutes les lignes en colonne : nom au-dessus, cartes en dessous */
+.reveal-hand-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.reveal-hand-row.is-winner-gold {
+  background: rgba(214, 168, 79, 0.1);
+  border-color: rgba(214, 168, 79, 0.4);
+  padding: 12px 14px;
+  gap: 10px;
+}
+.reveal-hand-name {
+  width: auto;
+  font-size: 13px;
+  flex-shrink: 0;
+  color: #a9b0b7;
+  font-weight: 600;
+}
+.reveal-hand-name.is-gold {
+  color: #d6a84f;
+  font-weight: 700;
+  font-size: 14px;
+}
+.reveal-hand-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.reveal-line-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .reveal-bank-icon { color: #a9b0b7; font-size: 11px; }
-.reveal-cause { color: #d6a84f; font-size: 11px; font-weight: 700; font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: 0.02em; }
+.reveal-cause {
+  color: #d6a84f;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: 0.02em;
+}
 .reveal-cause.is-claim { color: #c9a0ff; }
-.reveal-line-cards { display: flex; gap: 4px; flex-wrap: nowrap; overflow-x: auto; align-items: center; -webkit-overflow-scrolling: touch; }
-.reveal-seg-label { color: #5b636b; font-size: 9px; letter-spacing: 0.06em; margin-right: 2px; flex-shrink: 0; }
-.reveal-seg-sep { width: 1px; height: 28px; background: rgba(255, 255, 255, 0.15); margin: 0 4px; flex-shrink: 0; }
+.reveal-line-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  /* fallback scroll si trop de cartes sur très petit écran */
+  max-width: 100%;
+}
+.reveal-seg-label {
+  color: #5b636b;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  margin-right: 2px;
+  flex-shrink: 0;
+  align-self: center;
+}
+.reveal-seg-sep {
+  width: 1px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 4px;
+  flex-shrink: 0;
+  align-self: center;
+}
 .reveal-empty { color: #5b636b; font-size: 11px; }
-.reveal-payout { width: 100%; max-width: 320px; text-align: center; }
+.reveal-payout { width: 100%; max-width: min(100%, 360px); text-align: center; }
 .reveal-payout-title { font-size: 16px; font-weight: 700; margin: 0 0 16px; letter-spacing: 0.04em; }
 .reveal-payout-list { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; overflow: hidden; margin-bottom: 20px; }
 .reveal-payout-row { display: flex; justify-content: space-between; padding: 12px 16px; }
@@ -275,6 +366,17 @@
 .reveal-payout-amt.is-gain { color: #4caf76; }
 .reveal-payout-amt.is-loss { color: #c94b4b; }
 .reveal-cta { margin-top: 20px; padding: 14px !important; font-size: 13px !important; border-radius: 14px !important; letter-spacing: 0.08em; }
+
+@media (min-width: 600px) {
+  .reveal-hands,
+  .reveal-hands--wide {
+    max-width: min(100%, 560px);
+  }
+  .reveal-hand-cards,
+  .reveal-line-cards {
+    gap: 8px;
+  }
+}
 
 .table-screen--loading { align-items: center; justify-content: center; gap: 12px; }
 .table-loading-text { color: #a9b0b7; font-size: 14px; }
