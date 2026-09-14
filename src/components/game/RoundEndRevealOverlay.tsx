@@ -105,7 +105,7 @@ export function RoundEndRevealOverlay({
                             suit={card.suit}
                             value={card.value}
                             state={isTrailing ? 'winner' : 'default'}
-                            size="xs"
+                            size="sm"
                           />
                         )
                       })}
@@ -121,7 +121,7 @@ export function RoundEndRevealOverlay({
                           suit={card.suit}
                           value={card.value}
                           state="default"
-                          size="xs"
+                          size="sm"
                         />
                       ))}
                     </div>
