@@ -138,7 +138,7 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
   }
 
   return (
-    <ScreenShell bottomPad={24} className="mode-screen">
+    <ScreenShell bottomPad={120} className="mode-screen">
       <div className="mode-layout">
         <div className="mode-main">
           <div className="mode-header">
@@ -287,6 +287,8 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
               </div>
             )}
           </div>
+          {/* Espace réservé mobile : évite que BottomNav coupe la liste Tables ouvertes */}
+          <div className="mode-open-spacer" aria-hidden />
         </aside>
       </div>
     </ScreenShell>
