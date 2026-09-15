@@ -30,13 +30,16 @@ export async function handleStartTable(admin: SupabaseClient, tableId: string, s
   const table = await loadTable(admin, tableId)
   // Idempotent : si déjà en jeu, renvoyer l'état courant (évite la course entre 2 clients prêts)
   if (table.status === 'playing') {
-    try {
-      const { round, hands } = await loadLatestRound(admin, tableId)
-      const state = reconstructRoundState(table, round, hands)
-      return jsonResponse({ state: toPublicState(state, seatIndex), alreadyStarted: true })
-    } catch {
-      return jsonResponse({ state: null, alreadyStarted: true, tableStatus: 'playing' })
+    for (let i = 0; i < 6; i++) {
+      try {
+        const { round, hands } = await loadLatestRound(admin, tableId)
+        const state = reconstructRoundState(table, round, hands)
+        return jsonResponse({ state: toPublicState(state, seatIndex), alreadyStarted: true })
+      } catch {
+        await new Promise(r => setTimeout(r, 200))
+      }
     }
+    return jsonResponse({ state: null, alreadyStarted: true, tableStatus: 'playing' })
   }
   if (table.status !== 'lobby') return errorResponse('La table a déjà démarré ou n\'est plus disponible.')
   const seats = await loadSeats(admin, tableId)
@@ -54,12 +57,25 @@ export async function handleStartTable(admin: SupabaseClient, tableId: string, s
     .select('*')
   if (claimErr) return errorResponse(`Échec démarrage : ${claimErr.message}`)
   if (!claimed || claimed.length === 0) {
-    // Un autre client a claim entre-temps
+    // Un autre client a claim : attendre que le round soit créé (évite state:null)
+    for (let i = 0; i < 8; i++) {
+      await new Promise(r => setTimeout(r, 250))
+      try {
+        const t2 = await loadTable(admin, tableId)
+        if (t2.status === 'lobby') {
+          // L'autre client a rollback — on laisse retenter le client
+          return errorResponse('Démarrage interrompu. Réessayez.')
+        }
+        const { round, hands } = await loadLatestRound(admin, tableId)
+        const state = reconstructRoundState(t2, round, hands)
+        return jsonResponse({ state: toPublicState(state, seatIndex), alreadyStarted: true })
+      } catch {
+        /* round pas encore prêt */
+      }
+    }
     try {
       const t2 = await loadTable(admin, tableId)
-      const { round, hands } = await loadLatestRound(admin, tableId)
-      const state = reconstructRoundState(t2, round, hands)
-      return jsonResponse({ state: toPublicState(state, seatIndex), alreadyStarted: true })
+      return jsonResponse({ state: null, alreadyStarted: true, tableStatus: t2.status })
     } catch {
       return jsonResponse({ state: null, alreadyStarted: true, tableStatus: 'playing' })
     }
