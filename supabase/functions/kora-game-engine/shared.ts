@@ -111,6 +111,7 @@ export async function loadLatestRound(
 export function reconstructRoundState(table: TableRow, round: RoundRow, hands: Card[][]): RoundState {
   return {
     phase: round.phase as RoundState['phase'],
+    variant: table.deck_variant,
     numPlayers: NUM_PLAYERS,
     hands,
     currentTrick: round.current_trick as RoundState['currentTrick'],
@@ -247,6 +248,6 @@ export async function applyPayoutAndStats(
 
 export function findCallerSeat(seats: SeatRow[], userId: string): SeatRow {
   const seat = seats.find(s => s.user_id === userId)
-  if (!seat) throw new Error('Vous n\'êtes pas assis à cette table.')
+  if (!seat) throw new Error("Vous n'êtes pas assis à cette table.")
   return seat
 }
