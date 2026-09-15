@@ -160,6 +160,7 @@ export async function insertRound(
     const { error: handError } = await admin.from('kora_round_hands').insert({
       round_id: data.id,
       seat_index: seat.seat_index,
+      user_id: seat.user_id,
       cards: state.hands[seat.seat_index] ?? [],
       revealed: false,
     })
