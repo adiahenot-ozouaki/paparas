@@ -27,99 +27,125 @@ import {
 } from './shared.ts'
 
 export async function handleStartTable(admin: SupabaseClient, tableId: string, seatIndex: number): Promise<Response> {
-  const table = await loadTable(admin, tableId)
-  // Idempotent : si déjà en jeu, renvoyer l'état courant (évite la course entre 2 clients prêts)
-  if (table.status === 'playing') {
-    for (let i = 0; i < 6; i++) {
+  const seats = await loadSeats(admin, tableId)
+  if (seats.length < MIN_ACTIVE_PLAYERS) {
+    return errorResponse(`Il faut au moins ${MIN_ACTIVE_PLAYERS} joueurs pour démarrer.`)
+  }
+  if (!seats.every(s => s.is_ready)) {
+    return errorResponse('Tous les joueurs assis doivent être prêts.')
+  }
+
+  // Si déjà en jeu avec un round → renvoyer l'état
+  {
+    const table0 = await loadTable(admin, tableId)
+    if (table0.status === 'playing') {
+      for (let i = 0; i < 8; i++) {
+        try {
+          const { round, hands } = await loadLatestRound(admin, tableId)
+          const state = reconstructRoundState(table0, round, hands)
+          return jsonResponse({ state: toPublicState(state, seatIndex), alreadyStarted: true })
+        } catch {
+          await new Promise(r => setTimeout(r, 250))
+        }
+      }
+      // playing sans round = état cassé → nettoyer et retenter plus bas
+      await admin.from('kora_tables').update({ status: 'lobby', started_at: null }).eq('id', tableId)
+    }
+  }
+
+  // Jusqu'à 5 tentatives claim + create (gère course + rollback concurrent)
+  let lastError = 'Impossible de démarrer la table.'
+  for (let attempt = 0; attempt < 5; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 300 * attempt))
+
+    const table = await loadTable(admin, tableId)
+
+    // Un concurrent a réussi entre-temps
+    if (table.status === 'playing') {
       try {
         const { round, hands } = await loadLatestRound(admin, tableId)
         const state = reconstructRoundState(table, round, hands)
         return jsonResponse({ state: toPublicState(state, seatIndex), alreadyStarted: true })
       } catch {
-        await new Promise(r => setTimeout(r, 200))
+        lastError = 'Table en jeu mais round indisponible.'
+        continue
       }
     }
-    return jsonResponse({ state: null, alreadyStarted: true, tableStatus: 'playing' })
-  }
-  if (table.status !== 'lobby') return errorResponse('La table a déjà démarré ou n\'est plus disponible.')
-  const seats = await loadSeats(admin, tableId)
-  if (seats.length < MIN_ACTIVE_PLAYERS) {
-    return errorResponse(`Il faut au moins ${MIN_ACTIVE_PLAYERS} joueurs pour démarrer.`)
-  }
-  if (!seats.every(s => s.is_ready)) return errorResponse('Tous les joueurs assis doivent être prêts.')
+    if (table.status !== 'lobby') {
+      return errorResponse('La table a déjà démarré ou n\'est plus disponible.')
+    }
 
-  // Claim atomique du lobby (un seul client gagne la course)
-  const { data: claimed, error: claimErr } = await admin
-    .from('kora_tables')
-    .update({ status: 'playing', started_at: new Date().toISOString() })
-    .eq('id', tableId)
-    .eq('status', 'lobby')
-    .select('*')
-  if (claimErr) return errorResponse(`Échec démarrage : ${claimErr.message}`)
-  if (!claimed || claimed.length === 0) {
-    // Un autre client a claim : attendre que le round soit créé (évite state:null)
-    for (let i = 0; i < 8; i++) {
-      await new Promise(r => setTimeout(r, 250))
-      try {
+    // Claim
+    const { data: claimed, error: claimErr } = await admin
+      .from('kora_tables')
+      .update({ status: 'playing', started_at: new Date().toISOString() })
+      .eq('id', tableId)
+      .eq('status', 'lobby')
+      .select('*')
+    if (claimErr) {
+      lastError = `Échec démarrage : ${claimErr.message}`
+      continue
+    }
+    if (!claimed || claimed.length === 0) {
+      // Perdu le claim — attendre un round
+      for (let w = 0; w < 6; w++) {
+        await new Promise(r => setTimeout(r, 300))
         const t2 = await loadTable(admin, tableId)
-        if (t2.status === 'lobby') {
-          // L'autre client a rollback — on laisse retenter le client
-          return errorResponse('Démarrage interrompu. Réessayez.')
+        if (t2.status === 'playing') {
+          try {
+            const { round, hands } = await loadLatestRound(admin, tableId)
+            const state = reconstructRoundState(t2, round, hands)
+            return jsonResponse({ state: toPublicState(state, seatIndex), alreadyStarted: true })
+          } catch {
+            /* wait */
+          }
         }
-        const { round, hands } = await loadLatestRound(admin, tableId)
-        const state = reconstructRoundState(t2, round, hands)
+        if (t2.status === 'lobby') break // concurrent a rollback → retenter claim
+      }
+      continue
+    }
+
+    // On a le claim : réutiliser un round existant (orphelins) ou créer
+    try {
+      try {
+        const existing = await loadLatestRound(admin, tableId)
+        const state = reconstructRoundState(table, existing.round, existing.hands)
+        await admin.from('kora_table_players').update({ is_ready: false }).eq('table_id', tableId)
         return jsonResponse({ state: toPublicState(state, seatIndex), alreadyStarted: true })
       } catch {
-        /* round pas encore prêt */
+        /* create new */
       }
-    }
-    try {
-      const t2 = await loadTable(admin, tableId)
-      return jsonResponse({ state: null, alreadyStarted: true, tableStatus: t2.status })
-    } catch {
-      return jsonResponse({ state: null, alreadyStarted: true, tableStatus: 'playing' })
+
+      const stakeConfig: GameStakeConfig = { baseStake: table.base_stake, startingCapital: table.starting_capital }
+      const state = initRound({
+        variant: table.deck_variant,
+        numPlayers: NUM_PLAYERS,
+        startPlayerIndex: 0,
+        stakeConfig,
+        eliminatedPlayers: computeVacantSeats(seats),
+      })
+      const round = await insertRound(admin, tableId, 1, state, seats)
+      await admin.from('kora_table_players').update({ is_ready: false }).eq('table_id', tableId)
+      const payoutResult = await applyPayoutAndStats(admin, table, round, state, seats)
+      return jsonResponse({ state: toPublicState(state, seatIndex), eliminatedSeats: payoutResult.eliminatedSeats })
+    } catch (e) {
+      lastError = e instanceof Error ? e.message : String(e)
+      // Cleanup orphelins + rollback lobby pour retenter
+      try {
+        const { data: orphanRounds } = await admin.from('kora_rounds').select('id').eq('table_id', tableId)
+        const ids = (orphanRounds ?? []).map((r: { id: string }) => r.id)
+        if (ids.length > 0) {
+          await admin.from('kora_round_hands').delete().in('round_id', ids)
+          await admin.from('kora_rounds').delete().eq('table_id', tableId)
+        }
+      } catch {
+        /* ignore */
+      }
+      await admin.from('kora_tables').update({ status: 'lobby', started_at: null }).eq('id', tableId)
     }
   }
 
-  // Round déjà présent (retry après échec partiel) → idempotent, pas de re-insert
-  try {
-    const existing = await loadLatestRound(admin, tableId)
-    const state = reconstructRoundState(table, existing.round, existing.hands)
-    await admin.from('kora_table_players').update({ is_ready: false }).eq('table_id', tableId)
-    return jsonResponse({ state: toPublicState(state, seatIndex), alreadyStarted: true })
-  } catch {
-    /* pas de round — on crée */
-  }
-
-  const stakeConfig: GameStakeConfig = { baseStake: table.base_stake, startingCapital: table.starting_capital }
-  const state = initRound({
-    variant: table.deck_variant,
-    numPlayers: NUM_PLAYERS,
-    startPlayerIndex: 0,
-    stakeConfig,
-    eliminatedPlayers: computeVacantSeats(seats),
-  })
-  try {
-    const round = await insertRound(admin, tableId, 1, state, seats)
-    await admin.from('kora_table_players').update({ is_ready: false }).eq('table_id', tableId)
-    const payoutResult = await applyPayoutAndStats(admin, table, round, state, seats)
-    return jsonResponse({ state: toPublicState(state, seatIndex), eliminatedSeats: payoutResult.eliminatedSeats })
-  } catch (e) {
-    // Rollback complet : supprimer rounds orphelins + remettre lobby
-    try {
-      const { data: orphanRounds } = await admin.from('kora_rounds').select('id').eq('table_id', tableId)
-      const ids = (orphanRounds ?? []).map((r: { id: string }) => r.id)
-      if (ids.length > 0) {
-        await admin.from('kora_round_hands').delete().in('round_id', ids)
-        await admin.from('kora_rounds').delete().eq('table_id', tableId)
-      }
-    } catch {
-      /* best-effort cleanup */
-    }
-    await admin.from('kora_tables').update({ status: 'lobby', started_at: null }).eq('id', tableId)
-    const message = e instanceof Error ? e.message : String(e)
-    return errorResponse(message)
-  }
+  return errorResponse(lastError)
 }
 
 export async function handlePlayCard(admin: SupabaseClient, tableId: string, seatIndex: number, card: Card): Promise<Response> {
