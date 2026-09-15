@@ -20,7 +20,8 @@ export function humanizeError(
     return 'Session expirée. Reconnectez-vous pour continuer.'
   }
   if (lower.includes('duplicate key') || lower.includes('unique constraint')) {
-    return 'Vous êtes déjà assis à cette table.'
+    // Join est idempotent : ce message ne doit plus bloquer le lobby
+    return 'Vous êtes déjà à cette table — actualisation…'
   }
   if (
     lower.includes('row-level security') ||
