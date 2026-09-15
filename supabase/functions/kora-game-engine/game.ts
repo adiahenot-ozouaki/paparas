@@ -81,6 +81,16 @@ export async function handleStartTable(admin: SupabaseClient, tableId: string, s
     }
   }
 
+  // Round déjà présent (retry après échec partiel) → idempotent, pas de re-insert
+  try {
+    const existing = await loadLatestRound(admin, tableId)
+    const state = reconstructRoundState(table, existing.round, existing.hands)
+    await admin.from('kora_table_players').update({ is_ready: false }).eq('table_id', tableId)
+    return jsonResponse({ state: toPublicState(state, seatIndex), alreadyStarted: true })
+  } catch {
+    /* pas de round — on crée */
+  }
+
   const stakeConfig: GameStakeConfig = { baseStake: table.base_stake, startingCapital: table.starting_capital }
   const state = initRound({
     variant: table.deck_variant,
@@ -95,7 +105,17 @@ export async function handleStartTable(admin: SupabaseClient, tableId: string, s
     const payoutResult = await applyPayoutAndStats(admin, table, round, state, seats)
     return jsonResponse({ state: toPublicState(state, seatIndex), eliminatedSeats: payoutResult.eliminatedSeats })
   } catch (e) {
-    // Rollback status si le round n'a pas pu être créé
+    // Rollback complet : supprimer rounds orphelins + remettre lobby
+    try {
+      const { data: orphanRounds } = await admin.from('kora_rounds').select('id').eq('table_id', tableId)
+      const ids = (orphanRounds ?? []).map((r: { id: string }) => r.id)
+      if (ids.length > 0) {
+        await admin.from('kora_round_hands').delete().in('round_id', ids)
+        await admin.from('kora_rounds').delete().eq('table_id', tableId)
+      }
+    } catch {
+      /* best-effort cleanup */
+    }
     await admin.from('kora_tables').update({ status: 'lobby', started_at: null }).eq('id', tableId)
     const message = e instanceof Error ? e.message : String(e)
     return errorResponse(message)
