@@ -227,7 +227,7 @@ export default function TournamentsScreen({ onNavigate }: { onNavigate: (s: Scre
   }
 
   return (
-    <ScreenShell bottomPad={28} className="tourney-screen">
+    <ScreenShell className="tourney-screen">
       <PageHeader
         title="Tournois"
         subtitle="Competitions · inscrits · lots · spectate"
