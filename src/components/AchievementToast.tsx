@@ -12,15 +12,20 @@ import type { LifetimeStats } from '../lib/persistence/stats'
 // ==========================================================================
 // AchievementToast — file d'attente des hauts faits nouvellement débloqués.
 // Monte une fois sous GameProvider ; observe lifetimeStats.
+//
+// Important : à la connexion / sync cloud, les stats « sautent » vers l'historique
+// déjà débloqué. On absorbe ça en baseline (seedSeen) SANS toast. Les toasts
+// ne partent que pour un vrai déblocage en jeu après stabilisation.
 // ==========================================================================
 
 const DISPLAY_MS = 4200
 const EXIT_MS = 320
 
 export default function AchievementToast() {
-  const { lifetimeStats } = useGame()
+  const { lifetimeStats, statsSyncing } = useGame()
   const prevStats = useRef<LifetimeStats | null>(null)
-  const seeded = useRef(false)
+  /** true tant que la baseline n'est pas posée (mount + sync cloud). */
+  const skipDiff = useRef(true)
   const [queue, setQueue] = useState<AchievementDef[]>([])
   const [current, setCurrent] = useState<AchievementDef | null>(null)
   const [visible, setVisible] = useState(false)
@@ -29,20 +34,31 @@ export default function AchievementToast() {
   const hideTimerRef = useRef<number | null>(null)
   const clearTimerRef = useRef<number | null>(null)
 
-  // Premier rendu : ne pas toaster l'historique déjà débloqué
   useEffect(() => {
-    if (seeded.current) return
-    seeded.current = true
-    seedSeenFromStats(lifetimeStats)
-    prevStats.current = lifetimeStats
-  }, [lifetimeStats])
-
-  useEffect(() => {
-    if (!seeded.current || !prevStats.current) {
+    // Pendant une sync cloud (login, refresh) : absorber, pas de toast.
+    if (statsSyncing) {
+      skipDiff.current = true
+      seedSeenFromStats(lifetimeStats)
       prevStats.current = lifetimeStats
       return
     }
-    const newly = diffNewlyUnlocked(prevStats.current, lifetimeStats)
+
+    // Premier frame stable après mount / fin de sync : baseline, pas de toast.
+    if (skipDiff.current) {
+      seedSeenFromStats(lifetimeStats)
+      prevStats.current = lifetimeStats
+      skipDiff.current = false
+      return
+    }
+
+    const prev = prevStats.current
+    if (!prev) {
+      seedSeenFromStats(lifetimeStats)
+      prevStats.current = lifetimeStats
+      return
+    }
+
+    const newly = diffNewlyUnlocked(prev, lifetimeStats)
     prevStats.current = lifetimeStats
     if (newly.length === 0) return
 
@@ -52,7 +68,7 @@ export default function AchievementToast() {
 
     markAchievementsSeen(fresh.map(a => a.id))
     setQueue(q => [...q, ...fresh])
-  }, [lifetimeStats])
+  }, [lifetimeStats, statsSyncing])
 
   // Défile la file : un toast à la fois.
   // Important : le timer de disparition vit dans un effet séparé qui ne
@@ -73,25 +89,16 @@ export default function AchievementToast() {
     if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current)
     if (clearTimerRef.current) window.clearTimeout(clearTimerRef.current)
 
-    setVisible(true)
     hideTimerRef.current = window.setTimeout(() => {
       setVisible(false)
       clearTimerRef.current = window.setTimeout(() => {
         setCurrent(null)
-        clearTimerRef.current = null
       }, EXIT_MS)
-      hideTimerRef.current = null
     }, DISPLAY_MS)
 
     return () => {
-      if (hideTimerRef.current) {
-        window.clearTimeout(hideTimerRef.current)
-        hideTimerRef.current = null
-      }
-      if (clearTimerRef.current) {
-        window.clearTimeout(clearTimerRef.current)
-        clearTimerRef.current = null
-      }
+      if (hideTimerRef.current) window.clearTimeout(hideTimerRef.current)
+      if (clearTimerRef.current) window.clearTimeout(clearTimerRef.current)
     }
   }, [current])
 
@@ -100,8 +107,8 @@ export default function AchievementToast() {
   return (
     <div
       role="status"
-      aria-live="polite"
       className="achievement-toast"
+      aria-live="polite"
       style={{
         position: 'fixed',
         top: 'max(16px, env(safe-area-inset-top, 0px))',

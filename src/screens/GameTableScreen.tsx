@@ -98,14 +98,22 @@ export default function GameTableScreen({
       w === HUMAN_INDEX ? 'Vous gagnez le pli' : `${SEAT_NAMES[w]} gagne le pli`
     statusTone = 'gold'
   } else if (roundState.phase === 'playing') {
+    const leaderIndex =
+      roundState.currentTrick && roundState.currentTrick.requestedSuit !== null
+        ? roundState.currentTrick.starterIndex
+        : null
     if (isHumanTurn && !humanIsBanked) {
       statusMessage = isHumanLeader ? 'À toi de jouer · à la main' : 'À toi de jouer'
       statusTone = 'gold'
+    } else if (currentPlayerIndex !== null && currentPlayerIndex !== HUMAN_INDEX) {
+      const name = SEAT_NAMES[currentPlayerIndex]
+      statusMessage =
+        leaderIndex === currentPlayerIndex
+          ? `${name} joue · à la main`
+          : `${name} joue…`
+      statusTone = 'muted'
     } else if (requestedSuit) {
       statusMessage = `Couleur demandée ${requestedSuit}`
-      statusTone = 'muted'
-    } else if (currentPlayerIndex !== null && currentPlayerIndex !== HUMAN_INDEX) {
-      statusMessage = `${SEAT_NAMES[currentPlayerIndex]} joue…`
       statusTone = 'muted'
     }
   }

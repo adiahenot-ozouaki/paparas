@@ -114,7 +114,7 @@ export default function SpecialWinOverlay({
                         suit={card.suit}
                         value={card.value}
                         state={isWinner ? 'winner' : 'default'}
-                        size="xs"
+                        size="sm"
                       />
                     ))}
                   </div>

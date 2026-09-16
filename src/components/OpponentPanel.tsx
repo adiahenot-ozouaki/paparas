@@ -2,7 +2,7 @@ import PlayingCard from './PlayingCard'
 import { PlayedCardsStack } from './game/PlayedCardsStack'
 import type { Card as GameCard } from '../types'
 import type { ReactNode } from 'react'
-import { Skull, Landmark, Compass } from 'lucide-react'
+import { Skull, Landmark } from 'lucide-react'
 
 interface OpponentPanelProps {
   position: 'top' | 'left' | 'right'
@@ -59,20 +59,11 @@ export function OpponentPanel({
           </div>
         )}
 
-        {isBanked ? (
+        {/* Statuts JOUE / À LA MAIN → HUD (table-hud-status). Banque reste visible au siège. */}
+        {isBanked && (
           <Badge tone="muted">
             <Landmark size={12} className="kora-icon" aria-hidden /> BANQUE
           </Badge>
-        ) : isActive ? (
-          <Badge tone="gold" pulse>
-            JOUE...
-          </Badge>
-        ) : (
-          isLeader && (
-            <Badge tone="green">
-              <Compass size={12} className="kora-icon" aria-hidden /> À LA MAIN
-            </Badge>
-          )
         )}
       </div>
 

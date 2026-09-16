@@ -18,13 +18,13 @@ import {
 } from './shared.ts'
 
 /**
- * Quitte volontairement la table (table cash game — "cash out").
+ * Quitte volontairement la table.
  *
  * - Round en cours + pas encore banké → forfait (force bank, même après le 3e pli)
- * - Capital restant du siège → crédit wallet_balance du compte
+ * - Capital table non crédité au wallet (pas de cash-out)
  * - Siège supprimé (libère la place)
  * - Plus personne à table → suppression de la table et données liées
- * - < 2 joueurs restants en partie → cash-out des restants + dissolution
+ * - < 2 joueurs restants en partie → dissolution
  */
 export async function handleLeaveTable(
   admin: SupabaseClient,
@@ -84,26 +84,8 @@ export async function handleLeaveTable(
     }
   }
 
-  // Cash-out : capital siège → wallet compte
-  if (cashOut > 0) {
-    const { data: profile, error: profErr } = await admin
-      .from('kora_profiles')
-      .select('wallet_balance')
-      .eq('id', userId)
-      .single()
-    if (profErr || !profile) {
-      console.error('[leave_table] profil cash-out:', profErr?.message)
-    } else {
-      const nextWallet = (profile.wallet_balance ?? 0) + cashOut
-      const { error: walletErr } = await admin
-        .from('kora_profiles')
-        .update({ wallet_balance: nextWallet })
-        .eq('id', userId)
-      if (walletErr) {
-        console.error('[leave_table] crédit wallet:', walletErr.message)
-      }
-    }
-  }
+  // Pas de cash-out wallet : le capital table n'est pas crédité au compte
+  // (évite le gain artificiel à chaque départ). Mid-round = déjà banké ci-dessus.
 
   const { error } = await admin
     .from('kora_table_players')
@@ -119,29 +101,15 @@ export async function handleLeaveTable(
     await deleteEmptyTable(admin, tableId)
     tableDissolved = true
   } else if (remaining.length < 2 && table.status === 'playing') {
-    // Moins de 2 joueurs → la table ne peut plus continuer : cash-out des restants + dissolution
+    // Moins de 2 joueurs → dissolution (sans crédit wallet)
     for (const s of remaining) {
-      const cap = s.capital ?? 0
-      if (cap > 0) {
-        const { data: profile } = await admin
-          .from('kora_profiles')
-          .select('wallet_balance')
-          .eq('id', s.user_id)
-          .maybeSingle()
-        if (profile) {
-          await admin
-            .from('kora_profiles')
-            .update({ wallet_balance: (profile.wallet_balance ?? 0) + cap })
-            .eq('id', s.user_id)
-        }
-      }
       await admin.from('kora_table_players').delete().eq('table_id', tableId).eq('user_id', s.user_id)
     }
     await deleteEmptyTable(admin, tableId)
     tableDissolved = true
   }
 
-  return jsonResponse({ left: true, cashOut, forfeited, tableDissolved })
+  return jsonResponse({ left: true, cashOut: 0, forfeited, tableDissolved })
 }
 
 /** Supprime une table vide (aucun siège) et ses données associées. */

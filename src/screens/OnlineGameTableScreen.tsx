@@ -257,15 +257,36 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
 
   const canClaim = false
 
-  const statusMessage = isSpectating
-    ? 'Mode spectateur - lecture seule'
-    : leaving
-      ? 'Depart de la table...'
-      : busy
-        ? 'Envoi...'
-        : isHumanTurn
-          ? 'A toi de jouer'
-          : null
+  const leaderIndex =
+    viewState.currentTrick && viewState.currentTrick.requestedSuit !== null
+      ? viewState.currentTrick.starterIndex
+      : null
+
+  let statusTone: 'gold' | 'green' | 'muted' = 'muted'
+  let statusMessage: string | null = null
+  if (isSpectating) {
+    statusMessage = 'Mode spectateur — lecture seule'
+  } else if (leaving) {
+    statusMessage = 'Départ de la table…'
+  } else if (busy) {
+    statusMessage = 'Envoi…'
+  } else if (viewState.phase === 'playing') {
+    if (isHumanTurn && !humanIsBanked) {
+      statusMessage = isHumanLeader ? 'À toi de jouer · à la main' : 'À toi de jouer'
+      statusTone = 'gold'
+    } else if (currentViewPlayer !== null && currentViewPlayer !== VIEW_HUMAN) {
+      const name = players[currentViewPlayer]?.name ?? 'Joueur'
+      statusMessage =
+        leaderIndex === currentViewPlayer ? `${name} joue · à la main` : `${name} joue…`
+    } else if (requestedSuit) {
+      statusMessage = `Couleur demandée ${requestedSuit}`
+    }
+  } else if (viewState.phase === 'trickWon' && viewState.lastTrickWinnerIndex !== null) {
+    const w = viewState.lastTrickWinnerIndex
+    statusMessage =
+      w === VIEW_HUMAN ? 'Vous gagnez le pli' : `${players[w]?.name ?? 'Joueur'} gagne le pli`
+    statusTone = 'gold'
+  }
 
   async function runAction(action: Parameters<typeof callEngine>[0], extra: Record<string, unknown> = {}) {
     if (!tableId || busy || isSpectating || leaving) return
@@ -459,7 +480,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
         roundNumber={roundNumber}
         tricksWonThisRound={tricksWonThisRound}
         statusMessage={statusMessage}
-        statusTone="muted"
+        statusTone={statusTone}
         compactMode={compactMode}
         canBank={canBank && !busy && !leaving && connStatus !== 'offline'}
         onPause={() => setIsPaused(true)}

@@ -129,13 +129,35 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
     autoStartLock.current = true
     void (async () => {
       try {
-        const { ok, body } = await callEngine('start_table', table.id)
-        if (!ok) {
-          setError(humanizeError(body.error != null ? String(body.error) : undefined, 'Demarrage refuse.'))
-          autoStartLock.current = false
+        const { ok, body, status } = await callEngine('start_table', table.id)
+        if (ok) {
+          goToTable(table.id)
           return
         }
-        goToTable(table.id)
+        const errMsg = body.error != null ? String(body.error) : ''
+        const lower = errMsg.toLowerCase()
+        if (
+          lower.includes('déjà démarré') ||
+          lower.includes('deja demarre') ||
+          lower.includes('already') ||
+          lower.includes('plus disponible') ||
+          body.alreadyStarted === true
+        ) {
+          goToTable(table.id)
+          return
+        }
+        const { table: t } = await fetchTable(table.id)
+        if (t?.status === 'playing') {
+          goToTable(table.id)
+          return
+        }
+        setError(
+          humanizeError(
+            errMsg || (status === 401 ? 'Session expiree.' : undefined),
+            'Demarrage refuse. Verifiez la connexion ou reessayez.',
+          ),
+        )
+        autoStartLock.current = false
       } catch (e) {
         setError(humanizeError(e instanceof Error ? e.message : String(e)))
         autoStartLock.current = false
@@ -550,14 +572,8 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
                   {mySeat.is_ready ? 'Annuler — pas prêt' : 'Je suis prêt'}
                 </button>
               )}
-              {table.status === 'lobby' && seats.length < 2 && (
-                <p className="online-lobby-wait-hint">En attente d'au moins un autre joueur…</p>
-              )}
-              {table.status === 'lobby' && seats.length >= 2 && !allReady && (
-                <p className="online-lobby-wait-hint">En attente que tout le monde soit prêt…</p>
-              )}
               {canStart && (
-                <p className="online-lobby-wait-hint" style={{ color: '#d6a84f' }}>
+                <p className="online-lobby-autostart" role="status">
                   Lancement automatique…
                 </p>
               )}
@@ -571,7 +587,9 @@ export default function OnlineLobbyScreen({ onNavigate }: { onNavigate: (s: Scre
               </button>
             </div>
 
-            <TableChat tableId={table.id} myUserId={user?.id ?? null} title="Discussion" />
+            {table.id && (
+              <TableChat tableId={table.id} myUserId={user?.id ?? null} title="Discussion" />
+            )}
           </div>
         )}
       </div>

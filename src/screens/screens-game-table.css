@@ -1,185 +1,195 @@
-/* Table area, opponent, hand, reveal overlays, online chrome */
+/* Table area — layout hybride: relative + absolute (plus de grille)
+ * Sièges / ovale / piles jouées en absolute → aucun reflow quand une carte est jouée.
+ * Main joueur (.player-hand) reste absolute bottom (hors de .table-area).
+ * HUD reste en flux dans .table-screen.
+ */
 
 .table-area {
-  --table-side: 72px;
+  /* Réserve bas pour la main + padding haut pour le HUD */
   --table-pad-bottom: 210px;
   --table-pad-top: 8px;
+  --table-inset-x: max(6px, env(safe-area-inset-left, 0px));
+  --table-inset-x-right: max(6px, env(safe-area-inset-right, 0px));
+  --table-seat-n-top: 4px;
+  --table-seat-s-bottom: calc(var(--table-pad-bottom) + 4px);
+  --table-seat-side-y: 42%;
   --table-oval-ratio: 1.55;
-  --table-oval-max-w: min(92%, 520px);
-  --table-oval-max-h: min(86%, 340px);
+  --table-oval-max-w: min(78%, 480px);
+  --table-oval-max-h: min(52%, 300px);
 
   position: absolute;
   inset: 0;
-  display: grid;
-  grid-template-areas:
-    "north north north"
-    "west center east"
-    "south south south";
-  grid-template-columns: var(--table-side) minmax(0, 1fr) var(--table-side);
-  grid-template-rows: auto minmax(0, 1fr) auto;
-  padding-top: var(--table-pad-top);
-  padding-bottom: var(--table-pad-bottom);
-  padding-left: max(4px, env(safe-area-inset-left, 0px));
-  padding-right: max(4px, env(safe-area-inset-right, 0px));
-  /* Empêche le reflow des piles de cartes de déformer le centre */
-  contain: layout;
+  /* conteneur relative pour les enfants absolute */
+  z-index: 1;
+  pointer-events: none; /* les sièges réactivent les events */
+  contain: layout style;
+}
+
+.table-area > * {
+  pointer-events: auto;
 }
 
 .table-area.is-compact {
-  --table-side: 88px;
   --table-pad-bottom: 185px;
+  --table-seat-s-bottom: calc(var(--table-pad-bottom) + 4px);
 }
 
+/* —— Sièges (absolute, positions stables) —— */
+
 .table-area-north {
-  grid-area: north;
-  justify-self: center;
-  align-self: start;
+  position: absolute;
+  top: var(--table-seat-n-top);
+  left: 50%;
+  translate: -50% 0;
   z-index: 2;
-  /* largeur stable : ne pas faire grossir la ligne north */
-  max-width: 100%;
+  max-width: min(92%, 360px);
+  display: flex;
+  justify-content: center;
 }
 
 .table-area-west {
-  grid-area: west;
-  align-self: center;
-  justify-self: center;
+  position: absolute;
+  left: var(--table-inset-x);
+  top: var(--table-seat-side-y);
+  translate: 0 -50%;
   z-index: 2;
-  max-width: 100%;
+  max-width: min(28vw, 140px);
+  display: flex;
+  justify-content: center;
 }
 
 .table-area-east {
-  grid-area: east;
-  align-self: center;
-  justify-self: center;
+  position: absolute;
+  right: var(--table-inset-x-right);
+  top: var(--table-seat-side-y);
+  translate: 0 -50%;
   z-index: 2;
-  max-width: 100%;
+  max-width: min(28vw, 140px);
+  display: flex;
+  justify-content: center;
 }
+
+.table-area-south {
+  position: absolute;
+  bottom: var(--table-seat-s-bottom);
+  left: 50%;
+  translate: -50% 0;
+  z-index: 2;
+  max-width: min(92%, 360px);
+  display: flex;
+  justify-content: center;
+}
+
+/* —— Centre / ovale (décor stable, hors flux) —— */
 
 .table-area-center {
-  grid-area: center;
-  position: relative;
-  min-width: 0;
-  min-height: 0;
-  display: grid;
-  place-items: center;
-  /* ancre stable pour l'ovale indépendamment du contenu des sièges */
-  z-index: 0;
-}
-
-/*
- * Ovale du tapis : ratio d'aspect verrouillé.
- * Avant : inset % + border-radius 50% → l'ellipse changeait à chaque carte
- * (la cellule center changeait de ratio quand north/south/west/east croissaient).
- * Maintenant : centré, aspect-ratio fixe, borné par max-width/max-height.
- */
-.table-area-oval {
   position: absolute;
   left: 50%;
-  top: 50%;
+  top: 46%;
   translate: -50% -50%;
   width: var(--table-oval-max-w);
   max-height: var(--table-oval-max-h);
   aspect-ratio: var(--table-oval-ratio);
   height: auto;
+  z-index: 0;
+  pointer-events: none;
+}
+
+.table-area-oval {
+  position: absolute;
+  inset: 0;
   border-radius: 50%;
   z-index: 0;
   pointer-events: none;
 }
 
-.table-area-south {
-  grid-area: south;
-  justify-self: center;
-  align-self: end;
-  margin-top: 6px;
-  z-index: 2;
-  max-width: 100%;
-}
+/* —— Responsive —— */
 
-/* —— Responsive table —— */
-
-/* Très petits téléphones */
 @media (max-width: 360px) {
   .table-area {
-    --table-side: 56px;
     --table-pad-bottom: 195px;
-    --table-oval-max-w: min(96%, 280px);
-    --table-oval-max-h: min(82%, 180px);
+    --table-seat-side-y: 40%;
+    --table-oval-max-w: min(88%, 280px);
+    --table-oval-max-h: min(48%, 180px);
   }
   .table-area.is-compact {
-    --table-side: 64px;
     --table-pad-bottom: 170px;
   }
+  .table-area-west,
+  .table-area-east {
+    max-width: min(30vw, 100px);
+  }
 }
 
-/* Téléphones standards */
 @media (min-width: 361px) and (max-width: 480px) {
   .table-area {
-    --table-side: 68px;
-    --table-oval-max-w: min(94%, 340px);
-    --table-oval-max-h: min(84%, 220px);
+    --table-oval-max-w: min(82%, 340px);
+    --table-oval-max-h: min(50%, 220px);
   }
 }
 
-/* Tablettes portrait / grands téléphones */
 @media (min-width: 600px) {
   .table-area {
-    --table-side: 96px;
     --table-pad-top: 12px;
     --table-pad-bottom: 230px;
-    --table-oval-max-w: min(88%, 480px);
-    --table-oval-max-h: min(88%, 300px);
+    --table-seat-n-top: 8px;
+    --table-seat-side-y: 44%;
+    --table-oval-max-w: min(72%, 480px);
+    --table-oval-max-h: min(54%, 300px);
   }
   .table-area.is-compact {
-    --table-side: 110px;
     --table-pad-bottom: 200px;
+  }
+  .table-area-west,
+  .table-area-east {
+    max-width: min(22vw, 160px);
   }
 }
 
-/* Tablettes paysage / petits laptops */
 @media (min-width: 900px) {
   .table-area {
-    --table-side: 112px;
     --table-pad-bottom: 240px;
-    --table-oval-max-w: min(80%, 560px);
-    --table-oval-max-h: min(86%, 360px);
+    --table-oval-max-w: min(68%, 560px);
+    --table-oval-max-h: min(56%, 360px);
     --table-oval-ratio: 1.6;
   }
 }
 
-/* Desktop */
 @media (min-width: 1100px) {
   .table-area {
-    --table-side: 128px;
     --table-pad-top: 16px;
     --table-pad-bottom: 260px;
-    --table-oval-max-w: min(72%, 640px);
-    --table-oval-max-h: min(82%, 400px);
+    --table-seat-n-top: 12px;
+    --table-seat-side-y: 45%;
+    --table-oval-max-w: min(60%, 640px);
+    --table-oval-max-h: min(58%, 400px);
     --table-oval-ratio: 1.65;
   }
   .table-area.is-compact {
-    --table-side: 140px;
     --table-pad-bottom: 220px;
   }
-}
-
-/* Grands écrans */
-@media (min-width: 1600px) {
-  .table-area {
-    --table-side: 150px;
-    --table-oval-max-w: min(64%, 720px);
-    --table-oval-max-h: min(78%, 440px);
+  .table-area-west,
+  .table-area-east {
+    max-width: min(18vw, 180px);
   }
 }
 
-/* Hauteur limitée (landscape phone) : ovale plus plat, moins de padding bas */
+@media (min-width: 1600px) {
+  .table-area {
+    --table-oval-max-w: min(52%, 720px);
+    --table-oval-max-h: min(56%, 440px);
+  }
+}
+
 @media (max-height: 500px) and (orientation: landscape) {
   .table-area {
     --table-pad-top: 4px;
     --table-pad-bottom: 120px;
-    --table-side: 56px;
+    --table-seat-n-top: 2px;
+    --table-seat-side-y: 48%;
     --table-oval-ratio: 2;
-    --table-oval-max-w: min(70%, 420px);
-    --table-oval-max-h: min(70%, 160px);
+    --table-oval-max-w: min(55%, 420px);
+    --table-oval-max-h: min(55%, 160px);
   }
   .table-area.is-compact {
     --table-pad-bottom: 110px;
@@ -224,38 +234,129 @@
 .player-hand-hint { color: #a9b0b7; font-size: 11px; margin: 0; letter-spacing: 0.04em; opacity: 0.85; }
 .player-hand-claim-btn { padding: 10px 24px !important; font-size: 12px !important; border-radius: 12px !important; letter-spacing: 0.06em; background: linear-gradient(135deg, #9b59b6, #6f3d82) !important; box-shadow: 0 4px 16px rgba(155, 89, 182, 0.4) !important; }
 
-.reveal-overlay { position: absolute; inset: 0; background: rgba(11, 13, 16, 0.95); z-index: 200; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; overflow-y: auto; }
+.reveal-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(11, 13, 16, 0.95);
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: max(16px, env(safe-area-inset-top, 0px)) 16px max(20px, env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .reveal-rays { position: absolute; top: 30%; left: 50%; width: 280px; height: 280px; transform: translate(-50%, -50%); background-image: conic-gradient(from 0deg, transparent, color-mix(in srgb, var(--reveal-accent, #d6a84f) 8%, transparent) 20deg, transparent 40deg); animation: victoryRays 7s linear infinite; border-radius: 50%; pointer-events: none; }
 .reveal-rays--gold { background-image: conic-gradient(from 0deg, transparent, rgba(214, 168, 79, 0.08) 20deg, transparent 40deg); }
 .reveal-intro { text-align: center; position: relative; }
 .reveal-kicker { color: #a9b0b7; font-size: 12px; font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: 0.14em; margin: 0 0 12px; }
 .reveal-kicker--center { text-align: center; font-size: 11px; letter-spacing: 0.1em; margin: 0 0 16px; }
 .reveal-intro-title { font-size: 40px; font-weight: 800; color: var(--reveal-accent, #d6a84f); text-shadow: 0 0 40px color-mix(in srgb, var(--reveal-accent, #d6a84f) 50%, transparent); letter-spacing: 0.06em; }
-.reveal-showcase { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 16px; }
+.reveal-showcase { width: 100%; max-width: min(100%, 420px); display: flex; flex-direction: column; gap: 16px; }
 .reveal-rule-card { border: 1.5px solid; border-radius: 18px; padding: 16px 18px; }
-.reveal-rule-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+.reveal-rule-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
 .reveal-rule-label { font-size: 24px; font-weight: 800; }
 .reveal-rule-player { color: #a9b0b7; font-size: 12px; }
 .reveal-rule-desc { color: #a9b0b7; font-size: 12px; margin: 0 0 12px; }
 .reveal-rule-sum { margin-top: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 6px 12px; display: inline-block; font-size: 13px; font-weight: 700; }
-.reveal-hands { width: 100%; max-width: 360px; position: relative; }
-.reveal-hands--wide { max-width: 420px; }
-.reveal-hands-winner { text-align: center; font-size: 16px; font-weight: 700; margin: 0 0 16px; }
-.reveal-hands-list { display: flex; flex-direction: column; gap: 8px; }
-.reveal-hand-row { display: flex; align-items: center; gap: 10px; background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06); border-radius: 12px; padding: 8px 10px; }
-.reveal-hand-row.is-winner-gold { background: rgba(214, 168, 79, 0.1); border-color: rgba(214, 168, 79, 0.4); flex-direction: column; align-items: stretch; padding: 10px 12px; gap: 8px; }
-.reveal-hand-name { width: 56px; font-size: 12px; flex-shrink: 0; color: #a9b0b7; font-weight: 500; }
-.reveal-hand-name.is-gold { color: #d6a84f; font-weight: 700; width: auto; font-size: 13px; }
-.reveal-hand-cards { display: flex; gap: 4px; }
-.reveal-line-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* Mains / cartes — adapté aux cartes sm (43×61) */
+.reveal-hands {
+  width: 100%;
+  max-width: min(100%, 480px);
+  position: relative;
+}
+.reveal-hands--wide {
+  max-width: min(100%, 520px);
+}
+.reveal-hands-winner {
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 14px;
+}
+.reveal-hands-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+/* Toutes les lignes en colonne : nom au-dessus, cartes en dessous */
+.reveal-hand-row {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px;
+  padding: 10px 12px;
+}
+.reveal-hand-row.is-winner-gold {
+  background: rgba(214, 168, 79, 0.1);
+  border-color: rgba(214, 168, 79, 0.4);
+  padding: 12px 14px;
+  gap: 10px;
+}
+.reveal-hand-name {
+  width: auto;
+  font-size: 13px;
+  flex-shrink: 0;
+  color: #a9b0b7;
+  font-weight: 600;
+}
+.reveal-hand-name.is-gold {
+  color: #d6a84f;
+  font-weight: 700;
+  font-size: 14px;
+}
+.reveal-hand-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.reveal-line-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
 .reveal-bank-icon { color: #a9b0b7; font-size: 11px; }
-.reveal-cause { color: #d6a84f; font-size: 11px; font-weight: 700; font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: 0.02em; }
+.reveal-cause {
+  color: #d6a84f;
+  font-size: 11px;
+  font-weight: 700;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  letter-spacing: 0.02em;
+}
 .reveal-cause.is-claim { color: #c9a0ff; }
-.reveal-line-cards { display: flex; gap: 4px; flex-wrap: nowrap; overflow-x: auto; align-items: center; -webkit-overflow-scrolling: touch; }
-.reveal-seg-label { color: #5b636b; font-size: 9px; letter-spacing: 0.06em; margin-right: 2px; flex-shrink: 0; }
-.reveal-seg-sep { width: 1px; height: 28px; background: rgba(255, 255, 255, 0.15); margin: 0 4px; flex-shrink: 0; }
+.reveal-line-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  /* fallback scroll si trop de cartes sur très petit écran */
+  max-width: 100%;
+}
+.reveal-seg-label {
+  color: #5b636b;
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  margin-right: 2px;
+  flex-shrink: 0;
+  align-self: center;
+}
+.reveal-seg-sep {
+  width: 1px;
+  height: 44px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 4px;
+  flex-shrink: 0;
+  align-self: center;
+}
 .reveal-empty { color: #5b636b; font-size: 11px; }
-.reveal-payout { width: 100%; max-width: 320px; text-align: center; }
+.reveal-payout { width: 100%; max-width: min(100%, 360px); text-align: center; }
 .reveal-payout-title { font-size: 16px; font-weight: 700; margin: 0 0 16px; letter-spacing: 0.04em; }
 .reveal-payout-list { background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; overflow: hidden; margin-bottom: 20px; }
 .reveal-payout-row { display: flex; justify-content: space-between; padding: 12px 16px; }
@@ -265,6 +366,17 @@
 .reveal-payout-amt.is-gain { color: #4caf76; }
 .reveal-payout-amt.is-loss { color: #c94b4b; }
 .reveal-cta { margin-top: 20px; padding: 14px !important; font-size: 13px !important; border-radius: 14px !important; letter-spacing: 0.08em; }
+
+@media (min-width: 600px) {
+  .reveal-hands,
+  .reveal-hands--wide {
+    max-width: min(100%, 560px);
+  }
+  .reveal-hand-cards,
+  .reveal-line-cards {
+    gap: 8px;
+  }
+}
 
 .table-screen--loading { align-items: center; justify-content: center; gap: 12px; }
 .table-loading-text { color: #a9b0b7; font-size: 14px; }

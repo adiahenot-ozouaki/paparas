@@ -224,42 +224,90 @@ export async function joinOnlineTable(params: {
 }): Promise<{ seat: KoraTablePlayer | null; error: string | null }> {
   const { tableId, userId, buyIn, preferredSeat } = params
 
-  const { data: existing } = await supabase
+  const { data: mySeat } = await supabase
     .from('kora_table_players')
-    .select('seat_index')
+    .select('*')
     .eq('table_id', tableId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (mySeat) {
+    return { seat: mySeat as KoraTablePlayer, error: null }
+  }
 
-  const occupied = new Set((existing ?? []).map(s => s.seat_index))
-  let seatIndex = preferredSeat
-  if (seatIndex === undefined || occupied.has(seatIndex)) {
-    seatIndex = undefined
-    for (let i = 0; i < NUM_SEATS; i++) {
-      if (!occupied.has(i)) {
-        seatIndex = i
-        break
+  const tried = new Set<number>()
+  for (let attempt = 0; attempt < NUM_SEATS; attempt++) {
+    const { data: existing } = await supabase
+      .from('kora_table_players')
+      .select('seat_index')
+      .eq('table_id', tableId)
+
+    const occupied = new Set((existing ?? []).map(s => s.seat_index as number))
+    for (const t of tried) occupied.add(t)
+
+    let seatIndex: number | undefined =
+      preferredSeat !== undefined && !occupied.has(preferredSeat) && !tried.has(preferredSeat)
+        ? preferredSeat
+        : undefined
+    if (seatIndex === undefined) {
+      for (let i = 0; i < NUM_SEATS; i++) {
+        if (!occupied.has(i)) {
+          seatIndex = i
+          break
+        }
       }
     }
-  }
-  if (seatIndex === undefined) {
-    return { seat: null, error: 'Table complète (4/4).' }
-  }
+    if (seatIndex === undefined) {
+      const { data: again } = await supabase
+        .from('kora_table_players')
+        .select('*')
+        .eq('table_id', tableId)
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (again) return { seat: again as KoraTablePlayer, error: null }
+      return { seat: null, error: 'Table complète (4/4).' }
+    }
 
-  const { data, error } = await supabase
-    .from('kora_table_players')
-    .insert({
-      table_id: tableId,
-      user_id: userId,
-      seat_index: seatIndex,
-      capital: buyIn,
-      is_ready: false,
-    })
-    .select('*')
-    .single()
+    tried.add(seatIndex)
 
-  if (error || !data) {
+    const { data, error } = await supabase
+      .from('kora_table_players')
+      .insert({
+        table_id: tableId,
+        user_id: userId,
+        seat_index: seatIndex,
+        capital: buyIn,
+        is_ready: false,
+      })
+      .select('*')
+      .single()
+
+    if (!error && data) {
+      return { seat: data as KoraTablePlayer, error: null }
+    }
+
+    const lower = (error?.message ?? '').toLowerCase()
+    if (lower.includes('duplicate') || lower.includes('unique')) {
+      const { data: again } = await supabase
+        .from('kora_table_players')
+        .select('*')
+        .eq('table_id', tableId)
+        .eq('user_id', userId)
+        .maybeSingle()
+      if (again) return { seat: again as KoraTablePlayer, error: null }
+      continue
+    }
+
     return { seat: null, error: error?.message ?? 'Impossible de rejoindre la table.' }
   }
-  return { seat: data as KoraTablePlayer, error: null }
+
+  const { data: finalSeat } = await supabase
+    .from('kora_table_players')
+    .select('*')
+    .eq('table_id', tableId)
+    .eq('user_id', userId)
+    .maybeSingle()
+  if (finalSeat) return { seat: finalSeat as KoraTablePlayer, error: null }
+  return { seat: null, error: 'Table complète (4/4).' }
 }
 
 export async function setSeatReady(
@@ -292,11 +340,13 @@ export async function fetchSeatsWithProfiles(tableId: string): Promise<{
     .order('seat_index', { ascending: true })
 
   if (error) return { seats: [], error: error.message }
-  const rows = (seats ?? []) as KoraTablePlayer[]
+  const rows = ((seats ?? []) as KoraTablePlayer[]).filter(r => r.user_id != null)
   if (rows.length === 0) return { seats: [], error: null }
 
-  const userIds = rows.map(r => r.user_id)
-  const { data: profiles } = await supabase.from('kora_profiles').select('id, username, avatar').in('id', userIds)
+  const userIds = [...new Set(rows.map(r => r.user_id).filter(Boolean))] as string[]
+  const { data: profiles } = userIds.length
+    ? await supabase.from('kora_profiles').select('id, username, avatar').in('id', userIds)
+    : { data: [] as { id: string; username: string; avatar: string }[] }
   const byId = new Map((profiles ?? []).map(p => [p.id, p]))
 
   return {
@@ -383,7 +433,6 @@ export async function findMyActiveTables(userId: string): Promise<{
   return { tables: result, error: null }
 }
 
-/** Classement réel depuis kora_lifetime_stats + kora_profiles (nécessite session). */
 export async function fetchOnlineLeaderboard(
   limit = 40,
   metric: LeaderboardMetric = 'elo',
