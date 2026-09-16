@@ -146,3 +146,13 @@
     max-width: none;
   }
 }
+
+/* Mobile content clearance above BottomNav (safe-area aware) */
+@media (max-width: 899px) {
+  .app-layout--with-nav .screen-shell {
+    padding-bottom: var(
+      --shell-bottom-pad,
+      calc(88px + env(safe-area-inset-bottom, 0px))
+    );
+  }
+}
