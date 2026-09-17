@@ -22,6 +22,7 @@ import './screens/freestyle-table.css'
 import './theme/ads.css'
 import './theme/tournaments.css'
 import './theme/table-chat.css'
+import './theme/reveal-unified.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
