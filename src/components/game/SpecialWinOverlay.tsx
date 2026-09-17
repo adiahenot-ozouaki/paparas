@@ -31,6 +31,10 @@ export interface SpecialWinOverlayProps {
   onContinue: () => void
 }
 
+function isVacantSeatName(name: string): boolean {
+  return name === '-' || name === '—' || name.trim() === ''
+}
+
 export default function SpecialWinOverlay({
   winners,
   hands,
@@ -87,9 +91,14 @@ export default function SpecialWinOverlay({
           <div className="reveal-hands-list" style={{ gap: 12 }}>
             {seatNames.map((name, i) => {
               const isWinner = winnerIndexes.includes(i)
+              const hand = hands[i] ?? []
+              // Siège vide (online) — ne pas afficher la rangée
+              if (!isWinner && hand.length === 0 && isVacantSeatName(name)) {
+                return null
+              }
               return (
                 <div
-                  key={name}
+                  key={name + '-' + i}
                   className="anim-fade-in-up reveal-hand-row"
                   style={{
                     animationDelay: `${i * 0.08}s`,
@@ -108,7 +117,7 @@ export default function SpecialWinOverlay({
                     {name}
                   </span>
                   <div className="reveal-hand-cards">
-                    {hands[i].map((card, ci) => (
+                    {hand.map((card, ci) => (
                       <PlayingCard
                         key={ci}
                         suit={card.suit}
@@ -140,10 +149,12 @@ export default function SpecialWinOverlay({
             {winners.length > 1 ? 'nt' : ''} le round
           </p>
           <div className="reveal-payout-list">
-            {payoutLines.map((p, i) => (
+            {payoutLines
+              .filter(p => !isVacantSeatName(p.name))
+              .map((p, i, arr) => (
               <div
                 key={p.name}
-                className={`reveal-payout-row${i < payoutLines.length - 1 ? ' has-border' : ''}`}
+                className={`reveal-payout-row${i < arr.length - 1 ? ' has-border' : ''}`}
               >
                 <span className="reveal-payout-name">{p.name}</span>
                 <span
