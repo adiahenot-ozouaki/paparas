@@ -1,0 +1,29 @@
+/* Unified round-end: cards + payout on one screen */
+.reveal-hands--unified {
+  display: flex;
+  flex-direction: column;
+  max-height: 100%;
+}
+.reveal-hands--unified .reveal-hands-list {
+  flex: 0 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  max-height: min(42vh, 360px);
+  margin-bottom: 12px;
+}
+.reveal-payout--inline {
+  max-width: 100%;
+  margin-top: 4px;
+  text-align: left;
+}
+.reveal-payout--inline .reveal-payout-list {
+  margin-bottom: 12px;
+}
+.reveal-row-amt {
+  margin-left: auto;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.reveal-row-amt.is-gain { color: #4caf76; }
+.reveal-row-amt.is-loss { color: #c94b4b; }
