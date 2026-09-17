@@ -16,6 +16,10 @@ interface RoundEndRevealOverlayProps {
   seatNames?: string[]
 }
 
+function isVacantSeatName(name: string): boolean {
+  return name === '-' || name === '—' || name.trim() === ''
+}
+
 export function RoundEndRevealOverlay({
   outcome,
   hands,
@@ -38,6 +42,15 @@ export function RoundEndRevealOverlay({
     ? `Victoire reclamee · ${comboLabel}`
     : `Combo ${comboLabel}`
 
+  function isEmptySeat(i: number): boolean {
+    if (i === winnerIndex) return false
+    if (outcome.bankedPlayerIndexes.includes(i)) return false
+    const played = playLog[i] ?? []
+    const remaining = hands[i] ?? []
+    if (played.length > 0 || remaining.length > 0) return false
+    return isVacantSeatName(names[i] ?? '')
+  }
+
   return (
     <div className="reveal-overlay">
       <div className="reveal-rays reveal-rays--gold" aria-hidden />
@@ -54,6 +67,8 @@ export function RoundEndRevealOverlay({
 
           <div className="reveal-hands-list">
             {names.map((name, i) => {
+              if (isEmptySeat(i)) return null
+
               const isWinner = i === winnerIndex
               const isBanked = outcome.bankedPlayerIndexes.includes(i)
               const played = playLog[i] ?? []
@@ -63,11 +78,13 @@ export function RoundEndRevealOverlay({
                 ...remaining.map((card, index) => ({ card, fromHand: true, index })),
               ]
 
+              const visibleIndex = names.slice(0, i).filter((_, j) => !isEmptySeat(j)).length
+
               return (
                 <div
                   key={name + '-' + i}
                   className={`anim-fade-in-up reveal-hand-row${isWinner ? ' is-winner-gold' : ''}`}
-                  style={{ animationDelay: `${i * 0.06}s` }}
+                  style={{ animationDelay: `${visibleIndex * 0.06}s` }}
                 >
                   <div
                     className="reveal-line-head"
@@ -149,23 +166,25 @@ export function RoundEndRevealOverlay({
             {names[winnerIndex]} remporte le round
           </p>
           <div className="reveal-payout-list">
-            {payoutLines.map((p, i) => (
-              <div
-                key={p.playerIndex}
-                className={`reveal-payout-row${i < payoutLines.length - 1 ? ' has-border' : ''}`}
-              >
-                <span className="reveal-payout-name">
-                  {names[p.playerIndex] ?? `Joueur ${p.playerIndex + 1}`}
-                  {outcome.bankedPlayerIndexes.includes(p.playerIndex) ? ' (banque)' : ''}
-                </span>
-                <span
-                  className={`font-display reveal-payout-amt ${p.amount > 0 ? 'is-gain' : 'is-loss'}`}
+            {payoutLines
+              .filter(p => !isVacantSeatName(names[p.playerIndex] ?? ''))
+              .map((p, i, arr) => (
+                <div
+                  key={p.playerIndex}
+                  className={`reveal-payout-row${i < arr.length - 1 ? ' has-border' : ''}`}
                 >
-                  {p.amount > 0 ? '+' : ''}
-                  {p.amount.toLocaleString('fr-FR')} FCFA
-                </span>
-              </div>
-            ))}
+                  <span className="reveal-payout-name">
+                    {names[p.playerIndex] ?? `Joueur ${p.playerIndex + 1}`}
+                    {outcome.bankedPlayerIndexes.includes(p.playerIndex) ? ' (banque)' : ''}
+                  </span>
+                  <span
+                    className={`font-display reveal-payout-amt ${p.amount > 0 ? 'is-gain' : 'is-loss'}`}
+                  >
+                    {p.amount > 0 ? '+' : ''}
+                    {p.amount.toLocaleString('fr-FR')} FCFA
+                  </span>
+                </div>
+              ))}
           </div>
           <button
             className="btn-primary glow-gold"
