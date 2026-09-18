@@ -11,6 +11,8 @@ interface SpecialWinOverlayWrapperProps {
   >
   hands: RoundState['hands']
   onContinue: () => void
+  onHome?: () => void
+  homeLabel?: string
   onQuit?: () => void
   quitLabel?: string
   seatNames?: string[]
@@ -22,6 +24,8 @@ export function SpecialWinOverlayWrapper({
   outcome,
   hands,
   onContinue,
+  onHome,
+  homeLabel,
   onQuit,
   quitLabel,
   seatNames = SEAT_NAMES,
@@ -49,6 +53,8 @@ export function SpecialWinOverlayWrapper({
       seatNames={names}
       payoutLines={payoutLines}
       onContinue={onContinue}
+      onHome={onHome}
+      homeLabel={homeLabel}
       onQuit={onQuit}
       quitLabel={quitLabel}
       continueLabel={continueLabel}

@@ -1,65 +1,77 @@
-/* Unified round-end: cards + payout on one screen */
-.reveal-hands--unified {
+/* Unified round-end reveal + payout single screen */
+
+.reveal-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 200;
   display: flex;
   flex-direction: column;
-  max-height: 100%;
-}
-.reveal-hands--unified .reveal-hands-list {
-  flex: 0 1 auto;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(8, 10, 12, 0.92);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  max-height: min(42vh, 360px);
-  margin-bottom: 12px;
 }
-.reveal-payout--inline {
-  max-width: 100%;
-  margin-top: 4px;
-  text-align: left;
-}
-.reveal-payout--inline .reveal-payout-list {
-  margin-bottom: 12px;
-}
-.reveal-row-amt {
-  margin-left: auto;
-  font-size: 13px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-.reveal-row-amt.is-gain { color: #4caf76; }
-.reveal-row-amt.is-loss { color: #c94b4b; }
 
 .reveal-actions {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 0;
   width: 100%;
   margin-top: 16px;
 }
+
 .reveal-actions .reveal-cta {
-  margin-top: 0;
+  width: 100%;
 }
+
 .reveal-quit-btn {
   width: 100%;
+  margin-top: 8px;
   padding: 12px 16px;
-  border-radius: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.04);
-  color: #a9b0b7;
+  border-radius: 12px;
+  border: 1px solid rgba(231, 76, 60, 0.35);
+  background: rgba(231, 76, 60, 0.12);
+  color: #f5a89a;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s, border-color 0.15s;
 }
+
 .reveal-quit-btn:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(231, 76, 60, 0.2);
+  border-color: rgba(231, 76, 60, 0.55);
 }
+
 .reveal-quit-btn:active {
-  background: rgba(255, 255, 255, 0.1);
+  transform: scale(0.98);
 }
-.game-overlay--z-above-reveal {
-  z-index: 220;
+
+.reveal-home-btn {
+  width: 100%;
+  margin-top: 8px;
+  padding: 12px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.06);
+  color: #e8eaed;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+.reveal-home-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(214, 168, 79, 0.35);
+  color: #f0d58a;
+}
+.reveal-home-btn:active {
+  transform: scale(0.98);
 }
