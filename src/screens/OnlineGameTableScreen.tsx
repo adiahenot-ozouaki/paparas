@@ -12,7 +12,7 @@ import {
   rotateRoundStateForView,
   type SeatWithProfile,
 } from '../lib/online/api'
-import { getActiveOnlineTableId, setActiveOnlineTableId, getOnlineSpectate, setOnlineSpectate } from '../lib/online/session'
+import { getActiveOnlineTableId, setActiveOnlineTableId, getOnlineSpectate, setOnlineSpectate, setHomeNotice } from '../lib/online/session'
 import { humanizeError } from '../lib/online/errors'
 import { supabase } from '../lib/supabase/client'
 import { GameTableHud } from '../components/game/GameTableHud'
@@ -346,6 +346,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   function goHomeKeepTable() {
     setConfirmingLeave(false)
     setIsPaused(false)
+    setHomeNotice('Table conservée — vous n’avez pas abandonné. Reprenez depuis l’accueil.')
     onNavigate('home')
   }
 
