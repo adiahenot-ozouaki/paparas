@@ -288,7 +288,7 @@ export default function GameTableScreen({
         <PauseOverlay
           onResume={() => setIsPaused(false)}
           onQuit={() => onNavigate('home')}
-          quitLabel="Quitter la partie"
+          quitLabel="Retour à l'accueil"
         />
       )}
 
