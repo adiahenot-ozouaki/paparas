@@ -343,6 +343,13 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
     await refreshSeats()
   }
 
+  function goHomeKeepTable() {
+    setConfirmingLeave(false)
+    setIsPaused(false)
+    // Ne pas appeler leave_table : la table reste active (reprise possible).
+    onNavigate('home')
+  }
+
   async function handleLeaveConfirm() {
     setConfirmingLeave(false)
     setIsPaused(false)
@@ -363,19 +370,11 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
         setLeaving(false)
         return
       }
-      const cash = typeof body.cashOut === 'number' ? body.cashOut : null
       const forfeited = body.forfeited === true
-      if (cash != null && cash > 0) {
-        showToast(
-          (forfeited ? 'Abandon - ' : 'Cash-out - ') + cash.toLocaleString('fr-FR') + ' FCFA rendus au wallet',
-          3200,
-        )
-      } else if (forfeited) {
-        showToast('Vous avez abandonne la table.', 2500)
-      }
+      showToast(forfeited ? 'Vous avez abandonné la table (forfait).' : 'Vous avez quitté la table.', 2500)
       setOnlineSpectate(false)
       setActiveOnlineTableId(null)
-      setTimeout(() => onNavigate('onlineLobby'), cash != null && cash > 0 ? 400 : 0)
+      setTimeout(() => onNavigate('onlineLobby'), 300)
     } catch (e) {
       showError(humanizeError(e instanceof Error ? e.message : String(e), 'Impossible de quitter la table.'))
       setLeaving(false)
@@ -452,17 +451,15 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
           <h2 className="font-display game-overlay-title">QUITTER LA TABLE ?</h2>
           <p className="game-overlay-desc">
             {roundInProgress && !alreadyBanked
-              ? 'Un round est en cours : vous abandonnez (forfait). Votre capital restant sera rendu au wallet du compte.'
-              : 'Votre capital restant sur cette table sera rendu au wallet du compte.'}
+              ? 'Un round est en cours : vous abandonnez la partie (forfait). Vous ne pourrez plus rejouer à cette table.'
+              : 'Vous quittez définitivement cette table. Pour seulement revenir au menu, utilisez Accueil — la table restera active.'}
           </p>
-          {myCapital > 0 && (
-            <p className="game-overlay-desc" style={{ marginTop: 8 }}>
-              Cash-out estime : <strong>{myCapital.toLocaleString('fr-FR')} FCFA</strong>
-            </p>
-          )}
           <div className="game-overlay-actions">
             <UiButton fullWidth onClick={() => setConfirmingLeave(false)} className="game-overlay-cta">
               Rester
+            </UiButton>
+            <UiButton fullWidth variant="secondary" onClick={goHomeKeepTable} className="game-overlay-cta">
+              Retour à l&apos;accueil
             </UiButton>
             <button
               type="button"
@@ -470,14 +467,19 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
               disabled={leaving}
               onClick={() => void handleLeaveConfirm()}
             >
-              {leaving ? 'Depart...' : roundInProgress && !alreadyBanked ? 'Abandonner la table' : 'Quitter et cash-out'}
+              {leaving ? 'Départ…' : 'Abandonner la table'}
             </button>
           </div>
         </div>
       )}
 
       {isPaused && !confirmingLeave && (
-        <PauseOverlay onResume={() => setIsPaused(false)} onQuit={requestLeave} />
+        <PauseOverlay
+          onResume={() => setIsPaused(false)}
+          onHome={goHomeKeepTable}
+          onQuit={requestLeave}
+          quitLabel="Abandonner la table"
+        />
       )}
 
       <GameTableHud
@@ -488,7 +490,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
         compactMode={compactMode}
         canBank={canBank && !busy && !leaving && connStatus !== 'offline'}
         onPause={() => setIsPaused(true)}
-        onQuit={requestLeave}
+        onHome={goHomeKeepTable}
         onToggleCompact={() => setCompactMode(v => !v)}
         onOpenRules={() => onNavigate('rules')}
         onRequestBank={() => setConfirmingBank(true)}
