@@ -118,6 +118,7 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
 
   const top3 = online.slice(0, 3)
   const rest = online.slice(3)
+  const showPodium = activeTab === 'online' && Boolean(user) && top3.length >= 3 && widePodium
   const podiumOrder =
     top3.length >= 3
       ? [
@@ -183,37 +184,40 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
             </SectionCard>
           )}
 
-          {activeTab === 'online' && user && top3.length >= 3 && (
-            <div className="lb-podium" aria-label="Podium">
-              {podiumOrder.map(({ e, rank }) => {
-                const isYou = Boolean(user && e.userId === user.id)
-                const medal = rank === 0 ? 'gold' : rank === 1 ? 'silver' : 'bronze'
-                return (
-                  <SectionCard
-                    key={e.userId}
-                    variant={isYou || rank === 0 ? 'green' : 'default'}
-                    className={`lb-podium-card${rank === 0 ? ' is-first' : ''}`}
-                  >
-                    <span className="lb-podium-rank">
-                      <Medal size={22} className={`kora-icon lb-medal-icon lb-medal-icon--${medal}`} aria-hidden />
-                    </span>
-                    <div className="lb-podium-avatar">
-                      <AvatarIcon avatar={e.avatar} size={32} />
-                    </div>
-                    <p className="font-display lb-podium-name">
-                      {e.username}
-                      {isYou ? ' (vous)' : ''}
-                    </p>
-                    <p className="font-display lb-podium-score">
-                      {formatLeaderboardScore(metric, e.score)}
-                    </p>
-                    <p className="lb-podium-sub">
-                      {LEADERBOARD_METRICS.find(m => m.id === metric)?.label}
-                    </p>
-                  </SectionCard>
-                )
-              })}
-            </div>
+          {showPodium && (
+            <>
+              <div className="lb-podium" aria-label="Podium — places 1 à 3">
+                {podiumOrder.map(({ e, rank }) => {
+                  const isYou = Boolean(user && e.userId === user.id)
+                  const medal = rank === 0 ? 'gold' : rank === 1 ? 'silver' : 'bronze'
+                  return (
+                    <SectionCard
+                      key={e.userId}
+                      variant={isYou || rank === 0 ? 'green' : 'default'}
+                      className={`lb-podium-card${rank === 0 ? ' is-first' : ''}`}
+                    >
+                      <span className="lb-podium-rank">
+                        <Medal size={22} className={`kora-icon lb-medal-icon lb-medal-icon--${medal}`} aria-hidden />
+                      </span>
+                      <div className="lb-podium-avatar">
+                        <AvatarIcon avatar={e.avatar} size={32} />
+                      </div>
+                      <p className="font-display lb-podium-name">
+                        {e.username}
+                        {isYou ? ' (vous)' : ''}
+                      </p>
+                      <p className="font-display lb-podium-score">
+                        {formatLeaderboardScore(metric, e.score)}
+                      </p>
+                      <p className="lb-podium-sub">
+                        {LEADERBOARD_METRICS.find(m => m.id === metric)?.label}
+                      </p>
+                    </SectionCard>
+                  )
+                })}
+              </div>
+              <p className="lb-podium-footnote">À partir du 4ᵉ → liste à droite</p>
+            </>
           )}
         </div>
 
@@ -285,8 +289,11 @@ export default function LeaderboardScreen({ onNavigate }: { onNavigate: (s: Scre
                   />
                 ) : (
                   <div className="lb-online-list">
-                    {(widePodium && top3.length >= 3 ? rest : online).map((e, i) => {
-                      const rank = widePodium && top3.length >= 3 ? i + 3 : i
+                    {showPodium && rest.length > 0 && (
+                      <p className="lb-list-from">À partir du 4ᵉ</p>
+                    )}
+                    {(showPodium ? rest : online).map((e, i) => {
+                      const rank = showPodium ? i + 3 : i
                       const isYou = Boolean(user && e.userId === user.id)
                       return (
                         <OnlineRow key={e.userId} e={e} rank={rank} isYou={isYou} metric={metric} />
