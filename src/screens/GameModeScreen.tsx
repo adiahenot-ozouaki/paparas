@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext'
 import { useGame } from '../game/GameContext'
 import { findMyActiveTables, listOpenLobbyTables, type MyActiveTable, type OpenLobbyTable } from '../lib/online/api'
 import {
+  getActiveOnlineTableId,
   setActiveOnlineTableId,
   setOnlineLobbyIntent,
   setPendingJoinCode,
@@ -52,12 +53,25 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
   const { user } = useAuth()
   const { configureGame, startNewGame } = useGame()
   const [myTables, setMyTables] = useState<MyActiveTable[]>([])
+  const [sessionTableId, setSessionTableId] = useState<string | null>(() => getActiveOnlineTableId())
   const [openTables, setOpenTables] = useState<OpenLobbyTable[]>([])
   const [listError, setListError] = useState<string | null>(null)
 
   useEffect(() => {
+    const sync = () => setSessionTableId(getActiveOnlineTableId())
+    sync()
+    window.addEventListener('focus', sync)
+    document.addEventListener('visibilitychange', sync)
+    return () => {
+      window.removeEventListener('focus', sync)
+      document.removeEventListener('visibilitychange', sync)
+    }
+  }, [])
+
+  useEffect(() => {
     let cancelled = false
     ;(async () => {
+      setSessionTableId(getActiveOnlineTableId())
       if (user) {
         const mine = await findMyActiveTables(user.id)
         if (!cancelled && !mine.error) setMyTables(mine.tables)
@@ -137,6 +151,28 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
     else onNavigate('onlineLobby')
   }
 
+  const resumeList: MyActiveTable[] = (() => {
+    if (myTables.length > 0) {
+      if (sessionTableId) {
+        const match = myTables.find(t => t.tableId === sessionTableId)
+        if (match) return [match, ...myTables.filter(t => t.tableId !== sessionTableId)]
+      }
+      return myTables
+    }
+    if (sessionTableId) {
+      return [
+        {
+          tableId: sessionTableId,
+          status: 'playing',
+          baseStake: 0,
+          seatIndex: 0,
+          code: sessionTableId.replace(/-/g, '').slice(0, 8).toUpperCase(),
+        },
+      ]
+    }
+    return []
+  })()
+
   return (
     <ScreenShell bottomPad={120} className="mode-screen">
       <div className="mode-layout">
@@ -149,9 +185,9 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
             />
           </div>
 
-          {myTables.length > 0 && (
+          {resumeList.length > 0 && (
             <div className="mode-resume-list">
-              {myTables.slice(0, 2).map(t => (
+              {resumeList.slice(0, 2).map(t => (
                 <SectionCard
                   key={t.tableId}
                   variant="green"
@@ -159,10 +195,13 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
                   className="mode-resume-card"
                 >
                   <p className="font-display text-gold mode-resume-title">
-                    {t.status === 'playing' ? 'Reprendre la partie' : 'Retour au lobby'}
+                    {t.status === 'lobby' ? 'Retour au lobby' : 'Reprendre ma table'}
                   </p>
                   <p className="mode-resume-meta">
-                    Code {t.code} · mise {t.baseStake.toLocaleString('fr-FR')} · siege {t.seatIndex + 1}
+                    {t.baseStake > 0
+                      ? `Code ${t.code} · mise ${t.baseStake.toLocaleString('fr-FR')} · siège ${t.seatIndex + 1}`
+                      : `Table en cours · code ${t.code}`}
+                    {' · non abandonnée'}
                   </p>
                 </SectionCard>
               ))}
@@ -287,7 +326,6 @@ export default function GameModeScreen({ onNavigate }: { onNavigate: (s: Screen)
               </div>
             )}
           </div>
-          {/* Espace réservé mobile : évite que BottomNav coupe la liste Tables ouvertes */}
           <div className="mode-open-spacer" aria-hidden />
         </aside>
       </div>
