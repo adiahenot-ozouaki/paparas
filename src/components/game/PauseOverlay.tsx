@@ -3,11 +3,12 @@ import { UiButton } from '../ui'
 
 interface PauseOverlayProps {
   onResume: () => void
-  /** Quitter définitivement (solo) ou abandonner la table (online). */
+  /** Abandon définitif (online forfait) ou fin de session solo. */
   onQuit: () => void
-  /** Retour accueil sans abandonner la table online. */
+  /** Accueil sans abandonner la table online. */
   onHome?: () => void
   quitLabel?: string
+  homeLabel?: string
 }
 
 /** Pause réelle : fige les useEffect IA tant que isPaused est vrai. */
@@ -15,7 +16,8 @@ export function PauseOverlay({
   onResume,
   onQuit,
   onHome,
-  quitLabel = 'Quitter la partie',
+  quitLabel = 'Abandonner la table',
+  homeLabel = "Retour à l'accueil",
 }: PauseOverlayProps) {
   return (
     <div className="game-overlay game-overlay--dim game-overlay--z-pause">
@@ -32,7 +34,7 @@ export function PauseOverlay({
         </UiButton>
         {onHome && (
           <UiButton fullWidth variant="secondary" onClick={onHome} className="game-overlay-cta">
-            Retour à l&apos;accueil
+            {homeLabel}
           </UiButton>
         )}
         <button type="button" className="game-overlay-danger" onClick={onQuit}>
