@@ -9,6 +9,10 @@ interface RoundEndRevealOverlayProps {
   hands: Card[][]
   playLog: Card[][]
   onContinue: () => void
+  /** Quitter / retour accueil (optionnel). */
+  onQuit?: () => void
+  /** Label du bouton quitter. Defaut = QUITTER */
+  quitLabel?: string
   /** Noms affiches par index de vue (0-3). Defaut = SEAT_NAMES solo. */
   seatNames?: string[]
 }
@@ -22,6 +26,8 @@ export function RoundEndRevealOverlay({
   hands,
   playLog,
   onContinue,
+  onQuit,
+  quitLabel = 'QUITTER',
   seatNames = SEAT_NAMES,
 }: RoundEndRevealOverlayProps) {
   const winnerIndex = outcome.roundWinnerIndex
@@ -181,13 +187,25 @@ export function RoundEndRevealOverlay({
           </div>
         </div>
 
-        <button
-          className="btn-primary glow-gold reveal-cta"
-          onClick={onContinue}
-          style={{ width: '100%' }}
-        >
-          CONTINUER
-        </button>
+        <div className="reveal-actions">
+          <button
+            type="button"
+            className="btn-primary glow-gold reveal-cta"
+            onClick={onContinue}
+            style={{ width: '100%' }}
+          >
+            CONTINUER
+          </button>
+          {onQuit && (
+            <button
+              type="button"
+              className="reveal-quit-btn"
+              onClick={onQuit}
+            >
+              {quitLabel}
+            </button>
+          )}
+        </div>
       </div>
     </div>
   )
