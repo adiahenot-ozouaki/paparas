@@ -1,0 +1,23 @@
+/* Leaderboard scroll */
+.lb-screen.screen-shell {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+.lb-screen .screen-shell-inner {
+  min-height: 0;
+}
+.lb-online-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+.lb-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+}
+.lb-side {
+  min-height: 0;
+}
