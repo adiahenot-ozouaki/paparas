@@ -18,7 +18,6 @@ import OnlineLobbyScreen from './screens/OnlineLobbyScreen'
 import OnlineGameTableScreen from './screens/OnlineGameTableScreen'
 import AuthScreen from './screens/AuthScreen'
 import GameTableScreen from './screens/GameTableScreen'
-import FreestyleGameTableScreen from './screens/FreestyleGameTableScreen'
 import RoundResultScreen from './screens/RoundResultScreen'
 import VictoryScreen from './screens/VictoryScreen'
 import DefeatScreen from './screens/DefeatScreen'
@@ -27,6 +26,7 @@ import LeaderboardScreen from './screens/LeaderboardScreen'
 import StatsScreen from './screens/StatsScreen'
 import AchievementsScreen from './screens/AchievementsScreen'
 import RulesScreen from './screens/RulesScreen'
+import FreestyleGameTableScreen from './screens/FreestyleGameTableScreen'
 import TournamentsScreen from './screens/TournamentsScreen'
 
 const SplashPage = screenPage(SplashScreen)
@@ -37,7 +37,6 @@ const LobbyPage = screenPage(LobbyScreen)
 const OnlineLobbyPage = screenPage(OnlineLobbyScreen)
 const OnlineGameTablePage = screenPage(OnlineGameTableScreen)
 const GameTablePage = screenPage(GameTableScreen)
-const FreestylePage = screenPage(FreestyleGameTableScreen)
 const RoundResultPage = screenPage(RoundResultScreen)
 const VictoryPage = screenPage(VictoryScreen)
 const DefeatPage = screenPage(DefeatScreen)
@@ -46,6 +45,7 @@ const LeaderboardPage = screenPage(LeaderboardScreen)
 const StatsPage = screenPage(StatsScreen)
 const AchievementsPage = screenPage(AchievementsScreen)
 const RulesPage = screenPage(RulesScreen)
+const FreestylePage = screenPage(FreestyleGameTableScreen)
 const TournamentsPage = screenPage(TournamentsScreen)
 
 export default function App() {
