@@ -259,6 +259,8 @@ export default function GameTableScreen({
             outcome={roundState.outcome}
             hands={roundState.hands}
             onContinue={handleRoundEndContinue}
+            onQuit={() => onNavigate('home')}
+            quitLabel="RETOUR À L'ACCUEIL"
           />
         )}
 
@@ -269,6 +271,8 @@ export default function GameTableScreen({
             hands={roundState.hands}
             playLog={roundState.playLog}
             onContinue={handleRoundEndContinue}
+            onQuit={() => onNavigate('home')}
+            quitLabel="RETOUR À L'ACCUEIL"
           />
         )}
 
