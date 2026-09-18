@@ -29,6 +29,10 @@ export interface SpecialWinOverlayProps {
   seatNames: string[]
   payoutLines: { name: string; amount: number }[]
   onContinue: () => void
+  onQuit?: () => void
+  quitLabel?: string
+  continueLabel?: string
+  continueDisabled?: boolean
 }
 
 function isVacantSeatName(name: string): boolean {
@@ -41,6 +45,10 @@ export default function SpecialWinOverlay({
   seatNames,
   payoutLines,
   onContinue,
+  onQuit,
+  quitLabel = 'QUITTER',
+  continueLabel,
+  continueDisabled,
 }: SpecialWinOverlayProps) {
   const [phase, setPhase] = useState<OverlayPhase>('intro')
   const winnerIndexes = winners.map(w => w.playerIndex)
@@ -167,13 +175,22 @@ export default function SpecialWinOverlay({
             </div>
           </div>
 
-          <button
-            className="btn-primary glow-gold reveal-cta"
-            onClick={onContinue}
-            style={{ width: '100%' }}
-          >
-            CONTINUER →
-          </button>
+          <div className="reveal-actions">
+            <button
+              type="button"
+              className="btn-primary glow-gold reveal-cta"
+              onClick={onContinue}
+              style={{ width: '100%' }}
+              disabled={continueDisabled}
+            >
+              {continueLabel ?? 'CONTINUER →'}
+            </button>
+            {onQuit && (
+              <button type="button" className="reveal-quit-btn" onClick={onQuit}>
+                {quitLabel}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>
