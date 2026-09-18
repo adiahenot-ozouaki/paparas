@@ -18,6 +18,7 @@ import OnlineLobbyScreen from './screens/OnlineLobbyScreen'
 import OnlineGameTableScreen from './screens/OnlineGameTableScreen'
 import AuthScreen from './screens/AuthScreen'
 import GameTableScreen from './screens/GameTableScreen'
+import FreestyleGameTableScreen from './screens/FreestyleGameTableScreen'
 import RoundResultScreen from './screens/RoundResultScreen'
 import VictoryScreen from './screens/VictoryScreen'
 import DefeatScreen from './screens/DefeatScreen'
@@ -26,7 +27,6 @@ import LeaderboardScreen from './screens/LeaderboardScreen'
 import StatsScreen from './screens/StatsScreen'
 import AchievementsScreen from './screens/AchievementsScreen'
 import RulesScreen from './screens/RulesScreen'
-import FreestyleGameTableScreen from './screens/FreestyleGameTableScreen'
 import TournamentsScreen from './screens/TournamentsScreen'
 
 const SplashPage = screenPage(SplashScreen)
@@ -37,6 +37,7 @@ const LobbyPage = screenPage(LobbyScreen)
 const OnlineLobbyPage = screenPage(OnlineLobbyScreen)
 const OnlineGameTablePage = screenPage(OnlineGameTableScreen)
 const GameTablePage = screenPage(GameTableScreen)
+const FreestylePage = screenPage(FreestyleGameTableScreen)
 const RoundResultPage = screenPage(RoundResultScreen)
 const VictoryPage = screenPage(VictoryScreen)
 const DefeatPage = screenPage(DefeatScreen)
@@ -45,7 +46,6 @@ const LeaderboardPage = screenPage(LeaderboardScreen)
 const StatsPage = screenPage(StatsScreen)
 const AchievementsPage = screenPage(AchievementsScreen)
 const RulesPage = screenPage(RulesScreen)
-const FreestylePage = screenPage(FreestyleGameTableScreen)
 const TournamentsPage = screenPage(TournamentsScreen)
 
 export default function App() {
@@ -68,6 +68,8 @@ export default function App() {
                       <Route path={pathFor('victory')} element={<VictoryPage />} />
                       <Route path={pathFor('defeat')} element={<DefeatPage />} />
                       <Route path={pathFor('freestyleTable')} element={<FreestylePage />} />
+                      <Route path={pathFor('gameTable')} element={<GameTablePage />} />
+                      <Route path={pathFor('onlineGameTable')} element={<OnlineGameTablePage />} />
                     </Route>
 
                     <Route element={<ChromeLayout />}>
@@ -76,8 +78,6 @@ export default function App() {
                       <Route path={pathFor('stakeConfig')} element={<StakeConfigPage />} />
                       <Route path={pathFor('lobby')} element={<LobbyPage />} />
                       <Route path={pathFor('onlineLobby')} element={<OnlineLobbyPage />} />
-                      <Route path={pathFor('onlineGameTable')} element={<OnlineGameTablePage />} />
-                      <Route path={pathFor('gameTable')} element={<GameTablePage />} />
                       <Route path={pathFor('profile')} element={<ProfilePage />} />
                       <Route path={pathFor('leaderboard')} element={<LeaderboardPage />} />
                       <Route path={pathFor('stats')} element={<StatsPage />} />
