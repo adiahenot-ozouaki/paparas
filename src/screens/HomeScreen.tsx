@@ -8,7 +8,7 @@ import { ACHIEVEMENTS, getUnlockedAchievements } from '../game/achievements'
 import { getPlayerProgress } from '../game/progression'
 import { fetchWallet } from '../lib/persistence/cloud'
 import { findMyActiveTables, type MyActiveTable } from '../lib/online/api'
-import { getActiveOnlineTableId, setActiveOnlineTableId } from '../lib/online/session'
+import { getActiveOnlineTableId, setActiveOnlineTableId, consumeHomeNotice } from '../lib/online/session'
 import { Zap, Trophy, BookOpen, Gamepad2, TrendingUp, Coins, ArrowRight, Undo2, Play, SpadeIcon, AvatarIcon, User } from '../components/icons'
 import {
   EmptyState,
@@ -40,6 +40,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
   )
   const [activeTables, setActiveTables] = useState<MyActiveTable[]>([])
   const [sessionTableId, setSessionTableId] = useState<string | null>(() => getActiveOnlineTableId())
+  const [homeNotice, setHomeNoticeState] = useState<string | null>(null)
   const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { winRatio, progress, unlockedCount, bestComboLabel, netGain, gamesPlayed, gamesWon } = useMemo(() => {
@@ -76,6 +77,17 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
     }
     return null
   }, [activeTables, sessionTableId])
+
+  useEffect(() => {
+    const notice = consumeHomeNotice()
+    if (notice) setHomeNoticeState(notice)
+  }, [])
+
+  useEffect(() => {
+    if (!homeNotice) return
+    const t = setTimeout(() => setHomeNoticeState(null), 5000)
+    return () => clearTimeout(t)
+  }, [homeNotice])
 
   useEffect(() => {
     if (typeof profile?.wallet_balance === 'number') {
@@ -176,6 +188,45 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
         </header>
 
         <div className="home-main">
+          {homeNotice && (
+            <div
+              className="home-table-notice"
+              role="status"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                marginBottom: 12,
+                padding: '12px 14px',
+                borderRadius: 12,
+                border: '1px solid rgba(76, 175, 118, 0.35)',
+                background: 'rgba(76, 175, 118, 0.12)',
+                color: '#b8f0c8',
+                fontSize: 13,
+                fontWeight: 600,
+                lineHeight: 1.35,
+              }}
+            >
+              <span style={{ flex: 1 }}>{homeNotice}</span>
+              <button
+                type="button"
+                onClick={() => setHomeNoticeState(null)}
+                aria-label="Fermer"
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#b8f0c8',
+                  fontSize: 18,
+                  lineHeight: 1,
+                  cursor: 'pointer',
+                  padding: 4,
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
+
           <AdSlot placement="home-banner-top" className="home-ad-top" />
 
           <div className="home-money-stack">
@@ -211,6 +262,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
                 variant="green"
                 onClick={() => resumeTable(primaryResume)}
                 className="home-resume"
+                style={homeNotice ? { boxShadow: '0 0 0 2px rgba(76, 175, 118, 0.45)' } : undefined}
               >
                 <div className="home-resume-row">
                   <div>
