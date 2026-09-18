@@ -1,0 +1,149 @@
+/* ==========================================================================
+   Table full-bleed — safe-area (iPhone home indicator / notch) + touch zones
+   Importé après screens-game*.css pour surcharger.
+   ========================================================================== */
+
+.table-screen {
+  --table-safe-top: env(safe-area-inset-top, 0px);
+  --table-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --table-safe-left: env(safe-area-inset-left, 0px);
+  --table-safe-right: env(safe-area-inset-right, 0px);
+  /* Hauteur utile hors zone home indicator */
+  --table-hand-pad-y: max(12px, var(--table-safe-bottom));
+  --table-hud-pad-y: max(10px, var(--table-safe-top));
+}
+
+/* —— HUD haut : sous la notch / Dynamic Island —— */
+.table-hud {
+  padding-top: var(--table-hud-pad-y);
+  padding-bottom: 10px;
+  padding-left: max(12px, var(--table-safe-left));
+  padding-right: max(12px, var(--table-safe-right));
+  min-height: calc(44px + var(--table-hud-pad-y));
+  box-sizing: border-box;
+}
+
+/* Cibles tactiles ≥ 44×44 (Apple HIG) */
+.table-hud .icon-btn,
+.table-hud .icon-btn--sm,
+.table-hud button.icon-btn {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.table-hud-quit {
+  min-height: 44px;
+  height: auto;
+  padding: 0 14px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+/* —— Main joueur : au-dessus du home indicator —— */
+.player-hand {
+  padding-bottom: var(--table-hand-pad-y);
+  padding-left: max(0px, var(--table-safe-left));
+  padding-right: max(0px, var(--table-safe-right));
+  /* Zone tactile confortable sous les cartes */
+  padding-top: 4px;
+}
+
+.player-hand-play-btn,
+.player-hand-claim-btn {
+  min-height: 44px !important;
+}
+
+.player-hand-actions {
+  padding-bottom: 2px;
+}
+
+/* Réserve bas table-area = main + safe-area (sièges sud ne passent pas sous la main) */
+.table-area {
+  --table-pad-bottom: calc(210px + env(safe-area-inset-bottom, 0px));
+}
+
+.table-area.is-compact {
+  --table-pad-bottom: calc(185px + env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 360px) {
+  .table-area {
+    --table-pad-bottom: calc(195px + env(safe-area-inset-bottom, 0px));
+  }
+  .table-area.is-compact {
+    --table-pad-bottom: calc(170px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (min-width: 600px) {
+  .table-area {
+    --table-pad-bottom: calc(230px + env(safe-area-inset-bottom, 0px));
+  }
+  .table-area.is-compact {
+    --table-pad-bottom: calc(200px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (min-width: 900px) {
+  .table-area {
+    --table-pad-bottom: calc(240px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (min-width: 1100px) {
+  .table-area {
+    --table-pad-bottom: calc(260px + env(safe-area-inset-bottom, 0px));
+  }
+  .table-area.is-compact {
+    --table-pad-bottom: calc(220px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .table-area {
+    --table-pad-bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+  }
+  .table-area.is-compact {
+    --table-pad-bottom: calc(110px + env(safe-area-inset-bottom, 0px));
+  }
+  .table-hud {
+    padding-top: max(4px, var(--table-safe-top));
+    min-height: calc(40px + max(4px, var(--table-safe-top)));
+  }
+}
+
+/* Bannières / toasts online hors zones système */
+.online-conn-banner {
+  padding-top: max(10px, env(safe-area-inset-top, 0px));
+  padding-left: max(14px, env(safe-area-inset-left, 0px));
+  padding-right: max(14px, env(safe-area-inset-right, 0px));
+}
+
+.online-info-toast {
+  bottom: calc(120px + env(safe-area-inset-bottom, 0px));
+}
+
+.online-error-toast {
+  top: calc(72px + env(safe-area-inset-top, 0px));
+  left: max(12px, env(safe-area-inset-left, 0px));
+  right: max(12px, env(safe-area-inset-right, 0px));
+}
+
+.online-error-toast.is-under-banner {
+  top: calc(48px + env(safe-area-inset-top, 0px));
+}
+
+/* Overlays de table : safe padding */
+.game-overlay {
+  padding-top: max(24px, env(safe-area-inset-top, 0px));
+  padding-bottom: max(24px, env(safe-area-inset-bottom, 0px));
+  padding-left: max(24px, env(safe-area-inset-left, 0px));
+  padding-right: max(24px, env(safe-area-inset-right, 0px));
+}
+
+.game-overlay-danger,
+.game-overlay-cta {
+  min-height: 44px;
+}
