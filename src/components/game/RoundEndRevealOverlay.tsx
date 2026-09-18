@@ -9,9 +9,11 @@ interface RoundEndRevealOverlayProps {
   hands: Card[][]
   playLog: Card[][]
   onContinue: () => void
-  /** Action secondaire sous Continuer (accueil solo / abandon online). */
+  /** Accueil sans abandonner (online) — optionnel. */
+  onHome?: () => void
+  homeLabel?: string
+  /** Abandon définitif (online) ou retour accueil (solo si pas onHome). */
   onQuit?: () => void
-  /** Label. Solo: Accueil · Online: Abandonner. */
   quitLabel?: string
   /** Noms affiches par index de vue (0-3). Defaut = SEAT_NAMES solo. */
   seatNames?: string[]
@@ -26,6 +28,8 @@ export function RoundEndRevealOverlay({
   hands,
   playLog,
   onContinue,
+  onHome,
+  homeLabel = "Retour à l'accueil",
   onQuit,
   quitLabel = 'ABANDONNER LA TABLE',
   seatNames = SEAT_NAMES,
@@ -88,7 +92,10 @@ export function RoundEndRevealOverlay({
               >
                 <div
                   className="reveal-line-head"
-                  style={{ marginBottom: played.length + remaining.length > 0 || isWinner || amount != null ? 8 : 0 }}
+                  style={{
+                    marginBottom:
+                      played.length + remaining.length > 0 || isWinner || amount != null ? 8 : 0,
+                  }}
                 >
                   <span
                     className={`font-display reveal-hand-name${isWinner ? ' is-gold' : ''}`}
@@ -192,12 +199,13 @@ export function RoundEndRevealOverlay({
           >
             CONTINUER
           </button>
+          {onHome && (
+            <button type="button" className="reveal-home-btn" onClick={onHome}>
+              {homeLabel}
+            </button>
+          )}
           {onQuit && (
-            <button
-              type="button"
-              className="reveal-quit-btn"
-              onClick={onQuit}
-            >
+            <button type="button" className="reveal-quit-btn" onClick={onQuit}>
               {quitLabel}
             </button>
           )}
