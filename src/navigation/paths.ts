@@ -53,6 +53,8 @@ export const BARE_SCREENS: Screen[] = [
   'victory',
   'defeat',
   'freestyleTable',
+  'gameTable',
+  'onlineGameTable',
 ]
 
 export function isBareScreen(screen: Screen): boolean {

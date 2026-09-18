@@ -8,7 +8,7 @@ import { ACHIEVEMENTS, getUnlockedAchievements } from '../game/achievements'
 import { getPlayerProgress } from '../game/progression'
 import { fetchWallet } from '../lib/persistence/cloud'
 import { findMyActiveTables, type MyActiveTable } from '../lib/online/api'
-import { setActiveOnlineTableId } from '../lib/online/session'
+import { getActiveOnlineTableId, setActiveOnlineTableId, consumeHomeNotice } from '../lib/online/session'
 import { Zap, Trophy, BookOpen, Gamepad2, TrendingUp, Coins, ArrowRight, Undo2, Play, SpadeIcon, AvatarIcon, User } from '../components/icons'
 import {
   EmptyState,
@@ -39,6 +39,8 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
     typeof profile?.wallet_balance === 'number' ? profile.wallet_balance : null,
   )
   const [activeTables, setActiveTables] = useState<MyActiveTable[]>([])
+  const [sessionTableId, setSessionTableId] = useState<string | null>(() => getActiveOnlineTableId())
+  const [homeNotice, setHomeNoticeState] = useState<string | null>(null)
   const playTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const { winRatio, progress, unlockedCount, bestComboLabel, netGain, gamesPlayed, gamesWon } = useMemo(() => {
@@ -57,13 +59,52 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
 
   const displayName = profile?.username ?? (user ? 'Joueur' : 'Vous')
   const displayAvatar = profile?.avatar ?? SEAT_AVATARS[HUMAN_INDEX]
-  const primaryResume = activeTables[0] ?? null
+  const primaryResume: MyActiveTable | null = useMemo(() => {
+    if (activeTables.length > 0) {
+      const match = sessionTableId
+        ? activeTables.find(t => t.tableId === sessionTableId)
+        : null
+      return match ?? activeTables[0]
+    }
+    if (sessionTableId) {
+      return {
+        tableId: sessionTableId,
+        status: 'playing',
+        baseStake: 0,
+        seatIndex: 0,
+        code: sessionTableId.replace(/-/g, '').slice(0, 8).toUpperCase(),
+      }
+    }
+    return null
+  }, [activeTables, sessionTableId])
+
+  useEffect(() => {
+    const notice = consumeHomeNotice()
+    if (notice) setHomeNoticeState(notice)
+  }, [])
+
+  useEffect(() => {
+    if (!homeNotice) return
+    const t = setTimeout(() => setHomeNoticeState(null), 5000)
+    return () => clearTimeout(t)
+  }, [homeNotice])
 
   useEffect(() => {
     if (typeof profile?.wallet_balance === 'number') {
       setWalletBalance(profile.wallet_balance)
     }
   }, [profile?.wallet_balance])
+
+  useEffect(() => {
+    const syncSession = () => setSessionTableId(getActiveOnlineTableId())
+    syncSession()
+    window.addEventListener('focus', syncSession)
+    document.addEventListener('visibilitychange', syncSession)
+    return () => {
+      window.removeEventListener('focus', syncSession)
+      document.removeEventListener('visibilitychange', syncSession)
+    }
+  }, [])
 
   useEffect(() => {
     if (!user) {
@@ -73,33 +114,29 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
     }
 
     let cancelled = false
-    let idleId: number | undefined
-    let timeoutId: ReturnType<typeof setTimeout> | undefined
 
     const run = () => {
       if (cancelled) return
+      setSessionTableId(getActiveOnlineTableId())
       if (typeof profile?.wallet_balance !== 'number') {
         void fetchWallet().then(({ wallet }) => {
           if (!cancelled && wallet) setWalletBalance(wallet.balance)
         })
       }
       void findMyActiveTables(user.id).then(res => {
-        if (!cancelled && !res.error) setActiveTables(res.tables)
+        if (cancelled || res.error) return
+        setActiveTables(res.tables)
       })
     }
 
-    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
-      idleId = window.requestIdleCallback(run, { timeout: 800 })
-    } else {
-      timeoutId = setTimeout(run, 120)
-    }
+    const hasSession = Boolean(getActiveOnlineTableId())
+    const timeoutId = setTimeout(run, hasSession ? 0 : 120)
+    const intervalId = hasSession ? setInterval(run, 8000) : undefined
 
     return () => {
       cancelled = true
-      if (idleId !== undefined && 'cancelIdleCallback' in window) {
-        window.cancelIdleCallback(idleId)
-      }
-      if (timeoutId) clearTimeout(timeoutId)
+      clearTimeout(timeoutId)
+      if (intervalId) clearInterval(intervalId)
     }
   }, [user, profile?.wallet_balance, profile])
 
@@ -151,6 +188,45 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
         </header>
 
         <div className="home-main">
+          {homeNotice && (
+            <div
+              className="home-table-notice"
+              role="status"
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                marginBottom: 12,
+                padding: '12px 14px',
+                borderRadius: 12,
+                border: '1px solid rgba(76, 175, 118, 0.35)',
+                background: 'rgba(76, 175, 118, 0.12)',
+                color: '#b8f0c8',
+                fontSize: 13,
+                fontWeight: 600,
+                lineHeight: 1.35,
+              }}
+            >
+              <span style={{ flex: 1 }}>{homeNotice}</span>
+              <button
+                type="button"
+                onClick={() => setHomeNoticeState(null)}
+                aria-label="Fermer"
+                style={{
+                  border: 'none',
+                  background: 'transparent',
+                  color: '#b8f0c8',
+                  fontSize: 18,
+                  lineHeight: 1,
+                  cursor: 'pointer',
+                  padding: 4,
+                }}
+              >
+                ×
+              </button>
+            </div>
+          )}
+
           <AdSlot placement="home-banner-top" className="home-ad-top" />
 
           <div className="home-money-stack">
@@ -177,7 +253,7 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
                 label="Wallet compte"
                 amount={walletBalance}
                 icon={<Coins size={18} className="kora-icon" />}
-                subtitle="Buy-in online · cash-out"
+                subtitle="Buy-in online · solde compte"
               />
             )}
 
@@ -186,16 +262,19 @@ export default function HomeScreen({ onNavigate }: { onNavigate: (s: Screen) => 
                 variant="green"
                 onClick={() => resumeTable(primaryResume)}
                 className="home-resume"
+                style={homeNotice ? { boxShadow: '0 0 0 2px rgba(76, 175, 118, 0.45)' } : undefined}
               >
                 <div className="home-resume-row">
                   <div>
                     <p className="font-display home-resume-title">
-                      {primaryResume.status === 'playing' ? 'Reprendre la table' : 'Retour au lobby'}
+                      {primaryResume.status === 'lobby' ? 'Retour au lobby' : 'Reprendre ma table'}
                     </p>
                     <p className="home-resume-meta">
-                      Code {primaryResume.code} · mise {primaryResume.baseStake.toLocaleString('fr-FR')} · siege{' '}
-                      {primaryResume.seatIndex + 1}
+                      {primaryResume.baseStake > 0
+                        ? `Code ${primaryResume.code} · mise ${primaryResume.baseStake.toLocaleString('fr-FR')} · siège ${primaryResume.seatIndex + 1}`
+                        : `Table en cours · code ${primaryResume.code}`}
                       {activeTables.length > 1 ? ` · +${activeTables.length - 1} autre(s)` : ''}
+                      {' · la partie n’est pas abandonnée'}
                     </p>
                   </div>
                   <span className="home-resume-arrow">

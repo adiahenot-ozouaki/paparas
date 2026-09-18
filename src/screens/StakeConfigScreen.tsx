@@ -175,7 +175,7 @@ export default function StakeConfigScreen({ onNavigate }: { onNavigate: (s: Scre
   }
 
   return (
-    <ScreenShell bottomPad={0} className="stake-screen">
+    <ScreenShell className="stake-screen">
       <div className="stake-header">
         <BackButton absolute={false} onClick={() => onNavigate('gameMode')} />
         <h1 className="font-display stake-title">Configurer la table</h1>

@@ -5,7 +5,6 @@
  */
 
 .table-area {
-  /* Réserve bas pour la main + padding haut pour le HUD */
   --table-pad-bottom: 210px;
   --table-pad-top: 8px;
   --table-inset-x: max(6px, env(safe-area-inset-left, 0px));
@@ -19,9 +18,8 @@
 
   position: absolute;
   inset: 0;
-  /* conteneur relative pour les enfants absolute */
   z-index: 1;
-  pointer-events: none; /* les sièges réactivent les events */
+  pointer-events: none;
   contain: layout style;
 }
 
@@ -33,8 +31,6 @@
   --table-pad-bottom: 185px;
   --table-seat-s-bottom: calc(var(--table-pad-bottom) + 4px);
 }
-
-/* —— Sièges (absolute, positions stables) —— */
 
 .table-area-north {
   position: absolute;
@@ -80,8 +76,6 @@
   justify-content: center;
 }
 
-/* —— Centre / ovale (décor stable, hors flux) —— */
-
 .table-area-center {
   position: absolute;
   left: 50%;
@@ -102,8 +96,6 @@
   z-index: 0;
   pointer-events: none;
 }
-
-/* —— Responsive —— */
 
 @media (max-width: 360px) {
   .table-area {
@@ -204,7 +196,7 @@
 .opp-panel-meta { display: flex; flex-direction: column; align-items: center; gap: 5px; flex-shrink: 0; }
 .opp-info { background: rgba(11, 13, 16, 0.8); backdrop-filter: blur(8px); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 9px; padding: 3px 8px; text-align: center; }
 .opp-info.is-active { border-color: rgba(214, 168, 79, 0.45); box-shadow: 0 0 14px rgba(214, 168, 79, 0.2); }
-.opp-name { color: #fff; font-size: 11px; font-weight: 700; margin: 0; }
+.opp-name { color: #fff; font-size: 11px; margin: 0; font-weight: 700; }
 .opp-stats { color: #d6a84f; font-size: 10px; margin: 0; font-weight: 600; }
 .opp-badge { border-radius: 7px; padding: 3px 10px; border: 1px solid; }
 .opp-badge span { font-size: 9px; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 700; letter-spacing: 0.06em; }
@@ -261,100 +253,29 @@
 .reveal-rule-desc { color: #a9b0b7; font-size: 12px; margin: 0 0 12px; }
 .reveal-rule-sum { margin-top: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 10px; padding: 6px 12px; display: inline-block; font-size: 13px; font-weight: 700; }
 
-/* Mains / cartes — adapté aux cartes sm (43×61) */
-.reveal-hands {
-  width: 100%;
-  max-width: min(100%, 480px);
-  position: relative;
-}
-.reveal-hands--wide {
-  max-width: min(100%, 520px);
-}
-.reveal-hands-winner {
-  text-align: center;
-  font-size: 16px;
-  font-weight: 700;
-  margin: 0 0 14px;
-}
-.reveal-hands-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-/* Toutes les lignes en colonne : nom au-dessus, cartes en dessous */
+.reveal-hands { width: 100%; max-width: min(100%, 480px); position: relative; }
+.reveal-hands--wide { max-width: min(100%, 520px); }
+.reveal-hands-winner { text-align: center; font-size: 16px; font-weight: 700; margin: 0 0 14px; }
+.reveal-hands-list { display: flex; flex-direction: column; gap: 10px; }
 .reveal-hand-row {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 14px;
-  padding: 10px 12px;
+  display: flex; flex-direction: column; align-items: stretch; gap: 8px;
+  background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 14px; padding: 10px 12px;
 }
 .reveal-hand-row.is-winner-gold {
-  background: rgba(214, 168, 79, 0.1);
-  border-color: rgba(214, 168, 79, 0.4);
-  padding: 12px 14px;
-  gap: 10px;
+  background: rgba(214, 168, 79, 0.1); border-color: rgba(214, 168, 79, 0.4);
+  padding: 12px 14px; gap: 10px;
 }
-.reveal-hand-name {
-  width: auto;
-  font-size: 13px;
-  flex-shrink: 0;
-  color: #a9b0b7;
-  font-weight: 600;
-}
-.reveal-hand-name.is-gold {
-  color: #d6a84f;
-  font-weight: 700;
-  font-size: 14px;
-}
-.reveal-hand-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-}
-.reveal-line-head {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
-}
+.reveal-hand-name { width: auto; font-size: 13px; flex-shrink: 0; color: #a9b0b7; font-weight: 600; }
+.reveal-hand-name.is-gold { color: #d6a84f; font-weight: 700; font-size: 14px; }
+.reveal-hand-cards { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.reveal-line-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .reveal-bank-icon { color: #a9b0b7; font-size: 11px; }
-.reveal-cause {
-  color: #d6a84f;
-  font-size: 11px;
-  font-weight: 700;
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  letter-spacing: 0.02em;
-}
+.reveal-cause { color: #d6a84f; font-size: 11px; font-weight: 700; font-family: 'Plus Jakarta Sans', sans-serif; letter-spacing: 0.02em; }
 .reveal-cause.is-claim { color: #c9a0ff; }
-.reveal-line-cards {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  align-items: center;
-  /* fallback scroll si trop de cartes sur très petit écran */
-  max-width: 100%;
-}
-.reveal-seg-label {
-  color: #5b636b;
-  font-size: 9px;
-  letter-spacing: 0.06em;
-  margin-right: 2px;
-  flex-shrink: 0;
-  align-self: center;
-}
-.reveal-seg-sep {
-  width: 1px;
-  height: 44px;
-  background: rgba(255, 255, 255, 0.15);
-  margin: 0 4px;
-  flex-shrink: 0;
-  align-self: center;
-}
+.reveal-line-cards { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; max-width: 100%; }
+.reveal-seg-label { color: #5b636b; font-size: 9px; letter-spacing: 0.06em; margin-right: 2px; flex-shrink: 0; align-self: center; }
+.reveal-seg-sep { width: 1px; height: 44px; background: rgba(255, 255, 255, 0.15); margin: 0 4px; flex-shrink: 0; align-self: center; }
 .reveal-empty { color: #5b636b; font-size: 11px; }
 .reveal-payout { width: 100%; max-width: min(100%, 360px); text-align: center; }
 .reveal-payout-title { font-size: 16px; font-weight: 700; margin: 0 0 16px; letter-spacing: 0.04em; }
@@ -368,14 +289,8 @@
 .reveal-cta { margin-top: 20px; padding: 14px !important; font-size: 13px !important; border-radius: 14px !important; letter-spacing: 0.08em; }
 
 @media (min-width: 600px) {
-  .reveal-hands,
-  .reveal-hands--wide {
-    max-width: min(100%, 560px);
-  }
-  .reveal-hand-cards,
-  .reveal-line-cards {
-    gap: 8px;
-  }
+  .reveal-hands, .reveal-hands--wide { max-width: min(100%, 560px); }
+  .reveal-hand-cards, .reveal-line-cards { gap: 8px; }
 }
 
 .table-screen--loading { align-items: center; justify-content: center; gap: 12px; }

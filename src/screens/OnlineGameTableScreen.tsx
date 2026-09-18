@@ -12,7 +12,7 @@ import {
   rotateRoundStateForView,
   type SeatWithProfile,
 } from '../lib/online/api'
-import { getActiveOnlineTableId, setActiveOnlineTableId, getOnlineSpectate, setOnlineSpectate } from '../lib/online/session'
+import { getActiveOnlineTableId, setActiveOnlineTableId, getOnlineSpectate, setOnlineSpectate, setHomeNotice } from '../lib/online/session'
 import { humanizeError } from '../lib/online/errors'
 import { supabase } from '../lib/supabase/client'
 import { GameTableHud } from '../components/game/GameTableHud'
@@ -35,7 +35,7 @@ function rejectMessage(action: string, raw: string | undefined): string {
   if (action === 'play_card') return 'Coup rejete : ' + base
   if (action === 'bank_player') return 'Banque refusee : ' + base
   if (action === 'claim_victory') return 'Reclamation refusee : ' + base
-  if (action === 'leave_table') return 'Depart refuse : ' + base
+  if (action === 'leave_table') return 'Abandon refuse : ' + base
   return base
 }
 
@@ -87,7 +87,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
     if (typeof body.roundNumber === 'number') setRoundNumber(body.roundNumber)
     setLastSyncAt(Date.now())
     failStreakRef.current = 0
-    setConnStatus(prev => (prev === 'offline' ? prev : 'connected'))
+    setConnStatus(typeof navigator !== 'undefined' && !navigator.onLine ? 'offline' : 'connected')
   }, [])
 
   const pullState = useCallback(async () => {
@@ -152,6 +152,49 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
       cancelled = true
     }
   }, [authLoading, user, tableId, onNavigate, refreshSeats, pullState])
+
+  useEffect(() => {
+    if (!tableId) return
+
+    const goOffline = () => setConnStatus('offline')
+    const goOnline = () => {
+      setConnStatus('reconnecting')
+      failStreakRef.current = 0
+      void pullState()
+      void refreshSeats()
+    }
+    const onVisibility = () => {
+      if (document.visibilityState !== 'visible') return
+      if (!navigator.onLine) {
+        setConnStatus('offline')
+        return
+      }
+      setConnStatus(prev => (prev === 'connected' ? 'reconnecting' : prev === 'offline' ? 'reconnecting' : prev))
+      failStreakRef.current = 0
+      void pullState()
+      void refreshSeats()
+    }
+
+    window.addEventListener('offline', goOffline)
+    window.addEventListener('online', goOnline)
+    window.addEventListener('focus', onVisibility)
+    document.addEventListener('visibilitychange', onVisibility)
+
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
+      setConnStatus('offline')
+    } else {
+      setConnStatus('reconnecting')
+      failStreakRef.current = 0
+      void pullState()
+    }
+
+    return () => {
+      window.removeEventListener('offline', goOffline)
+      window.removeEventListener('online', goOnline)
+      window.removeEventListener('focus', onVisibility)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [tableId, pullState, refreshSeats])
 
   useEffect(() => {
     if (!tableId) return
@@ -224,7 +267,32 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   if (authLoading || loading || !viewState || (mySeat === null && !isSpectating)) {
     return (
       <div className="felt-bg table-screen table-screen--loading">
-        <span className="table-loading-text">Chargement de la table...</span>
+        <span className="table-loading-text">
+          {connStatus === 'offline'
+            ? 'Hors ligne — impossible de charger la table'
+            : connStatus === 'reconnecting'
+              ? 'Reconnexion à la table…'
+              : 'Chargement de la table...'}
+        </span>
+        {connStatus !== 'connected' && (
+          <button
+            type="button"
+            className="online-conn-retry"
+            style={{ marginTop: 8 }}
+            onClick={() => {
+              if (!navigator.onLine) {
+                setConnStatus('offline')
+                return
+              }
+              setConnStatus('reconnecting')
+              failStreakRef.current = 0
+              void pullState()
+              void refreshSeats()
+            }}
+          >
+            {connStatus === 'offline' ? 'Réessayer' : 'Forcer la sync'}
+          </button>
+        )}
       </div>
     )
   }
@@ -255,8 +323,6 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
     viewState.currentTrick.trickNumber < 3 &&
     !humanIsBanked
 
-  const canClaim = false
-
   const leaderIndex =
     viewState.currentTrick && viewState.currentTrick.requestedSuit !== null
       ? viewState.currentTrick.starterIndex
@@ -266,8 +332,14 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   let statusMessage: string | null = null
   if (isSpectating) {
     statusMessage = 'Mode spectateur — lecture seule'
+  } else if (connStatus === 'offline') {
+    statusMessage = 'Hors ligne — actions bloquées'
+    statusTone = 'muted'
+  } else if (connStatus === 'reconnecting') {
+    statusMessage = 'Reconnexion…'
+    statusTone = 'gold'
   } else if (leaving) {
-    statusMessage = 'Départ de la table…'
+    statusMessage = 'Abandon de la table…'
   } else if (busy) {
     statusMessage = 'Envoi…'
   } else if (viewState.phase === 'playing') {
@@ -290,6 +362,10 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
 
   async function runAction(action: Parameters<typeof callEngine>[0], extra: Record<string, unknown> = {}) {
     if (!tableId || busy || isSpectating || leaving) return
+    if (connStatus === 'offline') {
+      showError('Hors ligne — reconnexion requise.')
+      return
+    }
     setBusy(true)
     try {
       const { ok, body } = await callEngine(action, tableId, extra)
@@ -300,6 +376,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
       }
     } catch (e) {
       showError(humanizeError(e instanceof Error ? e.message : String(e), 'Echec reseau.'))
+      setConnStatus(navigator.onLine ? 'reconnecting' : 'offline')
     }
     setBusy(false)
     await refreshSeats()
@@ -343,6 +420,13 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
     await refreshSeats()
   }
 
+  function goHomeKeepTable() {
+    setConfirmingLeave(false)
+    setIsPaused(false)
+    setHomeNotice('Table conservée — vous n’avez pas abandonné. Reprenez depuis l’accueil.')
+    onNavigate('home')
+  }
+
   async function handleLeaveConfirm() {
     setConfirmingLeave(false)
     setIsPaused(false)
@@ -363,21 +447,18 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
         setLeaving(false)
         return
       }
-      const cash = typeof body.cashOut === 'number' ? body.cashOut : null
       const forfeited = body.forfeited === true
-      if (cash != null && cash > 0) {
-        showToast(
-          (forfeited ? 'Abandon - ' : 'Cash-out - ') + cash.toLocaleString('fr-FR') + ' FCFA rendus au wallet',
-          3200,
-        )
-      } else if (forfeited) {
-        showToast('Vous avez abandonne la table.', 2500)
-      }
+      showToast(
+        forfeited
+          ? 'Forfait : mise en banque auto. Capital de table non rendu au wallet.'
+          : 'Table abandonnée. Capital de table non rendu au wallet.',
+        3200,
+      )
       setOnlineSpectate(false)
       setActiveOnlineTableId(null)
-      setTimeout(() => onNavigate('onlineLobby'), cash != null && cash > 0 ? 400 : 0)
+      setTimeout(() => onNavigate('onlineLobby'), 300)
     } catch (e) {
-      showError(humanizeError(e instanceof Error ? e.message : String(e), 'Impossible de quitter la table.'))
+      showError(humanizeError(e instanceof Error ? e.message : String(e), "Impossible d'abandonner la table."))
       setLeaving(false)
     }
   }
@@ -399,11 +480,50 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
     <div className="felt-bg table-screen">
       <div className="table-screen-pattern" aria-hidden />
 
+      {connStatus === 'offline' && (
+        <div className="online-conn-banner is-offline" role="alert">
+          <span>Hors ligne — vérifiez votre connexion. La table reste active.</span>
+          <button
+            type="button"
+            className="online-conn-retry"
+            onClick={() => {
+              if (!navigator.onLine) {
+                showError('Toujours hors ligne.')
+                return
+              }
+              setConnStatus('reconnecting')
+              failStreakRef.current = 0
+              void pullState()
+              void refreshSeats()
+            }}
+          >
+            Réessayer
+          </button>
+        </div>
+      )}
+
+      {connStatus === 'reconnecting' && !isSpectating && (
+        <div className="online-conn-banner is-reconnect" role="status">
+          <span>Reconnexion à la table…</span>
+          <button
+            type="button"
+            className="online-conn-retry"
+            onClick={() => {
+              failStreakRef.current = 0
+              void pullState()
+              void refreshSeats()
+            }}
+          >
+            Forcer
+          </button>
+        </div>
+      )}
+
       {isSpectating && (
         <div className="online-conn-banner is-reconnect" role="status">
           <span>Mode spectateur - lecture seule</span>
           <button type="button" className="online-conn-retry" onClick={() => void handleLeaveConfirm()}>
-            Quitter
+            Quitter le mode spectateur
           </button>
         </div>
       )}
@@ -416,12 +536,22 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
 
       {toast && <div className="online-info-toast">{toast}</div>}
 
+      {connStatus === 'connected' && Date.now() - lastSyncAt > 12000 && (
+        <div className="online-lag-badge" role="status">
+          Sync retardée
+        </div>
+      )}
+
       {viewState.phase === 'specialWin' && viewState.outcome?.kind === 'specialWin' && !isSpectating && (
         <SpecialWinOverlayWrapper
           outcome={viewState.outcome}
           hands={viewState.hands}
           seatNames={players.map(p => p.name)}
           onContinue={() => void handleRoundEndContinue()}
+          onHome={goHomeKeepTable}
+          homeLabel="Retour à l'accueil"
+          onQuit={() => requestLeave()}
+          quitLabel="ABANDONNER LA TABLE"
         />
       )}
 
@@ -432,6 +562,10 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
           playLog={viewState.playLog}
           seatNames={players.map(p => p.name)}
           onContinue={() => void handleRoundEndContinue()}
+          onHome={goHomeKeepTable}
+          homeLabel="Retour à l'accueil"
+          onQuit={() => requestLeave()}
+          quitLabel="ABANDONNER LA TABLE"
         />
       )}
 
@@ -444,21 +578,19 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
       )}
 
       {confirmingLeave && !isSpectating && (
-        <div className="game-overlay game-overlay--dim game-overlay--z-pause" role="dialog" aria-modal="true">
-          <h2 className="font-display game-overlay-title">QUITTER LA TABLE ?</h2>
+        <div className="game-overlay game-overlay--dim game-overlay--z-pause game-overlay--z-above-reveal" role="dialog" aria-modal="true">
+          <h2 className="font-display game-overlay-title">ABANDONNER LA TABLE ?</h2>
           <p className="game-overlay-desc">
             {roundInProgress && !alreadyBanked
-              ? 'Un round est en cours : vous abandonnez (forfait). Votre capital restant sera rendu au wallet du compte.'
-              : 'Votre capital restant sur cette table sera rendu au wallet du compte.'}
+              ? 'Round en cours : abandon = forfait (mise en banque automatique). Vous quittez définitivement la table. Le capital de table n’est pas crédité au wallet. Pour le menu sans abandonner → Accueil.'
+              : 'Vous quittez définitivement cette table. Le capital restant sur la table n’est pas rendu au wallet. Pour le menu sans abandonner → Accueil.'}
           </p>
-          {myCapital > 0 && (
-            <p className="game-overlay-desc" style={{ marginTop: 8 }}>
-              Cash-out estime : <strong>{myCapital.toLocaleString('fr-FR')} FCFA</strong>
-            </p>
-          )}
           <div className="game-overlay-actions">
             <UiButton fullWidth onClick={() => setConfirmingLeave(false)} className="game-overlay-cta">
               Rester
+            </UiButton>
+            <UiButton fullWidth variant="secondary" onClick={goHomeKeepTable} className="game-overlay-cta">
+              Retour à l'accueil
             </UiButton>
             <button
               type="button"
@@ -466,14 +598,19 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
               disabled={leaving}
               onClick={() => void handleLeaveConfirm()}
             >
-              {leaving ? 'Depart...' : roundInProgress && !alreadyBanked ? 'Abandonner la table' : 'Quitter et cash-out'}
+              {leaving ? 'Abandon…' : 'Abandonner la table'}
             </button>
           </div>
         </div>
       )}
 
       {isPaused && !confirmingLeave && (
-        <PauseOverlay onResume={() => setIsPaused(false)} onQuit={requestLeave} />
+        <PauseOverlay
+          onResume={() => setIsPaused(false)}
+          onHome={goHomeKeepTable}
+          onQuit={requestLeave}
+          quitLabel="Abandonner la table"
+        />
       )}
 
       <GameTableHud
@@ -482,9 +619,9 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
         statusMessage={statusMessage}
         statusTone={statusTone}
         compactMode={compactMode}
-        canBank={canBank && !busy && !leaving && connStatus !== 'offline'}
+        canBank={canBank && !busy && !leaving && connStatus === 'connected'}
         onPause={() => setIsPaused(true)}
-        onQuit={requestLeave}
+        onHome={goHomeKeepTable}
         onToggleCompact={() => setCompactMode(v => !v)}
         onOpenRules={() => onNavigate('rules')}
         onRequestBank={() => setConfirmingBank(true)}
@@ -501,7 +638,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
         <PlayerHand
           players={players}
           hand={humanHand}
-          isHumanTurn={isHumanTurn && !busy && !leaving && connStatus !== 'offline'}
+          isHumanTurn={isHumanTurn && !busy && !leaving && connStatus === 'connected'}
           humanIsBanked={humanIsBanked}
           isLeader={isHumanLeader}
           selectedCardIndex={selectedCardIndex}

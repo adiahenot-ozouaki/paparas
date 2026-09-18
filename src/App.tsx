@@ -68,6 +68,8 @@ export default function App() {
                       <Route path={pathFor('victory')} element={<VictoryPage />} />
                       <Route path={pathFor('defeat')} element={<DefeatPage />} />
                       <Route path={pathFor('freestyleTable')} element={<FreestylePage />} />
+                      <Route path={pathFor('gameTable')} element={<GameTablePage />} />
+                      <Route path={pathFor('onlineGameTable')} element={<OnlineGameTablePage />} />
                     </Route>
 
                     <Route element={<ChromeLayout />}>
@@ -76,8 +78,6 @@ export default function App() {
                       <Route path={pathFor('stakeConfig')} element={<StakeConfigPage />} />
                       <Route path={pathFor('lobby')} element={<LobbyPage />} />
                       <Route path={pathFor('onlineLobby')} element={<OnlineLobbyPage />} />
-                      <Route path={pathFor('onlineGameTable')} element={<OnlineGameTablePage />} />
-                      <Route path={pathFor('gameTable')} element={<GameTablePage />} />
                       <Route path={pathFor('profile')} element={<ProfilePage />} />
                       <Route path={pathFor('leaderboard')} element={<LeaderboardPage />} />
                       <Route path={pathFor('stats')} element={<StatsPage />} />

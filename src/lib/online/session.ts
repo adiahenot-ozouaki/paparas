@@ -6,6 +6,7 @@ const KEY_TABLE = 'kora:onlineTableId'
 const KEY_INTENT = 'kora:onlineLobbyIntent'
 const KEY_JOIN_CODE = 'kora:onlineJoinCode'
 const KEY_JOIN_TABLE = 'kora:onlineJoinTableId'
+const KEY_HOME_NOTICE = 'kora:homeNotice'
 
 export type OnlineLobbyIntent = 'menu' | 'create' | 'join'
 
@@ -100,5 +101,24 @@ export function getOnlineSpectate(): boolean {
     return sessionStorage.getItem(KEY_SPECTATE) === '1'
   } catch {
     return false
+  }
+}
+
+/** Message one-shot affiché sur Home après Accueil (table conservée). */
+export function setHomeNotice(message: string): void {
+  try {
+    sessionStorage.setItem(KEY_HOME_NOTICE, message)
+  } catch {
+    // ignore
+  }
+}
+
+export function consumeHomeNotice(): string | null {
+  try {
+    const v = sessionStorage.getItem(KEY_HOME_NOTICE)
+    sessionStorage.removeItem(KEY_HOME_NOTICE)
+    return v
+  } catch {
+    return null
   }
 }

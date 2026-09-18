@@ -1,6 +1,6 @@
 import { SEAT_NAMES } from '../../game/GameContext'
 import { IconButton } from '../ui'
-import { Pause, Landmark, Eye, EyeOff } from 'lucide-react'
+import { Pause, Landmark, Eye, EyeOff, Home } from 'lucide-react'
 
 interface GameTableHudProps {
   roundNumber: number
@@ -10,7 +10,8 @@ interface GameTableHudProps {
   compactMode: boolean
   canBank: boolean
   onPause: () => void
-  onQuit: () => void
+  /** Retour accueil sans quitter la table (online) / fin de partie solo. */
+  onHome: () => void
   onToggleCompact: () => void
   onOpenRules: () => void
   onRequestBank: () => void
@@ -24,7 +25,7 @@ export function GameTableHud({
   compactMode,
   canBank,
   onPause,
-  onQuit,
+  onHome,
   onToggleCompact,
   onOpenRules,
   onRequestBank,
@@ -83,8 +84,15 @@ export function GameTableHud({
             <Eye size={16} strokeWidth={2} className="kora-icon" aria-hidden />
           )}
         </IconButton>
-        <button type="button" className="table-hud-quit" onClick={onQuit}>
-          Quitter
+        <button
+          type="button"
+          className="table-hud-quit"
+          onClick={onHome}
+          title="Retour à l'accueil (la partie en ligne reste active)"
+          aria-label="Retour à l'accueil"
+        >
+          <Home size={14} strokeWidth={2} className="kora-icon" aria-hidden style={{ marginRight: 4, verticalAlign: '-2px' }} />
+          Accueil
         </button>
       </div>
     </header>

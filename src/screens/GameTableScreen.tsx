@@ -259,6 +259,8 @@ export default function GameTableScreen({
             outcome={roundState.outcome}
             hands={roundState.hands}
             onContinue={handleRoundEndContinue}
+            onQuit={() => onNavigate('home')}
+            quitLabel="RETOUR À L'ACCUEIL"
           />
         )}
 
@@ -269,6 +271,8 @@ export default function GameTableScreen({
             hands={roundState.hands}
             playLog={roundState.playLog}
             onContinue={handleRoundEndContinue}
+            onQuit={() => onNavigate('home')}
+            quitLabel="RETOUR À L'ACCUEIL"
           />
         )}
 
@@ -284,6 +288,7 @@ export default function GameTableScreen({
         <PauseOverlay
           onResume={() => setIsPaused(false)}
           onQuit={() => onNavigate('home')}
+          quitLabel="Retour à l'accueil"
         />
       )}
 
@@ -295,7 +300,7 @@ export default function GameTableScreen({
         compactMode={compactMode}
         canBank={canBank}
         onPause={() => setIsPaused(true)}
-        onQuit={() => onNavigate('home')}
+        onHome={() => onNavigate('home')}
         onToggleCompact={() => setCompactMode(v => !v)}
         onOpenRules={() => onNavigate('rules')}
         onRequestBank={() => setConfirmingBank(true)}

@@ -1,0 +1,45 @@
+/* Leaderboard scroll */
+.lb-screen.screen-shell {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+.lb-screen .screen-shell-inner {
+  min-height: 0;
+}
+.lb-online-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-bottom: 8px;
+}
+.lb-body {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  min-height: 0;
+}
+.lb-side {
+  min-height: 0;
+}
+
+/* Desktop podium → liste : clarifier que la liste commence au 4ᵉ */
+.lb-podium-footnote {
+  margin: 8px 0 0;
+  padding: 0 4px;
+  color: #a9b0b7;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-align: center;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+.lb-list-from {
+  margin: 0 0 10px;
+  padding: 0 2px;
+  color: #a9b0b7;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}

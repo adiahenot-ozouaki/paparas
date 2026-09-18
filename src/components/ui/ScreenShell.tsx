@@ -6,7 +6,13 @@ import type { CSSProperties, ReactNode } from 'react'
 
 type ScreenShellProps = {
   children: ReactNode
-  /** padding-bottom mobile pour BottomNav (défaut 80). Ignoré ≥900px avec sidebar. */
+  /**
+   * padding-bottom mobile pour BottomNav (px, hors safe-area).
+   * Si omis : CSS `calc(88px + safe-area-inset-bottom)`.
+   * Si > 0 : `calc(bottomPad + safe-area-inset-bottom)`.
+   * Si 0 : aucun padding bas (plein écran).
+   * ≥900px : media query ramène à 28px (sidebar).
+   */
   bottomPad?: number
   className?: string
   style?: CSSProperties
@@ -18,20 +24,26 @@ type ScreenShellProps = {
 
 export default function ScreenShell({
   children,
-  bottomPad = 80,
+  bottomPad,
   className = '',
   style,
   pattern = true,
   centered = false,
 }: ScreenShellProps) {
+  let shellStyle: CSSProperties = { ...style }
+  if (bottomPad != null) {
+    const pad =
+      bottomPad <= 0
+        ? '0px'
+        : `calc(${bottomPad}px + env(safe-area-inset-bottom, 0px))`
+    shellStyle = {
+      ...shellStyle,
+      ['--shell-bottom-pad' as string]: pad,
+    }
+  }
+
   return (
-    <div
-      className={`screen-shell ${className}`.trim()}
-      style={{
-        ['--shell-bottom-pad' as string]: `${bottomPad}px`,
-        ...style,
-      }}
-    >
+    <div className={`screen-shell ${className}`.trim()} style={shellStyle}>
       {pattern && <div className="pattern-african screen-shell-pattern" aria-hidden />}
       <div className={centered ? 'page-content screen-shell-inner' : 'screen-shell-inner'}>{children}</div>
     </div>

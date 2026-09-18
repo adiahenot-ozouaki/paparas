@@ -21,7 +21,7 @@ const RULE_DESCRIPTION: Record<SpecialRuleType, string> = {
   t7: 'Au moins 3 des 5 cartes ont la valeur 7.',
 }
 
-type OverlayPhase = 'intro' | 'ruleShowcase' | 'handsReveal' | 'payout'
+type OverlayPhase = 'intro' | 'ruleShowcase' | 'result'
 
 export interface SpecialWinOverlayProps {
   winners: SpecialWinner[]
@@ -29,6 +29,16 @@ export interface SpecialWinOverlayProps {
   seatNames: string[]
   payoutLines: { name: string; amount: number }[]
   onContinue: () => void
+  onHome?: () => void
+  homeLabel?: string
+  onQuit?: () => void
+  quitLabel?: string
+  continueLabel?: string
+  continueDisabled?: boolean
+}
+
+function isVacantSeatName(name: string): boolean {
+  return name === '-' || name === '—' || name.trim() === ''
 }
 
 export default function SpecialWinOverlay({
@@ -37,6 +47,12 @@ export default function SpecialWinOverlay({
   seatNames,
   payoutLines,
   onContinue,
+  onHome,
+  homeLabel = "Retour à l'accueil",
+  onQuit,
+  quitLabel = 'ABANDONNER LA TABLE',
+  continueLabel,
+  continueDisabled,
 }: SpecialWinOverlayProps) {
   const [phase, setPhase] = useState<OverlayPhase>('intro')
   const winnerIndexes = winners.map(w => w.playerIndex)
@@ -44,7 +60,7 @@ export default function SpecialWinOverlay({
 
   useEffect(() => {
     const t1 = setTimeout(() => setPhase('ruleShowcase'), 1200)
-    const t2 = setTimeout(() => setPhase('handsReveal'), 1200 + 700 + winners.length * 1100)
+    const t2 = setTimeout(() => setPhase('result'), 1200 + 700 + winners.length * 1100)
     return () => {
       clearTimeout(t1)
       clearTimeout(t2)
@@ -81,15 +97,20 @@ export default function SpecialWinOverlay({
         </div>
       )}
 
-      {phase === 'handsReveal' && (
-        <div className="anim-fade-in reveal-hands">
-          <p className="reveal-kicker reveal-kicker--center">MAINS RÉVÉLÉES</p>
+      {phase === 'result' && (
+        <div className="anim-fade-in reveal-hands reveal-hands--unified">
+          <p className="reveal-kicker reveal-kicker--center">MAINS RÉVÉLÉES · BILAN</p>
           <div className="reveal-hands-list" style={{ gap: 12 }}>
             {seatNames.map((name, i) => {
               const isWinner = winnerIndexes.includes(i)
+              const hand = hands[i] ?? []
+              if (!isWinner && hand.length === 0 && isVacantSeatName(name)) {
+                return null
+              }
+              const line = payoutLines.find(p => p.name === name)
               return (
                 <div
-                  key={name}
+                  key={name + '-' + i}
                   className="anim-fade-in-up reveal-hand-row"
                   style={{
                     animationDelay: `${i * 0.08}s`,
@@ -101,14 +122,24 @@ export default function SpecialWinOverlay({
                       : {}),
                   }}
                 >
-                  <span
-                    className={`font-display reveal-hand-name${isWinner ? ' is-gold' : ''}`}
-                    style={isWinner ? { color: primaryColor } : undefined}
-                  >
-                    {name}
-                  </span>
+                  <div className="reveal-line-head" style={{ marginBottom: 8 }}>
+                    <span
+                      className={`font-display reveal-hand-name${isWinner ? ' is-gold' : ''}`}
+                      style={isWinner ? { color: primaryColor } : undefined}
+                    >
+                      {name}
+                    </span>
+                    {line && (
+                      <span
+                        className={`font-display reveal-row-amt ${line.amount > 0 ? 'is-gain' : 'is-loss'}`}
+                      >
+                        {line.amount > 0 ? '+' : ''}
+                        {line.amount.toLocaleString('fr-FR')}
+                      </span>
+                    )}
+                  </div>
                   <div className="reveal-hand-cards">
-                    {hands[i].map((card, ci) => (
+                    {hand.map((card, ci) => (
                       <PlayingCard
                         key={ci}
                         suit={card.suit}
@@ -123,45 +154,52 @@ export default function SpecialWinOverlay({
             })}
           </div>
 
-          <button
-            className="btn-primary glow-gold reveal-cta"
-            onClick={() => setPhase('payout')}
-            style={{ width: '100%' }}
-          >
-            VOIR LES GAINS →
-          </button>
-        </div>
-      )}
-
-      {phase === 'payout' && (
-        <div className="anim-fade-in-up reveal-payout">
-          <p className="text-gold font-display reveal-payout-title">
-            {winners.map(w => seatNames[w.playerIndex]).join(' & ')} remporte
-            {winners.length > 1 ? 'nt' : ''} le round
-          </p>
-          <div className="reveal-payout-list">
-            {payoutLines.map((p, i) => (
-              <div
-                key={p.name}
-                className={`reveal-payout-row${i < payoutLines.length - 1 ? ' has-border' : ''}`}
-              >
-                <span className="reveal-payout-name">{p.name}</span>
-                <span
-                  className={`font-display reveal-payout-amt ${p.amount > 0 ? 'is-gain' : 'is-loss'}`}
-                >
-                  {p.amount > 0 ? '+' : ''}
-                  {p.amount.toLocaleString('fr-FR')} FCFA
-                </span>
-              </div>
-            ))}
+          <div className="reveal-payout reveal-payout--inline">
+            <p className="text-gold font-display reveal-payout-title" style={{ fontSize: 14, marginBottom: 8 }}>
+              {winners.map(w => seatNames[w.playerIndex]).join(' & ')} remporte
+              {winners.length > 1 ? 'nt' : ''} le round
+            </p>
+            <div className="reveal-payout-list">
+              {payoutLines
+                .filter(p => !isVacantSeatName(p.name))
+                .map((p, i, arr) => (
+                  <div
+                    key={p.name}
+                    className={`reveal-payout-row${i < arr.length - 1 ? ' has-border' : ''}`}
+                  >
+                    <span className="reveal-payout-name">{p.name}</span>
+                    <span
+                      className={`font-display reveal-payout-amt ${p.amount > 0 ? 'is-gain' : 'is-loss'}`}
+                    >
+                      {p.amount > 0 ? '+' : ''}
+                      {p.amount.toLocaleString('fr-FR')} FCFA
+                    </span>
+                  </div>
+                ))}
+            </div>
           </div>
-          <button
-            className="btn-primary glow-gold"
-            onClick={onContinue}
-            style={{ padding: '14px 40px', fontSize: 14, borderRadius: 14, letterSpacing: '0.1em', width: '100%' }}
-          >
-            CONTINUER →
-          </button>
+
+          <div className="reveal-actions">
+            <button
+              type="button"
+              className="btn-primary glow-gold reveal-cta"
+              onClick={onContinue}
+              style={{ width: '100%' }}
+              disabled={continueDisabled}
+            >
+              {continueLabel ?? 'CONTINUER →'}
+            </button>
+            {onHome && (
+              <button type="button" className="reveal-home-btn" onClick={onHome}>
+                {homeLabel}
+              </button>
+            )}
+            {onQuit && (
+              <button type="button" className="reveal-quit-btn" onClick={onQuit}>
+                {quitLabel}
+              </button>
+            )}
+          </div>
         </div>
       )}
     </div>

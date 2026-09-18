@@ -35,7 +35,6 @@ export async function handleLeaveTable(
   const table = await loadTable(admin, tableId)
   const seats = await loadSeats(admin, tableId)
   const seat = seats.find(s => s.seat_index === seatIndex)
-  const cashOut = seat?.capital ?? 0
   let forfeited = false
 
   if (table.status === 'playing') {

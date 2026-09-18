@@ -22,6 +22,9 @@ import './screens/freestyle-table.css'
 import './theme/ads.css'
 import './theme/tournaments.css'
 import './theme/table-chat.css'
+import './theme/reveal-unified.css'
+import './theme/lb-scroll.css'
+import './theme/table-safe-area.css'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

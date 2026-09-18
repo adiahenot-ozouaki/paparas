@@ -1,4 +1,4 @@
-/* Espace sous Tables ouvertes — BottomNav mobile (~72–80px) */
+/* Espace sous Tables ouvertes — BottomNav mobile (~72–88px + safe-area) */
 .mode-open-spacer {
   display: none;
 }
@@ -6,7 +6,7 @@
 @media (max-width: 899px) {
   .mode-open-spacer {
     display: block;
-    height: 88px;
+    height: calc(88px + env(safe-area-inset-bottom, 0px));
     flex-shrink: 0;
   }
 
