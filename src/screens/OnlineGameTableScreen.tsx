@@ -35,7 +35,7 @@ function rejectMessage(action: string, raw: string | undefined): string {
   if (action === 'play_card') return 'Coup rejete : ' + base
   if (action === 'bank_player') return 'Banque refusee : ' + base
   if (action === 'claim_victory') return 'Reclamation refusee : ' + base
-  if (action === 'leave_table') return 'Depart refuse : ' + base
+  if (action === 'leave_table') return 'Abandon refuse : ' + base
   return base
 }
 
@@ -267,7 +267,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   if (isSpectating) {
     statusMessage = 'Mode spectateur — lecture seule'
   } else if (leaving) {
-    statusMessage = 'Départ de la table…'
+    statusMessage = 'Abandon de la table…'
   } else if (busy) {
     statusMessage = 'Envoi…'
   } else if (viewState.phase === 'playing') {
@@ -346,7 +346,6 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
   function goHomeKeepTable() {
     setConfirmingLeave(false)
     setIsPaused(false)
-    // Ne pas appeler leave_table : la table reste active (reprise possible).
     onNavigate('home')
   }
 
@@ -371,12 +370,12 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
         return
       }
       const forfeited = body.forfeited === true
-      showToast(forfeited ? 'Vous avez abandonné la table (forfait).' : 'Vous avez quitté la table.', 2500)
+      showToast(forfeited ? 'Table abandonnée (forfait).' : 'Table abandonnée.', 2500)
       setOnlineSpectate(false)
       setActiveOnlineTableId(null)
       setTimeout(() => onNavigate('onlineLobby'), 300)
     } catch (e) {
-      showError(humanizeError(e instanceof Error ? e.message : String(e), 'Impossible de quitter la table.'))
+      showError(humanizeError(e instanceof Error ? e.message : String(e), 'Impossible d’abandonner la table.'))
       setLeaving(false)
     }
   }
@@ -402,7 +401,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
         <div className="online-conn-banner is-reconnect" role="status">
           <span>Mode spectateur - lecture seule</span>
           <button type="button" className="online-conn-retry" onClick={() => void handleLeaveConfirm()}>
-            Quitter
+            Quitter le mode spectateur
           </button>
         </div>
       )}
@@ -422,7 +421,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
           seatNames={players.map(p => p.name)}
           onContinue={() => void handleRoundEndContinue()}
           onQuit={() => requestLeave()}
-          quitLabel="QUITTER LA TABLE"
+          quitLabel="ABANDONNER LA TABLE"
         />
       )}
 
@@ -434,7 +433,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
           seatNames={players.map(p => p.name)}
           onContinue={() => void handleRoundEndContinue()}
           onQuit={() => requestLeave()}
-          quitLabel="QUITTER LA TABLE"
+          quitLabel="ABANDONNER LA TABLE"
         />
       )}
 
@@ -448,11 +447,11 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
 
       {confirmingLeave && !isSpectating && (
         <div className="game-overlay game-overlay--dim game-overlay--z-pause game-overlay--z-above-reveal" role="dialog" aria-modal="true">
-          <h2 className="font-display game-overlay-title">QUITTER LA TABLE ?</h2>
+          <h2 className="font-display game-overlay-title">ABANDONNER LA TABLE ?</h2>
           <p className="game-overlay-desc">
             {roundInProgress && !alreadyBanked
-              ? 'Un round est en cours : vous abandonnez la partie (forfait). Vous ne pourrez plus rejouer à cette table.'
-              : 'Vous quittez définitivement cette table. Pour seulement revenir au menu, utilisez Accueil — la table restera active.'}
+              ? 'Un round est en cours : abandon = forfait. Vous ne pourrez plus rejouer à cette table. Pour le menu sans abandonner, utilisez Accueil.'
+              : 'Abandon définitif de cette table. Pour seulement revenir au menu, utilisez Accueil — la table restera active.'}
           </p>
           <div className="game-overlay-actions">
             <UiButton fullWidth onClick={() => setConfirmingLeave(false)} className="game-overlay-cta">
@@ -467,7 +466,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
               disabled={leaving}
               onClick={() => void handleLeaveConfirm()}
             >
-              {leaving ? 'Départ…' : 'Abandonner la table'}
+              {leaving ? 'Abandon…' : 'Abandonner la table'}
             </button>
           </div>
         </div>
