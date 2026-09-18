@@ -375,7 +375,7 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
       setActiveOnlineTableId(null)
       setTimeout(() => onNavigate('onlineLobby'), 300)
     } catch (e) {
-      showError(humanizeError(e instanceof Error ? e.message : String(e), 'Impossible d’abandonner la table.'))
+      showError(humanizeError(e instanceof Error ? e.message : String(e), "Impossible d'abandonner la table."))
       setLeaving(false)
     }
   }
@@ -420,6 +420,8 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
           hands={viewState.hands}
           seatNames={players.map(p => p.name)}
           onContinue={() => void handleRoundEndContinue()}
+          onHome={goHomeKeepTable}
+          homeLabel="Retour à l'accueil"
           onQuit={() => requestLeave()}
           quitLabel="ABANDONNER LA TABLE"
         />
@@ -432,6 +434,8 @@ export default function OnlineGameTableScreen({ onNavigate }: { onNavigate: (s: 
           playLog={viewState.playLog}
           seatNames={players.map(p => p.name)}
           onContinue={() => void handleRoundEndContinue()}
+          onHome={goHomeKeepTable}
+          homeLabel="Retour à l'accueil"
           onQuit={() => requestLeave()}
           quitLabel="ABANDONNER LA TABLE"
         />
