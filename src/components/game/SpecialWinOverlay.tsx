@@ -29,6 +29,8 @@ export interface SpecialWinOverlayProps {
   seatNames: string[]
   payoutLines: { name: string; amount: number }[]
   onContinue: () => void
+  onHome?: () => void
+  homeLabel?: string
   onQuit?: () => void
   quitLabel?: string
   continueLabel?: string
@@ -45,6 +47,8 @@ export default function SpecialWinOverlay({
   seatNames,
   payoutLines,
   onContinue,
+  onHome,
+  homeLabel = "Retour à l'accueil",
   onQuit,
   quitLabel = 'ABANDONNER LA TABLE',
   continueLabel,
@@ -185,6 +189,11 @@ export default function SpecialWinOverlay({
             >
               {continueLabel ?? 'CONTINUER →'}
             </button>
+            {onHome && (
+              <button type="button" className="reveal-home-btn" onClick={onHome}>
+                {homeLabel}
+              </button>
+            )}
             {onQuit && (
               <button type="button" className="reveal-quit-btn" onClick={onQuit}>
                 {quitLabel}
