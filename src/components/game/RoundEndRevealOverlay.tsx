@@ -9,9 +9,9 @@ interface RoundEndRevealOverlayProps {
   hands: Card[][]
   playLog: Card[][]
   onContinue: () => void
-  /** Quitter / retour accueil (optionnel). */
+  /** Action secondaire sous Continuer (accueil solo / abandon online). */
   onQuit?: () => void
-  /** Label du bouton quitter. Defaut = QUITTER */
+  /** Label. Solo: Accueil · Online: Abandonner. */
   quitLabel?: string
   /** Noms affiches par index de vue (0-3). Defaut = SEAT_NAMES solo. */
   seatNames?: string[]
@@ -27,7 +27,7 @@ export function RoundEndRevealOverlay({
   playLog,
   onContinue,
   onQuit,
-  quitLabel = 'QUITTER',
+  quitLabel = 'ABANDONNER LA TABLE',
   seatNames = SEAT_NAMES,
 }: RoundEndRevealOverlayProps) {
   const winnerIndex = outcome.roundWinnerIndex
@@ -76,10 +76,6 @@ export function RoundEndRevealOverlay({
             const isBanked = outcome.bankedPlayerIndexes.includes(i)
             const played = playLog[i] ?? []
             const remaining = hands[i] ?? []
-            const lineCards: { card: Card; fromHand: boolean; index: number }[] = [
-              ...played.map((card, index) => ({ card, fromHand: false, index })),
-              ...remaining.map((card, index) => ({ card, fromHand: true, index })),
-            ]
             const amount = amountBySeat.get(i)
 
             const visibleIndex = names.slice(0, i).filter((_, j) => !isEmptySeat(j)).length
@@ -92,7 +88,7 @@ export function RoundEndRevealOverlay({
               >
                 <div
                   className="reveal-line-head"
-                  style={{ marginBottom: lineCards.length > 0 || isWinner || amount != null ? 8 : 0 }}
+                  style={{ marginBottom: played.length + remaining.length > 0 || isWinner || amount != null ? 8 : 0 }}
                 >
                   <span
                     className={`font-display reveal-hand-name${isWinner ? ' is-gold' : ''}`}
@@ -120,7 +116,7 @@ export function RoundEndRevealOverlay({
                   )}
                 </div>
 
-                {lineCards.length > 0 ? (
+                {played.length + remaining.length > 0 ? (
                   <div className="reveal-line-cards">
                     {played.length > 0 && remaining.length > 0 && (
                       <span className="reveal-seg-label">TAPIS</span>
